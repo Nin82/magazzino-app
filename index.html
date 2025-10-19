@@ -1,3 +1,460 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestione Magazzino Completo</title>
+<!-- ================= PWA SETTINGS ================= -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4f46e5">
+
+<!-- Icona per dispositivi Apple -->
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+
+<script>
+  // Registrazione Service Worker per PWA
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js')
+      .then(() => console.log('✅ Service Worker registrato'))
+      .catch(err => console.log('❌ Errore Service Worker', err));
+  }
+</script>
+<!-- Libreria QR Code -->
+<script src="https://unpkg.com/html5-qrcode" defer></script>
+<!-- =============================================== -->
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+/* ================= STILE ================= */
+body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif; margin: 0; padding: 24px; background: #f8fafc; color: #1f2937; }
+.hidden { display: none; }
+h1 { color: #1e3a8a; font-weight: 800; margin-bottom: 24px; }
+h2,h3 { color: #374151; border-bottom:2px solid #e5e7eb; padding-bottom:8px; margin-top:30px; }
+hr { border:0; border-top:1px solid #e0e7eb; margin:30px 0; }
+/* Tabs */
+.tab-container { margin-bottom:24px; }
+.tab-container button { background:#fff; color:#6b7280; font-weight:600; border:1px solid #e5e7eb; border-bottom:none; padding:10px 20px; border-radius:8px 8px 0 0; margin-right:-1px; transition:all 0.2s; outline:none; }
+.tab-container button:hover { background:#f3f4f6; color:#1f2937; }
+.tab-container button.active { background:#fff; color:#1e3a8a; border-color:#1e3a8a; border-bottom:2px solid #fff; position:relative; z-index:10; }
+[role="tabpanel"] { background:#fff; padding:20px; border:1px solid #e5e7eb; border-radius:0 8px 8px 8px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); position:relative; top:-1px; }
+/* Pulsanti */
+button { cursor:pointer; background:#4f46e5; color:#fff; border:none; padding:10px 18px; border-radius:8px; margin:5px 5px 5px 0; transition:all 0.2s ease-in-out; font-weight:600; white-space:nowrap; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
+button:hover { background:#4338ca; transform:translateY(-1px); box-shadow:0 4px 8px rgba(0,0,0,0.15); }
+.btn-action { background:#10b981; } .btn-action:hover { background:#059669; }
+.btn-delete { background:#ef4444; } .btn-delete:hover { background:#dc2626; }
+.btn-secondary { background:#e5e7eb; color:#374151; box-shadow:none; } .btn-secondary:hover { background:#d1d5db; transform:translateY(-1px); box-shadow:0 2px 4px rgba(0,0,0,0.1);}
+.btn-reset { background:#991b1b; font-weight:700; } .btn-reset:hover { background:#7f1d1d; }
+/* Form */
+input, select { padding:10px 12px; border:1px solid #d1d5db; border-radius:6px; margin-right:10px; width:100%; max-width:250px; transition:border-color 0.2s, box-shadow 0.2s; font-size:1rem; }
+input:focus, select:focus { border-color:#4f46e5; box-shadow:0 0 0 3px rgba(79,70,229,0.2); outline:none; }
+input[readonly] { background-color:#f3f4f6; cursor:not-allowed; }
+label { font-weight:600; margin-bottom:4px; display:block; color:#374151; }
+#carico-form, #scarico-form { display:flex; gap:20px; flex-wrap:wrap; align-items:flex-end; }
+#carico-form div, #scarico-form div { display:flex; flex-direction:column; flex-grow:1; min-width:180px; }
+#carico-form button, #scarico-form button { margin-top:10px; }
+/* Notifica */
+#notification { font-weight:600; text-align:center; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
+/* Tabelle */
+table { width:100%; border-collapse:separate; border-spacing:0; margin-top:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); border-radius:8px; overflow:hidden; }
+th, td { padding:12px 16px; text-align:left; border-bottom:1px solid #f3f4f6; }
+th { background:#eef2ff; font-size:0.8rem; color:#1e3a8a; font-weight:700; text-transform:uppercase; }
+tr:last-child td { border-bottom:none; } 
+tr:nth-child(even) { background-color:#f9fafb; }
+tr:hover { background-color:#eff6ff; }
+.qty-cell { font-weight:700; color:#10b981; font-size:1.1rem; }
+.qty-low { color:#f97316; background-color:#fff7ed; border-radius:4px; padding:2px 6px; display:inline-block; }
+/* Dashboard e filtri */
+#chart-giacenze, #chart-andamento { background:#fff; padding:20px; margin-bottom:20px; border-radius:8px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); }
+.controls-container { background:#f3f4f6; padding:15px; border-radius:8px; box-shadow:inset 0 1px 3px rgba(0,0,0,0.05); display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+@media(max-width:768px){ body{padding:12px;} #carico-form,#scarico-form{flex-direction:column;align-items:stretch;gap:15px;} #carico-form div,#scarico-form div{min-width:100%;} input,select{max-width:100%;margin-right:0;} .controls-container{flex-direction:column;align-items:stretch;} .controls-container label{margin-bottom:0;} .controls-container button{width:100%;margin-right:0;} th,td{font-size:0.75rem;padding:8px 10px;} }
+</style>
+</head>
+<body>
+<h1>📦 Gestione Magazzino Completo</h1>
+<div id="notification" style="color:#fff;background:#4f46e5;padding:12px;margin-bottom:20px;border-radius:8px;display:none;"></div>
+
+<!-- Tabs -->
+<div class="tab-container">
+  <button role="tab" aria-controls="tab-carico" data-target="tab-carico" class="active">➕ Carico</button>
+  <button role="tab" aria-controls="tab-scarico" data-target="tab-scarico">➖ Scarico</button>
+  <button role="tab" aria-controls="tab-stock-summary" data-target="tab-stock-summary">📜 Riepilogo Giacenze</button>
+  <button role="tab" aria-controls="tab-dashboard" data-target="tab-dashboard">📊 Dashboard</button>
+  <button role="tab" aria-controls="tab-qr" data-target="tab-qr">📷 QR Scanner</button>
+</div>
+
+<!-- CARICO -->
+<div id="tab-carico" role="tabpanel">
+  <h2>Registra un Nuovo Ingresso</h2>
+  <form id="carico-form">
+    <div><label for="carico-barcode">Barcode:</label><input id="carico-barcode" placeholder="Codice Barcode" required></div>
+    <div><label for="carico-article">Articolo:</label><input id="carico-article" placeholder="Nome Articolo" required></div>
+    <div><label for="carico-qty">Quantità:</label><input type="number" id="carico-qty" required min="1" value="1"></div>
+    <button type="submit" class="btn-action">✅ Registra Carico</button>
+  </form>
+</div>
+
+<!-- SCARICO -->
+<div id="tab-scarico" role="tabpanel" class="hidden">
+  <h2>Registra una Nuova Uscita</h2>
+  <form id="scarico-form">
+    <div><label for="scarico-barcode">Barcode:</label><input id="scarico-barcode" placeholder="Codice Barcode" required></div>
+    <div><label for="scarico-qty">Quantità:</label><input type="number" id="scarico-qty" required min="1" value="1"></div>
+    <button type="submit" class="btn-delete">🔥 Registra Scarico</button>
+  </form>
+</div>
+
+<!-- INVENTARIO -->
+<div id="tab-stock-summary" role="tabpanel" class="hidden">
+  <h2>Inventario Attuale</h2>
+  <div style="margin-bottom: 15px; margin-top: 15px;">
+    <button onclick="downloadSummaryCSV()" class="btn-secondary">⬇️ Scarica Riepilogo CSV</button>
+  </div>
+  <div id="stock-summary-container">
+    <table id="stock-summary">
+      <thead><tr><th>Articolo</th><th>Barcode</th><th>Giacenza Totale</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="tab-dashboard" role="tabpanel" class="hidden">
+  <h2>Metriche Magazzino</h2>
+  <h3>Top 10 Giacenze per Quantità</h3>
+  <div id="chart-giacenze"></div>
+  <h3>Andamento Giornaliero Movimenti Netto</h3>
+  <div id="chart-andamento"></div>
+</div>
+
+<!-- Tab QR Scanner -->
+<div id="tab-qr" role="tabpanel" class="hidden">
+  <h2>Scansiona QR / Barcode</h2>
+
+  <p id="qr-status" style="font-weight:bold; color:#6b7280; margin-bottom:8px;">
+    ⛔ Scanner disattivato
+  </p>
+
+  <video id="qr-video" autoplay muted playsinline style="width:100%; max-width:420px; border-radius:8px; border:1px solid #d1d5db;"></video>
+
+  <div style="margin-top:12px;">
+    <label for="qr-result">Codice rilevato</label>
+    <input id="qr-result" readonly placeholder="Inquadra un codice..." style="width:100%; max-width:420px;">
+  </div>
+
+  <!-- Selettore destinazione -->
+  <div style="margin-top:12px;">
+    <label for="qr-target">Destinazione:</label>
+    <select id="qr-target" style="width:100%; max-width:200px;">
+      <option value="carico">Carico</option>
+      <option value="scarico">Scarico</option>
+    </select>
+  </div>
+
+  <div style="margin-top:10px;">
+    <button id="use-qr" class="btn-action">Usa barcode</button>
+    <button id="stop-qr" class="btn-secondary">Stop scanner</button>
+  </div>
+
+  <p style="margin-top:12px;color:#6b7280">
+    Se il browser non supporta la scansione nativa, verrà usato un fallback.
+  </p>
+</div>
+
+<hr>
+<h2>Storico Completo Operazioni</h2>
+<div class="controls-container">
+  <label for="filter-type">Tipo Operazione:</label>
+  <select id="filter-type">
+    <option value="Tutti">Tutti</option>
+    <option value="Carico">Carico</option>
+    <option value="Scarico">Scarico</option>
+  </select>
+
+  <label for="filter-articolo">Articolo (Ricerca):</label>
+  <input id="filter-articolo" placeholder="Cerca articolo..." style="flex-grow:1; max-width: 250px;">
+  
+  <button id="apply-filter" class="btn-secondary">🔎 Applica Filtro</button>
+  <button id="clear-filter" class="btn-secondary">🗑️ Rimuovi Filtro</button>
+  <button onclick="downloadLogCSV()" class="btn-secondary">⬇️ Scarica Log CSV</button>
+  <button onclick="resetDatabase()" class="btn-reset">⚠️ Resetta Database (Cancella Tutto)</button> 
+</div>
+
+<div id="full-log-container">
+  <table id="full-log">
+    <thead><tr><th>Data/Ora</th><th>Tipo</th><th>Barcode</th><th>Articolo</th><th>Quantità</th><th>Azioni</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<script type="module">
+// ================== SUPABASE ==================
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+// ================== SUONO BEEP ==================
+function playBeep(duration = 100, frequency = 440, volume = 0.5) {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+
+    // Colleghiamo l'oscillatore al gainNode e poi all'uscita audio
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    oscillator.type = 'square';       // tipo di onda: square, sine, sawtooth, triangle
+    oscillator.frequency.value = frequency; // frequenza in Hz
+    gainNode.gain.value = volume;     // volume (0-1)
+
+    oscillator.start();
+    setTimeout(() => oscillator.stop(), duration); // ferma dopo `duration` ms
+}
+
+const supabaseUrl = 'https://eevwzkcesmfofpecuxwv.supabase.co'
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnd6a2Nlc21mb2ZwZWN1eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2ODkxOTAsImV4cCI6MjA3NjI2NTE5MH0.j7TQnwbw-gW2S6QBjyp4wsQJrXUVYmg3wwVWVPRe1b4'
+const supabase = createClient(supabaseUrl, supabaseKey)
+
+// ================== ELEMENTI ==================
+const caricoBarcode = document.getElementById('carico-barcode');
+const caricoArticle = document.getElementById('carico-article');
+const caricoQty = document.getElementById('carico-qty');
+const scaricoBarcode = document.getElementById('scarico-barcode');
+const scaricoQty = document.getElementById('scarico-qty');
+const notificationElement = document.getElementById('notification');
+
+// ================== NOTIFICHE ==================
+function showNotification(msg,type='info'){
+    notificationElement.textContent = msg;
+    notificationElement.style.display='block';
+    notificationElement.style.backgroundColor = type==='success'?'#10b981': type==='error'?'#ef4444':'#4f46e5';
+    setTimeout(()=>{notificationElement.style.display='none'},3000);
+}
+
+// ================== FUNZIONI ==================
+async function addCarico(barcode, article, qty){
+    const { data:existing } = await supabase.from('magazzino').select('*').eq('barcode',barcode).single();
+    if(existing){
+        await supabase.from('magazzino').update({quantity:existing.quantity+qty}).eq('barcode',barcode);
+    } else {
+        await supabase.from('magazzino').insert([{barcode,article,quantity:qty}]);
+    }
+    await supabase.from('log_operazioni').insert([{type:'Carico',barcode,article,quantity:qty}]);
+    showNotification(`Carico registrato: ${qty}x ${article}`,'success');
+}
+async function addScarico(barcode, qty){
+    const { data:existing } = await supabase.from('magazzino').select('*').eq('barcode',barcode).single();
+    if(!existing || existing.quantity<qty){ showNotification("Errore: quantità insufficiente",'error'); return; }
+    const newQty = existing.quantity - qty;
+    if(newQty===0) await supabase.from('magazzino').delete().eq('barcode',barcode);
+    else await supabase.from('magazzino').update({quantity:newQty}).eq('barcode',barcode);
+    await supabase.from('log_operazioni').insert([{type:'Scarico',barcode,article:existing.article,quantity:qty}]);
+    showNotification(`Scarico registrato: ${qty}x ${existing.article}`,'success');
+}
+async function getStockSummary(){ const { data } = await supabase.from('magazzino').select('*'); return data || []; }
+async function getLog(filterType='Tutti',filterArticle=''){ 
+    let query = supabase.from('log_operazioni').select('*').order('date',{ascending:false}); 
+    if(filterType!=='Tutti') query=query.eq('type',filterType); 
+    if(filterArticle) query=query.ilike('article',`%${filterArticle}%`);
+    const { data } = await query; return data || []; 
+}
+async function renderStockSummary(){
+    const tbody = document.querySelector('#stock-summary tbody');
+    const data = await getStockSummary();
+    tbody.innerHTML='';
+    if(data.length===0){tbody.innerHTML='<tr><td colspan="3" style="text-align:center;padding:20px">Nessun articolo in giacenza.</td></tr>'; return;}
+    data.sort((a,b)=>b.quantity-a.quantity).forEach(item=>{
+        const qtyClass = item.quantity<10?'qty-low':'';
+        const row = tbody.insertRow();
+        row.innerHTML=`<td>${item.article}</td><td>${item.barcode}</td><td class="qty-cell"><span class="${qtyClass}">${item.quantity}</span></td>`;
+    });
+}
+async function renderTables(){
+    const typeFilter = document.getElementById('filter-type').value;
+    const articoloFilter = document.getElementById('filter-articolo').value.toLowerCase();
+    const tbody = document.querySelector('#full-log tbody');
+    const data = await getLog(typeFilter,articoloFilter);
+    tbody.innerHTML='';
+    if(data.length===0){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:20px">Nessun risultato trovato.</td></tr>'; return;}
+    data.forEach(r=>{
+        const color = r.type==='Carico'?'#059669':'#dc2626';
+        const icon = r.type==='Carico'?'⬆️':'⬇️';
+        const tr = document.createElement('tr');
+        tr.innerHTML=`<td>${new Date(r.date).toLocaleString()}</td>
+                      <td style="color:${color};font-weight:bold">${icon} ${r.type}</td>
+                      <td>${r.barcode}</td>
+                      <td>${r.article}</td>
+                      <td>${r.quantity}</td>
+                      <td><button class="btn-delete" onclick="deleteRecord(${r.id})">❌ Annulla</button></td>`;
+        tbody.appendChild(tr);
+    });
+}
+async function deleteRecord(id){
+    if(!confirm("Confermi l'eliminazione?")) return;
+    const { data } = await supabase.from('log_operazioni').select('*').eq('id',id).single();
+    if(!data){ showNotification("Record non trovato",'error'); return;}
+    if(data.type==='Carico'){
+        const { data:existing } = await supabase.from('magazzino').select('*').eq('barcode',data.barcode).single();
+        if(existing && existing.quantity>=data.quantity){
+            const newQty = existing.quantity - data.quantity;
+            if(newQty===0) await supabase.from('magazzino').delete().eq('barcode',data.barcode);
+            else await supabase.from('magazzino').update({quantity:newQty}).eq('barcode',data.barcode);
+        }
+    } else {
+        const { data:existing } = await supabase.from('magazzino').select('*').eq('barcode',data.barcode).single();
+        if(existing) await supabase.from('magazzino').update({quantity:existing.quantity+data.quantity}).eq('barcode',data.barcode);
+        else await supabase.from('magazzino').insert([{barcode:data.barcode,article:data.article,quantity:data.quantity}]);
+    }
+    await supabase.from('log_operazioni').delete().eq('id',id);
+    renderTables();
+    renderStockSummary();
+    showNotification("Record annullato",'success');
+}
+async function resetDatabase(){
+    if(!confirm("ATTENZIONE: elimini TUTTO il database?")) return;
+
+    // Cancella prima log_operazioni
+    const { error: logError } = await supabase.from('log_operazioni').delete().neq('id',0);
+    if(logError) { showNotification("Errore cancellazione log: "+logError.message,'error'); return; }
+
+    // Cancella magazzino
+    const { error: stockError } = await supabase.from('magazzino').delete().neq('barcode','');
+    if(stockError) { showNotification("Errore cancellazione magazzino: "+stockError.message,'error'); return; }
+
+    // Aggiorna UI
+    renderTables();
+    renderStockSummary();
+    renderCharts();
+    showNotification("Database resettato",'success');
+}
+async function downloadCSV(filename,data){
+    const csv = data.map(r=>Object.values(r).join(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+}
+async function downloadSummaryCSV(){
+    const data = await getStockSummary();
+    downloadCSV('riepilogo_giacenze.csv',data);
+}
+async function downloadLogCSV(){
+    const data = await getLog();
+    downloadCSV('log_operazioni.csv',data);
+}
+
+// ================== DASHBOARD ==================
+async function renderCharts(){
+    const data = await getStockSummary();
+    const top10 = data.sort((a,b)=>b.quantity-a.quantity).slice(0,10);
+    d3.select("#chart-giacenze").html('');
+    const width=600,height=300;
+    const svg=d3.select("#chart-giacenze").append("svg").attr("width",width).attr("height",height);
+    const x=d3.scaleBand().domain(top10.map(d=>d.article)).range([50,width-20]).padding(0.2);
+    const y=d3.scaleLinear().domain([0,d3.max(top10,d=>d.quantity)]).range([height-40,20]);
+    svg.append("g").attr("transform",`translate(0,${height-40})`).call(d3.axisBottom(x)).selectAll("text").attr("transform","rotate(-40)").style("text-anchor","end");
+    svg.append("g").attr("transform","translate(50,0)").call(d3.axisLeft(y));
+    svg.selectAll("rect").data(top10).enter().append("rect")
+       .attr("x",d=>x(d.article)).attr("y",d=>y(d.quantity))
+       .attr("width",x.bandwidth()).attr("height",d=>height-40-y(d.quantity))
+       .attr("fill","#4f46e5");
+}
+
+
+async function renderAndamentoGiornaliero() {
+    const { data: logData } = await supabase
+        .from('log_operazioni')
+        .select('date,type,quantity');
+
+    if(!logData || logData.length === 0){
+        d3.select("#chart-andamento").html("Nessun dato disponibile");
+        return;
+    }
+
+    // Raggruppa per giorno
+    const dailyMap = {};
+    logData.forEach(r => {
+        const day = new Date(r.date).toISOString().slice(0,10); // YYYY-MM-DD
+        if(!dailyMap[day]) dailyMap[day] = 0;
+        dailyMap[day] += r.type === 'Carico' ? r.quantity : -r.quantity;
+    });
+
+    // Trasforma in array ordinato
+    const dailyArray = Object.entries(dailyMap)
+        .map(([date, qty]) => ({ date: new Date(date), qty }))
+        .sort((a,b)=>a.date - b.date);
+
+    // Imposta dimensioni grafico
+    const width = 600, height = 300;
+    d3.select("#chart-andamento").html('');
+    const svg = d3.select("#chart-andamento").append("svg").attr("width", width).attr("height", height);
+
+    const x = d3.scaleTime()
+        .domain(d3.extent(dailyArray, d => d.date))
+        .range([50, width-20]);
+    const y = d3.scaleLinear()
+        .domain([d3.min(dailyArray, d=>d.qty), d3.max(dailyArray, d=>d.qty)])
+        .range([height-40, 20]);
+
+    // Line generator
+    const line = d3.line()
+        .x(d => x(d.date))
+        .y(d => y(d.qty))
+        .curve(d3.curveMonotoneX);
+
+    // Assi
+    svg.append("g").attr("transform",`translate(0,${height-40})`).call(d3.axisBottom(x));
+    svg.append("g").attr("transform","translate(50,0)").call(d3.axisLeft(y));
+
+    // Linea andamento
+    svg.append("path")
+        .datum(dailyArray)
+        .attr("fill","none")
+        .attr("stroke","#10b981")
+        .attr("stroke-width",2)
+        .attr("d", line);
+}
+
+// ================== INIT ==================
+window.downloadLogCSV = downloadLogCSV;
+window.downloadSummaryCSV = downloadSummaryCSV;
+window.deleteRecord = deleteRecord;
+window.resetDatabase = resetDatabase;
+
+async function refreshAll(){
+    await renderStockSummary();
+    await renderTables();
+    await renderCharts();
+    await renderAndamentoGiornaliero(); 
+}
+
+
+// ================== FILTRI ==================
+document.getElementById('apply-filter').addEventListener('click', renderTables);
+document.getElementById('clear-filter').addEventListener('click', ()=>{
+    document.getElementById('filter-type').value='Tutti';
+    document.getElementById('filter-articolo').value='';
+    renderTables();
+});
+
+// ================== FORM ==================
+caricoBarcode.addEventListener('input', async ()=>{
+    if(!caricoBarcode.value) return;
+    const { data:existing } = await supabase.from('magazzino').select('*').eq('barcode',caricoBarcode.value).single();
+    if(existing) caricoArticle.value = existing.article;
+});
+document.getElementById('carico-form').addEventListener('submit', async e=>{
+    e.preventDefault();
+    await addCarico(caricoBarcode.value,caricoArticle.value,parseInt(caricoQty.value));
+    caricoBarcode.value=''; caricoArticle.value=''; caricoQty.value=1;
+    refreshAll();
+});
+document.getElementById('scarico-form').addEventListener('submit', async e=>{
+    e.preventDefault();
+    await addScarico(scaricoBarcode.value,parseInt(scaricoQty.value));
+    scaricoBarcode.value=''; scaricoQty.value=1;
+    refreshAll();
+});
+
+refreshAll();
+
 // ====================== QR SCANNER ROBUSTO ======================
 window.videoStream = null;
 window.html5QrInstance = null;
@@ -119,3 +576,60 @@ document.querySelectorAll('.tab-container button').forEach(btn => {
         else stopQRScanner();
     });
 });
+
+// ====================== SWITCH TABS CON START/STOP QR ======================
+document.querySelectorAll('.tab-container button').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        document.querySelectorAll('.tab-container button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        document.querySelectorAll('[role="tabpanel"]').forEach(tab => tab.classList.add('hidden'));
+        document.getElementById(btn.dataset.target).classList.remove('hidden');
+
+        // 🔹 Gestione QR scanner: start/stop automatico
+        if (btn.dataset.target === 'tab-qr') {
+            await startQRScanner();
+        } else {
+            stopQRScanner();
+        }
+    });
+});
+
+// ====================== PULSANTE "USA BARCODE" OTTIMIZZATO ======================
+document.getElementById('use-qr').addEventListener('click', () => {
+    const qrCode = document.getElementById('qr-result').value;
+    const target = document.getElementById('qr-target').value;
+
+    if (!qrCode) {
+        showNotification('Nessun codice QR rilevato!', 'error');
+        return;
+    }
+
+    // Cambia automaticamente il tab
+    const tabId = target === 'carico' ? 'tab-carico' : 'tab-scarico';
+    document.querySelectorAll('.tab-container button').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.tab-container button[data-target="${tabId}"]`).classList.add('active');
+
+    document.querySelectorAll('[role="tabpanel"]').forEach(tab => tab.classList.add('hidden'));
+    document.getElementById(tabId).classList.remove('hidden');
+
+    // Inserisce il codice nel campo corretto e autofocus su quantità
+    if (target === 'carico') {
+        caricoBarcode.value = qrCode;
+        caricoBarcode.dispatchEvent(new Event('input')); // autocompleta articolo
+        caricoQty.focus();
+        showNotification(`Barcode inserito nel Carico: ${qrCode}`, 'success');
+    } else {
+        scaricoBarcode.value = qrCode;
+        scaricoQty.focus();
+        showNotification(`Barcode inserito nello Scarico: ${qrCode}`, 'success');
+    }
+
+    // 🔹 Pulisce il box QR
+    document.getElementById('qr-result').value = '';
+    lastScanned = '';
+});
+
+</script>
+</body>
+</html>
