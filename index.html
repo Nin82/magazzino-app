@@ -529,30 +529,41 @@ document.querySelectorAll('.tab-container button').forEach(btn => {
 
 // ====================== PULSANTE "USA BARCODE" ======================
   document.getElementById('use-qr').addEventListener('click', () => {
-      const qrCode = document.getElementById('qr-result').value;
-      const target = document.getElementById('qr-target').value;
+    const qrCode = document.getElementById('qr-result').value;
+    const target = document.getElementById('qr-target').value;
 
-      if (!qrCode) {
-          showNotification('Nessun codice QR rilevato!', 'error');
-          return;
-      }
+    if (!qrCode) {
+        showNotification('Nessun codice QR rilevato!', 'error');
+        return;
+    }
 
-      if(target === 'carico'){
-          caricoBarcode.value = qrCode;
-          caricoBarcode.dispatchEvent(new Event('input')); // autocompleta articolo
-          showNotification(`Barcode inserito nel Carico: ${qrCode}`, 'success');
-      } else {
-          scaricoBarcode.value = qrCode;
-          showNotification(`Barcode inserito nello Scarico: ${qrCode}`, 'success');
-      }
-  });
+    // Cambia automaticamente il tab
+    const tabId = target === 'carico' ? 'tab-carico' : 'tab-scarico';
+    document.querySelectorAll('.tab-container button').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.tab-container button[data-target="${tabId}"]`).classList.add('active');
 
-  // Bottone stop scanner
-  document.getElementById('stop-qr').addEventListener('click', () => {
-      stopQRScanner();
-  });
+    document.querySelectorAll('[role="tabpanel"]').forEach(tab => tab.classList.add('hidden'));
+    document.getElementById(tabId).classList.remove('hidden');
+
+    // Inserisce il codice nel campo corretto
+    if(target === 'carico'){
+        caricoBarcode.value = qrCode;
+        caricoBarcode.dispatchEvent(new Event('input')); // autocompleta articolo
+        showNotification(`Barcode inserito nel Carico: ${qrCode}`, 'success');
+    } else {
+        scaricoBarcode.value = qrCode;
+        showNotification(`Barcode inserito nello Scarico: ${qrCode}`, 'success');
+    }
+
+    // Suono beep
+    const beep = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA='); // piccolo beep vuoto
+    beep.play();
+});
+
 
 
 </script>
 </body>
 </html>
+
+
