@@ -449,10 +449,10 @@ document.getElementById('scarico-form').addEventListener('submit', async e=>{
 
 refreshAll();
 
+// ====================== QR SCANNER MIGLIORATO ======================
 let videoStream;
-let html5QrInstance;
-let lastScanned = '';
-let scanCooldown = false;
+let html5QrInstance; 
+let lastScanned = ''; 
 
 async function startQRScanner() {
     const video = document.getElementById('qr-video');
@@ -460,65 +460,74 @@ async function startQRScanner() {
 
     try {
         if ('BarcodeDetector' in window) {
-            // API nativa
-            videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            // ✅ API nativa (più veloce e precisa)
+            videoStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment' }
+            });
             video.srcObject = videoStream;
 
-            const detector = new BarcodeDetector({ formats: ['qr_code','code_128','ean_13'] });
+            const detector = new BarcodeDetector({ formats: ['qr_code', 'code_128', 'ean_13', 'code_39'] });
 
             const scanLoop = async () => {
                 if (!videoStream) return;
+                const barcodes = await detector.detect(video);
 
-                try {
-                    const barcodes = await detector.detect(video);
-                    if (barcodes.length > 0 && barcodes[0].rawValue !== lastScanned && !scanCooldown) {
-                        lastScanned = barcodes[0].rawValue;
-                        resultInput.value = lastScanned;
-                        showNotification(`📷 Codice rilevato: ${lastScanned}`, 'success');
-                        playBeep(150, 600, 0.5); // beep qui
-			scanCooldown = true;
-                        setTimeout(()=> scanCooldown = false, 1000);
+                if (barcodes.length > 0) {
+                    const newCode = barcodes[0].rawValue.trim();
+                    if (newCode && newCode !== lastScanned) {
+                        lastScanned = newCode;
+                        resultInput.value = newCode;
+                        playBeep(150, 600, 0.5);
+                        showNotification(`📷 Codice rilevato: ${newCode}`, 'success');
+
+                        // Evita doppie letture per 1.5 secondi
+                        setTimeout(() => { lastScanned = ''; }, 1500);
                     }
-                } catch (err) { /* ignora errori */ }
-
+                }
                 requestAnimationFrame(scanLoop);
             };
+
             requestAnimationFrame(scanLoop);
 
         } else {
-            // Fallback Html5Qrcode
+            // ⚙️ Fallback con html5-qrcode
             if (!html5QrInstance) html5QrInstance = new Html5Qrcode("qr-video");
 
             await html5QrInstance.start(
                 { facingMode: "environment" },
-                { fps: 10, qrbox: 300 },
+                { fps: 15, qrbox: 300, aspectRatio: 1.0 },
                 qrCodeMessage => {
-                    if(qrCodeMessage !== lastScanned && !scanCooldown){
-                        lastScanned = qrCodeMessage;
-                        resultInput.value = lastScanned;
-                        showNotification(`📷 Codice rilevato: ${lastScanned}`, 'success');
-                        playBeep(150, 600, 0.5); // beep qui
-			scanCooldown = true;
-                        setTimeout(()=> scanCooldown = false, 1000);
+                    const newCode = qrCodeMessage.trim();
+                    if (newCode && newCode !== lastScanned) {
+                        lastScanned = newCode;
+                        resultInput.value = newCode;
+                        playBeep(150, 600, 0.5);
+                        showNotification(`📷 Codice rilevato: ${newCode}`, 'success');
+
+                        // Evita letture ripetute per 1.5 secondi
+                        setTimeout(() => { lastScanned = ''; }, 1500);
                     }
                 },
-                errorMessage => { /* ignora errori */ }
+                errorMessage => { /* Ignora errori temporanei */ }
             );
         }
     } catch (err) {
         console.error('Errore fotocamera:', err);
-        alert('Impossibile accedere alla fotocamera. Controlla permessi e browser.');
+        alert('Impossibile accedere alla fotocamera.');
     }
 }
 
+// Ferma lo scanner
 function stopQRScanner() {
     lastScanned = '';
-    scanCooldown = false;
-
     if (videoStream) {
         videoStream.getTracks().forEach(track => track.stop());
         videoStream = null;
     }
+    if (html5QrInstance) {
+        html5QrInstance.stop().catch(err => console.log('Errore stop QR:', err));
+    }
+}
 
     if (html5QrInstance) {
         html5QrInstance.stop().catch(err => console.log('Errore stop QR:', err));
