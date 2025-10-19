@@ -529,25 +529,30 @@ async function startQRScanner() {
     }
 }
 
-function stopQRScanner() {
+async function stopQRScanner() {
     lastScanned = '';
     scanCooldown = false;
 
-    // Ferma lo stream video (API nativa o Html5Qrcode)
+    // Ferma lo stream video
     if (videoStream) {
         videoStream.getTracks().forEach(track => track.stop());
         videoStream = null;
     }
 
-    // Ferma html5QrInstance SOLO se esiste (fallback Html5Qrcode)
+    // Ferma Html5Qrcode se presente
     if (html5QrInstance) {
-        html5QrInstance.stop()
-            .then(() => {
-                html5QrInstance.clear();  // libera la risorsa solo per html5QrInstance
-                html5QrInstance = null;
-            })
-            .catch(err => console.log('Errore stop QR:', err));
+        try {
+            await html5QrInstance.stop();
+            html5QrInstance.clear();
+            html5QrInstance = null;
+        } catch(err) {
+            console.log('Errore stop QR:', err);
+        }
     }
+
+    // Pulizia video per API nativa
+    const video = document.getElementById('qr-video');
+    if (video) video.srcObject = null;  // assicura che la fotocamera si spenga
 }
 
 // ====================== SWITCH TABS CON START/STOP QR ======================
