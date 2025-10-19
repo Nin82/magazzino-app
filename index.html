@@ -185,6 +185,29 @@ tr:hover { background-color:#eff6ff; }
 <script type="module">
 // ================== SUPABASE ==================
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+const supabaseUrl = 'https://eevwzkcesmfofpecuxwv.supabase.co'
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnd6a2Nlc21mb2ZwZWN1eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2ODkxOTAsImV4cCI6MjA3NjI2NTE5MH0.j7TQnwbw-gW2S6QBjyp4wsQJrXUVYmg3wwVWVPRe1b4'
+const supabase = createClient(supabaseUrl, supabaseKey)
+
+// ================== SUONO BEEP ==================
+function playBeep(duration = 100, frequency = 440, volume = 0.5) {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+
+    // Colleghiamo l'oscillatore al gainNode e poi all'uscita audio
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    oscillator.type = 'square';       // tipo di onda: square, sine, sawtooth, triangle
+    oscillator.frequency.value = frequency; // frequenza in Hz
+    gainNode.gain.value = volume;     // volume (0-1)
+
+    oscillator.start();
+    setTimeout(() => oscillator.stop(), duration); // ferma dopo `duration` ms
+}
+
 const supabaseUrl = 'https://eevwzkcesmfofpecuxwv.supabase.co'
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnd6a2Nlc21mb2ZwZWN1eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2ODkxOTAsImV4cCI6MjA3NjI2NTE5MH0.j7TQnwbw-gW2S6QBjyp4wsQJrXUVYmg3wwVWVPRe1b4'
 const supabase = createClient(supabaseUrl, supabaseKey)
@@ -459,6 +482,7 @@ async function startQRScanner() {
                         lastScanned = barcodes[0].rawValue;
                         resultInput.value = lastScanned;
                         showNotification(`📷 Codice rilevato: ${lastScanned}`, 'success');
+                        playBeep(150, 600, 0.5); // beep qui
                         scanCooldown = true;
                         setTimeout(()=> scanCooldown = false, 1000);
                     }
@@ -480,6 +504,7 @@ async function startQRScanner() {
                         lastScanned = qrCodeMessage;
                         resultInput.value = lastScanned;
                         showNotification(`📷 Codice rilevato: ${lastScanned}`, 'success');
+			playBeep(150, 600, 0.5); // beep qui
                         scanCooldown = true;
                         setTimeout(()=> scanCooldown = false, 1000);
                     }
@@ -524,12 +549,12 @@ document.querySelectorAll('.tab-container button').forEach(btn => {
         }
 
        
-        refreshAll();
+       
     });
 });
 
 // ====================== PULSANTE "USA BARCODE" ======================
-  document.getElementById('use-qr').addEventListener('click', () => {
+document.getElementById('use-qr').addEventListener('click', () => {
     const qrCode = document.getElementById('qr-result').value;
     const target = document.getElementById('qr-target').value;
 
@@ -556,11 +581,8 @@ document.querySelectorAll('.tab-container button').forEach(btn => {
         showNotification(`Barcode inserito nello Scarico: ${qrCode}`, 'success');
     }
 
-    // Suono beep
-    const beep = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA='); // piccolo beep vuoto
-    beep.play();
+    
 });
-
 
 
 </script>
