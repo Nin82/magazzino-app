@@ -185,22 +185,6 @@ tr:hover { background-color:#eff6ff; }
 <script type="module">
 // ================== SUPABASE ==================
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
-// ================== SUONO BEEP ==================
-function playBeep(duration = 100, frequency = 440, volume = 0.5) {
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = audioCtx.createOscillator();
-    const gainNode = audioCtx.createGain();
-
-    oscillator.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-
-    oscillator.type = 'square';
-    oscillator.frequency.value = frequency;
-    gainNode.gain.value = volume;
-
-    oscillator.start();
-    setTimeout(() => oscillator.stop(), duration);
-}
 const supabaseUrl = 'https://eevwzkcesmfofpecuxwv.supabase.co'
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnd6a2Nlc21mb2ZwZWN1eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2ODkxOTAsImV4cCI6MjA3NjI2NTE5MH0.j7TQnwbw-gW2S6QBjyp4wsQJrXUVYmg3wwVWVPRe1b4'
 const supabase = createClient(supabaseUrl, supabaseKey)
@@ -449,10 +433,10 @@ document.getElementById('scarico-form').addEventListener('submit', async e=>{
 
 refreshAll();
 
-// ====================== QR SCANNER MIGLIORATO ======================
 let videoStream;
-let html5QrInstance; 
-let lastScanned = ''; 
+let html5QrInstance;
+let lastScanned = '';
+let scanCooldown = false;
 
 async function startQRScanner() {
     const video = document.getElementById('qr-video');
@@ -460,74 +444,63 @@ async function startQRScanner() {
 
     try {
         if ('BarcodeDetector' in window) {
-            // ✅ API nativa (più veloce e precisa)
-            videoStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'environment' }
-            });
+            // API nativa
+            videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
             video.srcObject = videoStream;
 
-            const detector = new BarcodeDetector({ formats: ['qr_code', 'code_128', 'ean_13', 'code_39'] });
+            const detector = new BarcodeDetector({ formats: ['qr_code','code_128','ean_13'] });
 
             const scanLoop = async () => {
                 if (!videoStream) return;
-                const barcodes = await detector.detect(video);
 
-                if (barcodes.length > 0) {
-                    const newCode = barcodes[0].rawValue.trim();
-                    if (newCode && newCode !== lastScanned) {
-                        lastScanned = newCode;
-                        resultInput.value = newCode;
-                        playBeep(150, 600, 0.5);
-                        showNotification(`📷 Codice rilevato: ${newCode}`, 'success');
-
-                        // Evita doppie letture per 1.5 secondi
-                        setTimeout(() => { lastScanned = ''; }, 1500);
+                try {
+                    const barcodes = await detector.detect(video);
+                    if (barcodes.length > 0 && barcodes[0].rawValue !== lastScanned && !scanCooldown) {
+                        lastScanned = barcodes[0].rawValue;
+                        resultInput.value = lastScanned;
+                        showNotification(`📷 Codice rilevato: ${lastScanned}`, 'success');
+                        scanCooldown = true;
+                        setTimeout(()=> scanCooldown = false, 1000);
                     }
-                }
+                } catch (err) { /* ignora errori */ }
+
                 requestAnimationFrame(scanLoop);
             };
-
             requestAnimationFrame(scanLoop);
 
         } else {
-            // ⚙️ Fallback con html5-qrcode
+            // Fallback Html5Qrcode
             if (!html5QrInstance) html5QrInstance = new Html5Qrcode("qr-video");
 
             await html5QrInstance.start(
                 { facingMode: "environment" },
-                { fps: 15, qrbox: 300, aspectRatio: 1.0 },
+                { fps: 10, qrbox: 300 },
                 qrCodeMessage => {
-                    const newCode = qrCodeMessage.trim();
-                    if (newCode && newCode !== lastScanned) {
-                        lastScanned = newCode;
-                        resultInput.value = newCode;
-                        playBeep(150, 600, 0.5);
-                        showNotification(`📷 Codice rilevato: ${newCode}`, 'success');
-
-                        // Evita letture ripetute per 1.5 secondi
-                        setTimeout(() => { lastScanned = ''; }, 1500);
+                    if(qrCodeMessage !== lastScanned && !scanCooldown){
+                        lastScanned = qrCodeMessage;
+                        resultInput.value = lastScanned;
+                        showNotification(`📷 Codice rilevato: ${lastScanned}`, 'success');
+                        scanCooldown = true;
+                        setTimeout(()=> scanCooldown = false, 1000);
                     }
                 },
-                errorMessage => { /* Ignora errori temporanei */ }
+                errorMessage => { /* ignora errori */ }
             );
         }
     } catch (err) {
         console.error('Errore fotocamera:', err);
-        alert('Impossibile accedere alla fotocamera.');
+        alert('Impossibile accedere alla fotocamera. Controlla permessi e browser.');
     }
 }
 
-// Ferma lo scanner
 function stopQRScanner() {
     lastScanned = '';
+    scanCooldown = false;
+
     if (videoStream) {
         videoStream.getTracks().forEach(track => track.stop());
         videoStream = null;
     }
-    if (html5QrInstance) {
-        html5QrInstance.stop().catch(err => console.log('Errore stop QR:', err));
-    }
-}
 
     if (html5QrInstance) {
         html5QrInstance.stop().catch(err => console.log('Errore stop QR:', err));
@@ -556,7 +529,7 @@ document.querySelectorAll('.tab-container button').forEach(btn => {
 });
 
 // ====================== PULSANTE "USA BARCODE" ======================
-document.getElementById('use-qr').addEventListener('click', () => {
+  document.getElementById('use-qr').addEventListener('click', () => {
     const qrCode = document.getElementById('qr-result').value;
     const target = document.getElementById('qr-target').value;
 
@@ -583,8 +556,11 @@ document.getElementById('use-qr').addEventListener('click', () => {
         showNotification(`Barcode inserito nello Scarico: ${qrCode}`, 'success');
     }
 
-    
+    // Suono beep
+    const beep = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA='); // piccolo beep vuoto
+    beep.play();
 });
+
 
 
 </script>
