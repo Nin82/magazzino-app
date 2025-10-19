@@ -533,60 +533,63 @@ async function startQRScanner() {
 }
 
 async function stopQRScanner() {
-    lastScanned = '';
-    scanBuffer = {}; // reset del buffer
-    scanCooldown = false;
-
-    const video = document.getElementById('qr-video');
-    const resultInput = document.getElementById('qr-result');
-
     try {
-        // Ferma lo stream video se esiste
+        lastScanned = '';
+        scanBuffer = {};
+        scanCooldown = false;
+
+        const video = document.getElementById('qr-video');
+        const resultInput = document.getElementById('qr-result');
+
+        // 🧹 Pulisce campo risultato
+        if (resultInput) resultInput.value = '';
+
+        // 🛑 Ferma tutti i flussi video
         if (videoStream) {
-            videoStream.getTracks().forEach(track => track.stop());
+            videoStream.getTracks().forEach(track => {
+                try { track.stop(); } catch(e){}
+            });
             videoStream = null;
         }
 
-        // Ferma e resetta Html5Qrcode
+        // 🧩 Ferma anche html5QrInstance se esiste
         if (html5QrInstance) {
-            try { await html5QrInstance.stop(); } catch(e){/* ignora */ }
-            try { html5QrInstance.clear(); } catch(e){/* ignora */ }
+            try { await html5QrInstance.stop(); } catch(e){}
+            try { html5QrInstance.clear(); } catch(e){}
             html5QrInstance = null;
         }
 
-        // Pulisce il campo risultato
-        if (resultInput) resultInput.value = '';
-
-        // ✅ Forza la disconnessione video con un piccolo delay
+        // 🧼 Rimuove srcObject e resetta il video
         if (video) {
             video.pause();
             video.srcObject = null;
 
-            // ⚙️ Hack mobile: rimuovi e ricrea l’elemento video
-            setTimeout(() => {
-                const parent = video.parentNode;
-                if (parent) {
-                    video.remove();
-                    const newVideo = document.createElement('video');
-                    newVideo.id = 'qr-video';
-                    newVideo.autoplay = true;
-                    newVideo.muted = true;
-                    newVideo.playsInline = true;
-                    newVideo.style.width = '100%';
-                    newVideo.style.maxWidth = '420px';
-                    newVideo.style.borderRadius = '8px';
-                    newVideo.style.border = '1px solid #d1d5db';
-                    parent.insertBefore(newVideo, parent.firstChild);
-                }
-            }, 300); // tempo sufficiente per chiudere la cam su iOS/Android
-        }
-    } catch (err) {
-        console.warn('Errore arresto scanner:', err);
-    }
+            // ⚙️ Rimuove e ricrea il video (fix per mobile)
+            const parent = video.parentNode;
+            const placeholder = video.nextSibling;
+            video.remove();
 
-    // Pulizia riferimenti globali
-    window.videoStream = null;
-    window.html5QrInstance = null;
+            const newVideo = document.createElement('video');
+            newVideo.id = 'qr-video';
+            newVideo.autoplay = true;
+            newVideo.muted = true;
+            newVideo.playsInline = true;
+            newVideo.style.width = '100%';
+            newVideo.style.maxWidth = '420px';
+            newVideo.style.borderRadius = '8px';
+            newVideo.style.border = '1px solid #d1d5db';
+
+            if (placeholder) {
+                parent.insertBefore(newVideo, placeholder);
+            } else {
+                parent.appendChild(newVideo);
+            }
+        }
+
+        console.log('✅ Scanner arrestato e video ricreato');
+    } catch (err) {
+        console.error('❌ Errore in stopQRScanner:', err);
+    }
 }
 
 // ====================== SWITCH TABS CON START/STOP QR ======================
