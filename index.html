@@ -452,11 +452,14 @@ document.getElementById('scarico-form').addEventListener('submit', async e=>{
 
 refreshAll();
 
+// ====================== QR SCANNER ROBUSTO ======================	
 let videoStream;
 let html5QrInstance;
 let lastScanned = '';
 let scanBuffer = {};
 const SCAN_BUFFER_MS = 1500; // 1,5 secondi tra scansioni dello stesso codice
+
+
 
 async function startQRScanner() {
     const video = document.getElementById('qr-video');
@@ -533,30 +536,33 @@ async function stopQRScanner() {
     lastScanned = '';
     scanCooldown = false;
 
-    // Ferma lo stream video se esiste
+    // Ferma stream video
     if (videoStream) {
         videoStream.getTracks().forEach(track => track.stop());
         videoStream = null;
     }
 
-    // Pulisci il video HTML
+    // Pulisci elemento video
     const video = document.getElementById('qr-video');
-    if (video) video.srcObject = null;
+    if (video) {
+        video.pause();
+        video.srcObject = null;
+    }
 
-    // Ferma html5QrInstance se esiste
+    // Ferma e resetta Html5Qrcode
     if (html5QrInstance) {
-        try {
-            await html5QrInstance.stop(); // ferma scanning
-        } catch(err) { /* ignora errori */ }
-        try {
-            html5QrInstance.clear();      // libera risorse
-        } catch(err) { /* ignora errori */ }
+        try { await html5QrInstance.stop(); } catch(e){/* ignora */ }
+        try { html5QrInstance.clear(); } catch(e){/* ignora */ }
         html5QrInstance = null;
     }
 
-    // Reset box codice rilevato
+    // Reset box QR
     const resultInput = document.getElementById('qr-result');
-    if (resultInput) resultInput.value = '';
+    if(resultInput) resultInput.value = '';
+
+    // Forza garbage collector su mobile (aiuta Safari/Chrome)
+    window.html5QrInstance = null;
+    window.videoStream = null;
 }
 
 // ====================== SWITCH TABS CON START/STOP QR ======================
@@ -574,9 +580,6 @@ document.querySelectorAll('.tab-container button').forEach(btn => {
         } else {
             stopQRScanner();
         }
-
-       
-       
     });
 });
 
@@ -609,10 +612,10 @@ document.getElementById('use-qr').addEventListener('click', () => {
         scaricoQty.focus();
         showNotification(`Barcode inserito nello Scarico: ${qrCode}`, 'success');
     }
-// Pulisce il box QR
-document.getElementById('qr-result').value = '';
-lastScanned = '';
 
+    // 🔹 Pulisce il box QR
+    document.getElementById('qr-result').value = '';
+    lastScanned = '';
 });
 
 </script>
