@@ -129,7 +129,11 @@ tr:hover { background-color:#eff6ff; }
 <div id="tab-qr" role="tabpanel" class="hidden">
   <h2>Scansiona QR / Barcode</h2>
 
-  <video id="qr-video" style="width:100%; max-width:420px; border-radius:8px; border:1px solid #d1d5db;" autoplay muted playsinline></video>
+  <p id="qr-status" style="font-weight:bold; color:#6b7280; margin-bottom:8px;">
+    ⛔ Scanner disattivato
+  </p>
+
+  <video id="qr-video" autoplay muted playsinline style="width:100%; max-width:420px; border-radius:8px; border:1px solid #d1d5db;"></video>
 
   <div style="margin-top:12px;">
     <label for="qr-result">Codice rilevato</label>
@@ -154,7 +158,6 @@ tr:hover { background-color:#eff6ff; }
     Se il browser non supporta la scansione nativa, verrà usato un fallback.
   </p>
 </div>
-
 
 <hr>
 <h2>Storico Completo Operazioni</h2>
@@ -456,140 +459,111 @@ refreshAll();
 let videoStream;
 let html5QrInstance;
 let lastScanned = '';
-let scanBuffer = {};
-const SCAN_BUFFER_MS = 1500; // 1,5 secondi tra scansioni dello stesso codice
-
-
+let scanCooldown = false;
 
 async function startQRScanner() {
     const video = document.getElementById('qr-video');
     const resultInput = document.getElementById('qr-result');
+    const statusLabel = document.getElementById('qr-status');
 
     try {
         if ('BarcodeDetector' in window) {
-            // ✅ API nativa
-            videoStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-            });
+            // --- API nativa ---
+            videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
             video.srcObject = videoStream;
 
-            const detector = new BarcodeDetector({ formats: ['qr_code', 'code_128', 'ean_13'] });
+            const detector = new BarcodeDetector({ formats: ['qr_code', 'code_128', 'ean_13', 'ean_8'] });
 
             const scanLoop = async () => {
                 if (!videoStream) return;
-
                 try {
                     const barcodes = await detector.detect(video);
-                    if (barcodes.length > 0) {
-                        const code = barcodes[0].rawValue;
-                        if (!scanBuffer[code]) {
-                            lastScanned = code;
-                            resultInput.value = code;
-                            showNotification(`📷 Codice rilevato: ${lastScanned}`, 'success');
-                            playBeep(150, 600, 0.5);
-                            if (navigator.vibrate) navigator.vibrate(100);
-
-                            scanBuffer[code] = Date.now();
-                            setTimeout(() => { delete scanBuffer[code]; }, SCAN_BUFFER_MS);
-                        }
+                    if (barcodes.length > 0 && barcodes[0].rawValue !== lastScanned && !scanCooldown) {
+                        lastScanned = barcodes[0].rawValue;
+                        resultInput.value = lastScanned;
+                        showNotification(`📷 Codice rilevato: ${lastScanned}`, 'success');
+                        playBeep(150, 600, 0.5);
+                        scanCooldown = true;
+                        setTimeout(() => scanCooldown = false, 1000);
                     }
-                } catch (err) {
-                    console.warn('Errore rilevamento barcode:', err);
-                }
-
+                } catch (err) { /* ignora errori */ }
                 requestAnimationFrame(scanLoop);
             };
-
             requestAnimationFrame(scanLoop);
-
         } else {
-            // 🔄 Fallback Html5Qrcode
+            // --- Fallback Html5Qrcode ---
             if (!html5QrInstance) html5QrInstance = new Html5Qrcode("qr-video");
-
-            const qrboxSize = Math.min(window.innerWidth * 0.8, 300);
 
             await html5QrInstance.start(
                 { facingMode: "environment" },
-                { fps: 15, qrbox: qrboxSize },
+                { fps: 10, qrbox: 300 },
                 qrCodeMessage => {
-                    if (!scanBuffer[qrCodeMessage]) {
+                    if (qrCodeMessage !== lastScanned && !scanCooldown) {
                         lastScanned = qrCodeMessage;
                         resultInput.value = lastScanned;
                         showNotification(`📷 Codice rilevato: ${lastScanned}`, 'success');
                         playBeep(150, 600, 0.5);
-                        if (navigator.vibrate) navigator.vibrate(100);
-
-                        scanBuffer[qrCodeMessage] = Date.now();
-                        setTimeout(() => { delete scanBuffer[qrCodeMessage]; }, SCAN_BUFFER_MS);
+                        scanCooldown = true;
+                        setTimeout(() => scanCooldown = false, 1000);
                     }
                 },
                 errorMessage => { /* ignora errori */ }
             );
         }
+
+        // ✅ Aggiorna stato
+        if (statusLabel) {
+            statusLabel.textContent = '📸 Scanner attivo';
+            statusLabel.style.color = '#16a34a';
+        }
+
     } catch (err) {
         console.error('Errore fotocamera:', err);
         alert('Impossibile accedere alla fotocamera. Controlla permessi e browser.');
     }
 }
 
-async function stopQRScanner() {
-    try {
-        lastScanned = '';
-        scanBuffer = {};
-        scanCooldown = false;
 
-        const video = document.getElementById('qr-video');
-        const resultInput = document.getElementById('qr-result');
+function stopQRScanner() {
+    const statusLabel = document.getElementById('qr-status');
+    const resultInput = document.getElementById('qr-result');
 
-        // 🧹 Pulisce campo risultato
-        if (resultInput) resultInput.value = '';
+    lastScanned = '';
+    scanCooldown = false;
 
-        // 🛑 Ferma tutti i flussi video
-        if (videoStream) {
-            videoStream.getTracks().forEach(track => {
-                try { track.stop(); } catch(e){}
-            });
-            videoStream = null;
-        }
+    // 🧹 Pulisce input codice
+    if (resultInput) resultInput.value = '';
 
-        // 🧩 Ferma anche html5QrInstance se esiste
-        if (html5QrInstance) {
-            try { await html5QrInstance.stop(); } catch(e){}
-            try { html5QrInstance.clear(); } catch(e){}
-            html5QrInstance = null;
-        }
-
-        // 🧼 Rimuove srcObject e resetta il video
-        if (video) {
-            video.pause();
-            video.srcObject = null;
-
-            // ⚙️ Rimuove e ricrea il video (fix per mobile)
-            const parent = video.parentNode;
-            const placeholder = video.nextSibling;
-            video.remove();
-
-            const newVideo = document.createElement('video');
-            newVideo.id = 'qr-video';
-            newVideo.autoplay = true;
-            newVideo.muted = true;
-            newVideo.playsInline = true;
-            newVideo.style.width = '100%';
-            newVideo.style.maxWidth = '420px';
-            newVideo.style.borderRadius = '8px';
-            newVideo.style.border = '1px solid #d1d5db';
-
-            if (placeholder) {
-                parent.insertBefore(newVideo, placeholder);
-            } else {
-                parent.appendChild(newVideo);
-            }
-        }
-
-        console.log('✅ Scanner arrestato e video ricreato');
-    } catch (err) {
-        console.error('❌ Errore in stopQRScanner:', err);
+    // 🛑 Ferma lo stream video (API nativa)
+    if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+        videoStream = null;
     }
+
+    // 🛑 Ferma html5QrInstance se attiva
+    if (html5QrInstance) {
+        html5QrInstance.stop()
+            .then(() => {
+                html5QrInstance.clear();
+                html5QrInstance = null;
+            })
+            .catch(err => console.warn('Errore stop QR:', err));
+    }
+
+    // 🔄 Forza rilascio cam su mobile
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ video: false }).catch(() => { });
+    }
+
+    // 🔴 Aggiorna stato
+    if (statusLabel) {
+        statusLabel.textContent = '⛔ Scanner disattivato';
+        statusLabel.style.color = '#dc2626';
+    }
+
+    // Pulizia riferimenti globali
+    window.videoStream = null;
+    window.html5QrInstance = null;
 }
 
 // ====================== SWITCH TABS CON START/STOP QR ======================
