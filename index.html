@@ -534,35 +534,59 @@ async function startQRScanner() {
 
 async function stopQRScanner() {
     lastScanned = '';
+    scanBuffer = {}; // reset del buffer
     scanCooldown = false;
 
-    // Ferma stream video
-    if (videoStream) {
-        videoStream.getTracks().forEach(track => track.stop());
-        videoStream = null;
-    }
-
-    // Pulisci elemento video
     const video = document.getElementById('qr-video');
-    if (video) {
-        video.pause();
-        video.srcObject = null;
-    }
-
-    // Ferma e resetta Html5Qrcode
-    if (html5QrInstance) {
-        try { await html5QrInstance.stop(); } catch(e){/* ignora */ }
-        try { html5QrInstance.clear(); } catch(e){/* ignora */ }
-        html5QrInstance = null;
-    }
-
-    // Reset box QR
     const resultInput = document.getElementById('qr-result');
-    if(resultInput) resultInput.value = '';
 
-    // Forza garbage collector su mobile (aiuta Safari/Chrome)
-    window.html5QrInstance = null;
+    try {
+        // Ferma lo stream video se esiste
+        if (videoStream) {
+            videoStream.getTracks().forEach(track => track.stop());
+            videoStream = null;
+        }
+
+        // Ferma e resetta Html5Qrcode
+        if (html5QrInstance) {
+            try { await html5QrInstance.stop(); } catch(e){/* ignora */ }
+            try { html5QrInstance.clear(); } catch(e){/* ignora */ }
+            html5QrInstance = null;
+        }
+
+        // Pulisce il campo risultato
+        if (resultInput) resultInput.value = '';
+
+        // ✅ Forza la disconnessione video con un piccolo delay
+        if (video) {
+            video.pause();
+            video.srcObject = null;
+
+            // ⚙️ Hack mobile: rimuovi e ricrea l’elemento video
+            setTimeout(() => {
+                const parent = video.parentNode;
+                if (parent) {
+                    video.remove();
+                    const newVideo = document.createElement('video');
+                    newVideo.id = 'qr-video';
+                    newVideo.autoplay = true;
+                    newVideo.muted = true;
+                    newVideo.playsInline = true;
+                    newVideo.style.width = '100%';
+                    newVideo.style.maxWidth = '420px';
+                    newVideo.style.borderRadius = '8px';
+                    newVideo.style.border = '1px solid #d1d5db';
+                    parent.insertBefore(newVideo, parent.firstChild);
+                }
+            }, 300); // tempo sufficiente per chiudere la cam su iOS/Android
+        }
+    } catch (err) {
+        console.warn('Errore arresto scanner:', err);
+    }
+
+    // Pulizia riferimenti globali
     window.videoStream = null;
+    window.html5QrInstance = null;
 }
 
 // ====================== SWITCH TABS CON START/STOP QR ======================
