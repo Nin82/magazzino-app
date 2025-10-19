@@ -455,7 +455,8 @@ refreshAll();
 let videoStream;
 let html5QrInstance;
 let lastScanned = '';
-let scanCooldown = false;
+let scanBuffer = {};
+const SCAN_BUFFER_MS = 1500; // 1,5 secondi tra scansioni dello stesso codice
 
 async function startQRScanner() {
     const video = document.getElementById('qr-video');
@@ -463,46 +464,60 @@ async function startQRScanner() {
 
     try {
         if ('BarcodeDetector' in window) {
-            // API nativa
-            videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            // ✅ API nativa
+            videoStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+            });
             video.srcObject = videoStream;
 
-            const detector = new BarcodeDetector({ formats: ['qr_code','code_128','ean_13'] });
+            const detector = new BarcodeDetector({ formats: ['qr_code', 'code_128', 'ean_13'] });
 
             const scanLoop = async () => {
                 if (!videoStream) return;
 
                 try {
                     const barcodes = await detector.detect(video);
-                    if (barcodes.length > 0 && barcodes[0].rawValue !== lastScanned && !scanCooldown) {
-                        lastScanned = barcodes[0].rawValue;
-                        resultInput.value = lastScanned;
-                        showNotification(`📷 Codice rilevato: ${lastScanned}`, 'success');
-                        playBeep(150, 600, 0.5); // beep qui
-                        scanCooldown = true;
-                        setTimeout(()=> scanCooldown = false, 1000);
+                    if (barcodes.length > 0) {
+                        const code = barcodes[0].rawValue;
+                        if (!scanBuffer[code]) {
+                            lastScanned = code;
+                            resultInput.value = code;
+                            showNotification(`📷 Codice rilevato: ${lastScanned}`, 'success');
+                            playBeep(150, 600, 0.5);
+                            if (navigator.vibrate) navigator.vibrate(100);
+
+                            scanBuffer[code] = Date.now();
+                            setTimeout(() => { delete scanBuffer[code]; }, SCAN_BUFFER_MS);
+                        }
                     }
-                } catch (err) { /* ignora errori */ }
+                } catch (err) {
+                    console.warn('Errore rilevamento barcode:', err);
+                }
 
                 requestAnimationFrame(scanLoop);
             };
+
             requestAnimationFrame(scanLoop);
 
         } else {
-            // Fallback Html5Qrcode
+            // 🔄 Fallback Html5Qrcode
             if (!html5QrInstance) html5QrInstance = new Html5Qrcode("qr-video");
+
+            const qrboxSize = Math.min(window.innerWidth * 0.8, 300);
 
             await html5QrInstance.start(
                 { facingMode: "environment" },
-                { fps: 10, qrbox: 300 },
+                { fps: 15, qrbox: qrboxSize },
                 qrCodeMessage => {
-                    if(qrCodeMessage !== lastScanned && !scanCooldown){
+                    if (!scanBuffer[qrCodeMessage]) {
                         lastScanned = qrCodeMessage;
                         resultInput.value = lastScanned;
                         showNotification(`📷 Codice rilevato: ${lastScanned}`, 'success');
-			playBeep(150, 600, 0.5); // beep qui
-                        scanCooldown = true;
-                        setTimeout(()=> scanCooldown = false, 1000);
+                        playBeep(150, 600, 0.5);
+                        if (navigator.vibrate) navigator.vibrate(100);
+
+                        scanBuffer[qrCodeMessage] = Date.now();
+                        setTimeout(() => { delete scanBuffer[qrCodeMessage]; }, SCAN_BUFFER_MS);
                     }
                 },
                 errorMessage => { /* ignora errori */ }
@@ -516,7 +531,7 @@ async function startQRScanner() {
 
 function stopQRScanner() {
     lastScanned = '';
-    scanCooldown = false;
+    scanBuffer = {};
 
     if (videoStream) {
         videoStream.getTracks().forEach(track => track.stop());
@@ -549,7 +564,7 @@ document.querySelectorAll('.tab-container button').forEach(btn => {
     });
 });
 
-// ====================== PULSANTE "USA BARCODE" ======================
+// ====================== PULSANTE "USA BARCODE" OTTIMIZZATO ======================
 document.getElementById('use-qr').addEventListener('click', () => {
     const qrCode = document.getElementById('qr-result').value;
     const target = document.getElementById('qr-target').value;
@@ -567,19 +582,18 @@ document.getElementById('use-qr').addEventListener('click', () => {
     document.querySelectorAll('[role="tabpanel"]').forEach(tab => tab.classList.add('hidden'));
     document.getElementById(tabId).classList.remove('hidden');
 
-    // Inserisce il codice nel campo corretto
-    if(target === 'carico'){
+    // Inserisce il codice nel campo corretto e autofocus su quantità
+    if (target === 'carico') {
         caricoBarcode.value = qrCode;
         caricoBarcode.dispatchEvent(new Event('input')); // autocompleta articolo
+        caricoQty.focus();
         showNotification(`Barcode inserito nel Carico: ${qrCode}`, 'success');
     } else {
         scaricoBarcode.value = qrCode;
+        scaricoQty.focus();
         showNotification(`Barcode inserito nello Scarico: ${qrCode}`, 'success');
     }
-
-    
 });
-
 
 </script>
 </body>
