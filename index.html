@@ -475,7 +475,8 @@ async function startQRScanner() {
                         lastScanned = barcodes[0].rawValue;
                         resultInput.value = lastScanned;
                         showNotification(`📷 Codice rilevato: ${lastScanned}`, 'success');
-                        scanCooldown = true;
+                        playBeep(150, 600, 0.5); // beep qui
+			scanCooldown = true;
                         setTimeout(()=> scanCooldown = false, 1000);
                     }
                 } catch (err) { /* ignora errori */ }
@@ -496,7 +497,8 @@ async function startQRScanner() {
                         lastScanned = qrCodeMessage;
                         resultInput.value = lastScanned;
                         showNotification(`📷 Codice rilevato: ${lastScanned}`, 'success');
-                        scanCooldown = true;
+                        playBeep(150, 600, 0.5); // beep qui
+			scanCooldown = true;
                         setTimeout(()=> scanCooldown = false, 1000);
                     }
                 },
@@ -572,8 +574,7 @@ document.getElementById('use-qr').addEventListener('click', () => {
         showNotification(`Barcode inserito nello Scarico: ${qrCode}`, 'success');
     }
 
-    // Suono beep
-    playBeep(150, 600, 0.5);
+    
 });
 
 
