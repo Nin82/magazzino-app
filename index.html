@@ -155,7 +155,6 @@ tr:hover { background-color:#eff6ff; }
   </p>
 </div>
 
-<audio id="qr-beep" src="beep-1082.wav" preload="auto"></audio>
 
 <hr>
 <h2>Storico Completo Operazioni</h2>
@@ -529,12 +528,8 @@ document.querySelectorAll('.tab-container button').forEach(btn => {
     });
 });
 
-
-// ====================== ELEMENTO AUDIO ======================
-const qrBeep = document.getElementById('qr-beep');
-
 // ====================== PULSANTE "USA BARCODE" ======================
-document.getElementById('use-qr').addEventListener('click', () => {
+  document.getElementById('use-qr').addEventListener('click', () => {
     const qrCode = document.getElementById('qr-result').value;
     const target = document.getElementById('qr-target').value;
 
@@ -543,7 +538,15 @@ document.getElementById('use-qr').addEventListener('click', () => {
         return;
     }
 
-    // Inserimento nel tab corretto
+    // Cambia automaticamente il tab
+    const tabId = target === 'carico' ? 'tab-carico' : 'tab-scarico';
+    document.querySelectorAll('.tab-container button').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.tab-container button[data-target="${tabId}"]`).classList.add('active');
+
+    document.querySelectorAll('[role="tabpanel"]').forEach(tab => tab.classList.add('hidden'));
+    document.getElementById(tabId).classList.remove('hidden');
+
+    // Inserisce il codice nel campo corretto
     if(target === 'carico'){
         caricoBarcode.value = qrCode;
         caricoBarcode.dispatchEvent(new Event('input')); // autocompleta articolo
@@ -553,104 +556,11 @@ document.getElementById('use-qr').addEventListener('click', () => {
         showNotification(`Barcode inserito nello Scarico: ${qrCode}`, 'success');
     }
 
-    // ✅ Suono
-    qrBeep.currentTime = 0;
-    qrBeep.play();
-
-    // Passa automaticamente al tab corretto
-    document.querySelectorAll('.tab-container button').forEach(btn => btn.classList.remove('active'));
-    const targetTabBtn = target === 'carico' ? document.querySelector('[data-target="tab-carico"]')
-                                             : document.querySelector('[data-target="tab-scarico"]');
-    targetTabBtn.classList.add('active');
-
-    document.querySelectorAll('[role="tabpanel"]').forEach(tab => tab.classList.add('hidden'));
-    document.getElementById(target === 'carico' ? 'tab-carico' : 'tab-scarico').classList.remove('hidden');
-});	
-
-// ====================== BOTTONE STOP SCANNER ======================
-document.getElementById('stop-qr').addEventListener('click', () => {
-    stopQRScanner();
+    // Suono beep
+    const beep = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA='); // piccolo beep vuoto
+    beep.play();
 });
 
-// ====================== FUNZIONE START QR SCANNER ======================
-async function startQRScanner() {
-    const video = document.getElementById('qr-video');
-    const resultInput = document.getElementById('qr-result');
-
-    try {
-        if ('BarcodeDetector' in window) {
-            // API nativa
-            videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-            video.srcObject = videoStream;
-
-            const detector = new BarcodeDetector({ formats: ['qr_code','code_128','ean_13'] });
-
-            const scanLoop = async () => {
-                if (!videoStream) return;
-
-                try {
-                    const barcodes = await detector.detect(video);
-                    if (barcodes.length > 0 && barcodes[0].rawValue !== lastScanned && !scanCooldown) {
-                        lastScanned = barcodes[0].rawValue;
-                        resultInput.value = lastScanned;
-                        showNotification(`📷 Codice rilevato: ${lastScanned}`, 'success');
-
-                        // ✅ Suono
-                        qrBeep.currentTime = 0;
-                        qrBeep.play();
-
-                        scanCooldown = true;
-                        setTimeout(()=> scanCooldown = false, 1000);
-                    }
-                } catch (err) { /* ignora errori */ }
-
-                requestAnimationFrame(scanLoop);
-            };
-            requestAnimationFrame(scanLoop);
-
-        } else {
-            // Fallback Html5Qrcode
-            if (!html5QrInstance) html5QrInstance = new Html5Qrcode("qr-video");
-
-            await html5QrInstance.start(
-                { facingMode: "environment" },
-                { fps: 10, qrbox: 300 },
-                qrCodeMessage => {
-                    if(qrCodeMessage !== lastScanned && !scanCooldown){
-                        lastScanned = qrCodeMessage;
-                        resultInput.value = lastScanned;
-                        showNotification(`📷 Codice rilevato: ${lastScanned}`, 'success');
-
-                        // ✅ Suono
-                        qrBeep.currentTime = 0;
-                        qrBeep.play();
-
-                        scanCooldown = true;
-                        setTimeout(()=> scanCooldown = false, 1000);
-                    }
-                },
-                errorMessage => { /* ignora errori */ }
-            );
-        }
-    } catch (err) {
-        console.error('Errore fotocamera:', err);
-        alert('Impossibile accedere alla fotocamera. Controlla permessi e browser.');
-    }
-}
-
-function stopQRScanner() {
-    lastScanned = '';
-    scanCooldown = false;
-
-    if (videoStream) {
-        videoStream.getTracks().forEach(track => track.stop());
-        videoStream = null;
-    }
-
-    if (html5QrInstance) {
-        html5QrInstance.stop().catch(err => console.log('Errore stop QR:', err));
-    }
-}
 
 
 </script>
