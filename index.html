@@ -402,28 +402,7 @@ async function refreshAll(){
     await renderAndamentoGiornaliero(); 
 }
 
-// ================== TABS ==================
-document.querySelectorAll('.tab-container button').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-        // Disattiva tab precedente e attiva quella nuova
-        document.querySelectorAll('.tab-container button').forEach(b=>b.classList.remove('active'));
-        btn.classList.add('active');
 
-        // Nascondi tutti i pannelli
-        document.querySelectorAll('[role="tabpanel"]').forEach(tab=>tab.classList.add('hidden'));
-        document.getElementById(btn.dataset.target).classList.remove('hidden');
-
-        // 🔹 Gestione QR scanner: start/stop automatico
-        if (btn.dataset.target === 'tab-qr') {
-            startQRScanner();   // Avvia scanner se selezionato tab QR
-        } else {
-            stopQRScanner();    // Arresta scanner se si cambia tab
-        }
-
-        // Aggiorna i dati (carico/scarico/dashboard)
-        refreshAll();
-    });
-});
 // ================== FILTRI ==================
 document.getElementById('apply-filter').addEventListener('click', renderTables);
 document.getElementById('clear-filter').addEventListener('click', ()=>{
