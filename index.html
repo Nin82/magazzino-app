@@ -409,6 +409,30 @@ scaricoBarcode.addEventListener('input', async () => {
   }
 });
 
+// 🔹 Nuova funzione per aggiornare la select scarico e selezionare un barcode
+async function refreshScaricoSelect(currentBarcode = '') {
+  await populateScaricoArticles();
+
+  if (currentBarcode) {
+    const exists = [...scaricoArticle.options].some(o => o.value === currentBarcode);
+    if (!exists) {
+      const { data } = await supabase
+        .from('magazzino')
+        .select('article, barcode')
+        .eq('barcode', currentBarcode)
+        .maybeSingle();
+
+      if (data) {
+        const opt = document.createElement('option');
+        opt.value = data.barcode;
+        opt.textContent = data.article;
+        scaricoArticle.appendChild(opt);
+      }
+    }
+    scaricoArticle.value = currentBarcode; // seleziona l'articolo corrispondente
+  }
+}
+
 // ================== NOTIFICHE ==================
 function showNotification(msg,type='info'){
     notificationElement.textContent = msg;
@@ -649,8 +673,18 @@ document.getElementById('carico-form').addEventListener('submit', async e=>{
 });
 document.getElementById('scarico-form').addEventListener('submit', async e=>{
     e.preventDefault();
-    await addScarico(scaricoArticle.value || scaricoBarcode.value, parseInt(scaricoQty.value));
-    scaricoBarcode.value=''; scaricoQty.value=1;
+
+    const barcode = scaricoArticle.value || scaricoBarcode.value;
+
+    await addScarico(barcode, parseInt(scaricoQty.value));
+
+    // Resetta campi
+    scaricoBarcode.value = '';
+    scaricoQty.value = 1;
+
+    // Aggiorna select scarico per includere eventuali barcode non presenti
+    await refreshScaricoSelect();
+
     refreshAll();
 });
 
@@ -784,7 +818,7 @@ document.querySelectorAll('.tab-container button').forEach(btn => {
 });
 
 // ====================== PULSANTE "USA BARCODE" OTTIMIZZATO ======================
-document.getElementById('use-qr').addEventListener('click', () => {
+document.getElementById('use-qr').addEventListener('click', async () => {
     const qrCode = document.getElementById('qr-result').value;
     const target = document.getElementById('qr-target').value;
 
@@ -809,8 +843,8 @@ document.getElementById('use-qr').addEventListener('click', () => {
         showNotification(`Barcode inserito nel Carico: ${qrCode}`, 'success');
     } else {
         scaricoBarcode.value = qrCode;
-        scaricoBarcode.dispatchEvent(new Event('input'));
         scaricoQty.focus();
+        await refreshScaricoSelect(qrCode); // ✅ aggiorna select e aggiunge barcode se manca
         showNotification(`Barcode inserito nello Scarico: ${qrCode}`, 'success');
     }
 
