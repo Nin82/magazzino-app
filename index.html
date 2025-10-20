@@ -118,7 +118,7 @@ tr:hover { background-color:#eff6ff; }
         value="1"
       >
     </div>
-
+	<div id="carico-giacenza-display" style="font-weight:700; color:#4f46e5; margin-top:10px; min-width:180px;"></div>
     <button type="submit" class="btn-action">✅ Registra Carico</button>
   </form>
 </div>
@@ -162,7 +162,7 @@ tr:hover { background-color:#eff6ff; }
         value="1"
       >
     </div>
-
+	<div id="scarico-giacenza-display" style="font-weight:700; color:#ef4444; margin-top:10px; min-width:180px;"></div>
     <button type="submit" class="btn-delete">🔥 Registra Scarico</button>
   </form>
 </div>
@@ -344,20 +344,23 @@ scaricoBarcode.addEventListener('input', async () => {
 
 // Autocompila barcode quando si seleziona un articolo dalla select Scarico
 scaricoArticle.addEventListener('change', async () => {
-  const barcode = scaricoArticle.value;
+    const barcode = scaricoArticle.value;
 
-  // Controllo che il barcode esista ancora in magazzino
-  if (barcode) {
-    const { data: existing, error } = await supabase
-      .from('magazzino')
-      .select('barcode')
-      .eq('barcode', barcode)
-      .maybeSingle();
+    // Controllo che il barcode esista ancora in magazzino
+    if (barcode) {
+        const { data: existing, error } = await supabase
+            .from('magazzino')
+            .select('barcode')
+            .eq('barcode', barcode)
+            .maybeSingle();
 
-    scaricoBarcode.value = (existing && existing.barcode) || '';
-  } else {
-    scaricoBarcode.value = '';
-  }
+        scaricoBarcode.value = (existing && existing.barcode) || '';
+    } else {
+        scaricoBarcode.value = '';
+    }
+    
+    // ➡️ AGGIORNA LA GIACENZA
+    getAndDisplayStock(barcode, 'scarico-giacenza-display', 'scarico');
 });
 
 // ================== FUNZIONI SUPPORTO ==================
@@ -387,26 +390,23 @@ async function populateScaricoArticles() {
 
 // Autocompila l’articolo quando inserisci o scanni un barcode
 scaricoBarcode.addEventListener('input', async () => {
-  const code = scaricoBarcode.value.trim();
-  if (!code) return;
+    const code = scaricoBarcode.value.trim();
+    if (!code) {
+        document.getElementById('scarico-giacenza-display').textContent = ''; // ⬅️ AGGIUNTO
+        return;
+    }
+    
+    // ... (restante logica di lookup e selezione)
 
-  const { data: existing, error } = await supabase
-    .from('magazzino')
-    .select('article')
-    .eq('barcode', code)
-    .maybeSingle();
+    if (existing) {
+        const option = [...scaricoArticle.options].find(o => o.textContent === existing.article);
+        if (option) scaricoArticle.value = option.value;
+    } else {
+        scaricoArticle.value = ''; // [cite: 47] se non esiste, resetta la select
+    }
 
-  if (error) {
-    console.warn('Errore lookup articolo:', error);
-    return;
-  }
-
-  if (existing) {
-    const option = [...scaricoArticle.options].find(o => o.textContent === existing.article);
-    if (option) scaricoArticle.value = option.value;
-  } else {
-    scaricoArticle.value = ''; // se non esiste, resetta la select
-  }
+    // ➡️ AGGIORNA LA GIACENZA
+    getAndDisplayStock(code, 'scarico-giacenza-display', 'scarico');
 });
 
 // 🔹 Nuova funzione per aggiornare la select scarico e selezionare un barcode
@@ -431,6 +431,36 @@ async function refreshScaricoSelect(currentBarcode = '') {
     }
     scaricoArticle.value = currentBarcode; // seleziona l'articolo corrispondente
   }
+}
+
+
+// ================== FUNZIONI SUPPORT (Nuova) ==================
+
+async function getAndDisplayStock(barcode, displayElementId, mode) {
+    const displayElement = document.getElementById(displayElementId);
+    if (!displayElement) return;
+
+    if (!barcode) {
+        displayElement.textContent = '';
+        return;
+    }
+
+    const { data: existing } = await supabase
+        .from('magazzino')
+        .select('quantity')
+        .eq('barcode', barcode)
+        .maybeSingle();
+
+    if (existing) {
+        const qty = existing.quantity;
+        displayElement.textContent = `Giacenza Attuale: ${qty} unità`;
+    } else {
+        if (mode === 'carico') {
+            displayElement.textContent = 'NUOVO Articolo (Giacenza: 0)';
+        } else { // mode === 'scarico'
+            displayElement.textContent = 'Articolo NON in giacenza';
+        }
+    }
 }
 
 // ================== NOTIFICHE ==================
@@ -661,10 +691,18 @@ document.getElementById('clear-filter').addEventListener('click', ()=>{
 
 // ================== FORM ==================
 caricoBarcode.addEventListener('input', async ()=>{
-    if(!caricoBarcode.value) return;
-    const { data:existing } = await supabase.from('magazzino').select('*').eq('barcode',caricoBarcode.value).single();
+    const barcode = caricoBarcode.value;
+    if(!barcode) {
+        document.getElementById('carico-giacenza-display').textContent = '';
+        return;
+    }
+    const { data:existing } = await supabase.from('magazzino').select('article').eq('barcode',barcode).maybeSingle();
     if(existing) caricoArticle.value = existing.article;
+    
+    // ➡️ AGGIORNA LA GIACENZA
+    getAndDisplayStock(barcode, 'carico-giacenza-display', 'carico');
 });
+
 document.getElementById('carico-form').addEventListener('submit', async e=>{
     e.preventDefault();
     await addCarico(caricoBarcode.value,caricoArticle.value,parseInt(caricoQty.value));
