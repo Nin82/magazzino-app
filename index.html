@@ -92,26 +92,30 @@ tr:hover { background-color:#eff6ff; }
 </div>
 
 <!-- SCARICO -->
-<form id="scarico-form">
-  <div>
-    <label for="scarico-barcode">Barcode:</label>
-    <input id="scarico-barcode" placeholder="Codice Barcode" required>
-  </div>
+<div id="tab-scarico" role="tabpanel" class="hidden">
+  <h2>Registra uno Scarico</h2>
+  <form id="scarico-form">
+    <div>
+      <label for="scarico-barcode">Barcode:</label>
+      <input id="scarico-barcode" placeholder="Codice Barcode" required>
+    </div>
 
-  <div>
-    <label for="scarico-article">Articolo:</label>
-    <select id="scarico-article" required>
-      <option value="">-- Seleziona Articolo --</option>
-    </select>
-  </div>
+    <div>
+      <label for="scarico-article">Articolo:</label>
+      <select id="scarico-article" required>
+        <option value="">-- Seleziona Articolo --</option>
+      </select>
+    </div>
 
-  <div>
-    <label for="scarico-qty">Quantità:</label>
-    <input type="number" id="scarico-qty" required min="1" value="1">
-  </div>
+    <div>
+      <label for="scarico-qty">Quantità:</label>
+      <input type="number" id="scarico-qty" required min="1" value="1">
+    </div>
 
-  <button type="submit" class="btn-delete">🔥 Registra Scarico</button>
-</form>
+    <button type="submit" class="btn-delete">🔥 Registra Scarico</button>
+  </form>
+</div>
+
 
 <!-- INVENTARIO -->
 <div id="tab-stock-summary" role="tabpanel" class="hidden">
