@@ -715,6 +715,7 @@ document.getElementById('use-qr').addEventListener('click', () => {
         showNotification(`Barcode inserito nel Carico: ${qrCode}`, 'success');
     } else {
         scaricoBarcode.value = qrCode;
+        scaricoBarcode.dispatchEvent(new Event('input'));
         scaricoQty.focus();
         showNotification(`Barcode inserito nello Scarico: ${qrCode}`, 'success');
     }
