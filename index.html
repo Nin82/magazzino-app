@@ -388,6 +388,49 @@ async function populateScaricoArticles() {
   }
 }
 
+
+/ 🔹 Nuova funzione per aggiornare la select scarico e selezionare un barcode
+async function refreshScaricoSelect(currentBarcode = '') {
+// ...
+}
+
+// ➡️ INSERIMENTO QUI: Funzione getAndDisplayStock aggiornata con auto-reset
+async function getAndDisplayStock(barcode, displayElementId, mode, autoReset = false) {
+    const displayElement = document.getElementById(displayElementId);
+    if (!displayElement) return;
+
+    if (!barcode) {
+        displayElement.textContent = '';
+        return;
+    }
+
+    const { data: existing } = await supabase
+        .from('magazzino')
+        .select('quantity')
+        .eq('barcode', barcode)
+        .maybeSingle();
+
+    if (existing) {
+        const qty = existing.quantity;
+        displayElement.textContent = `Giacenza Attuale: ${qty} unità`;
+    } else {
+        if (mode === 'carico') {
+            displayElement.textContent = 'NUOVO Articolo (Giacenza: 0)';
+        } else { // mode === 'scarico'
+            displayElement.textContent = 'Articolo NON in giacenza';
+        }
+    }
+    
+    // LOGICA AGGIUNTA: Auto-reset dopo 10 secondi
+    if (autoReset) {
+        setTimeout(() => {
+            if (displayElement.textContent.includes('Giacenza Attuale') || displayElement.textContent.includes('NUOVO Articolo')) {
+                displayElement.textContent = '';
+            }
+        }, 10000); // 10000ms = 10 secondi
+    }
+}
+
 // Autocompila l’articolo quando inserisci o scanni un barcode
 scaricoBarcode.addEventListener('input', async () => {
     const code = scaricoBarcode.value.trim();
@@ -432,6 +475,7 @@ async function refreshScaricoSelect(currentBarcode = '') {
     scaricoArticle.value = currentBarcode; // seleziona l'articolo corrispondente
   }
 }
+
 
 
 // ================== FUNZIONI SUPPORT (Nuova) ==================
@@ -705,24 +749,35 @@ caricoBarcode.addEventListener('input', async ()=>{
 
 document.getElementById('carico-form').addEventListener('submit', async e=>{
     e.preventDefault();
-    await addCarico(caricoBarcode.value,caricoArticle.value,parseInt(caricoQty.value));
+    // 1. Salva il barcode prima che il campo venga resettato
+    const currentBarcode = caricoBarcode.value; 
+    
+    // 2. Esegue il carico
+    await addCarico(currentBarcode,caricoArticle.value,parseInt(caricoQty.value));
+    
+    // 3. AGGIORNA E MOSTRA PER 10s LA NUOVA GIACENZA
+    // Il 'true' attiva il setTimeout di 10 secondi nella funzione getAndDisplayStock
+    await getAndDisplayStock(currentBarcode, 'carico-giacenza-display', 'carico', true); 
+    
+    // 4. Resetta i campi del form e aggiorna le tabelle
     caricoBarcode.value=''; caricoArticle.value=''; caricoQty.value=1;
     refreshAll();
 });
+
 document.getElementById('scarico-form').addEventListener('submit', async e=>{
     e.preventDefault();
-
-    const barcode = scaricoArticle.value || scaricoBarcode.value;
-
-    await addScarico(barcode, parseInt(scaricoQty.value));
-
-    // Resetta campi
-    scaricoBarcode.value = '';
-    scaricoQty.value = 1;
-
-    // Aggiorna select scarico per includere eventuali barcode non presenti
-    await refreshScaricoSelect();
-
+    // 1. Salva il barcode (può venire dal select o dall'input)
+    const currentBarcode = scaricoArticle.value || scaricoBarcode.value; 
+    
+    // 2. Esegue lo scarico
+    await addScarico(currentBarcode, parseInt(scaricoQty.value));
+    
+    // 3. AGGIORNA E MOSTRA PER 10s LA NUOVA GIACENZA
+    // La funzione getAndDisplayStock deve essere quella modificata con il setTimeout.
+    await getAndDisplayStock(currentBarcode, 'scarico-giacenza-display', 'scarico', true); 
+    
+    // 4. Resetta i campi e aggiorna
+    scaricoBarcode.value=''; scaricoQty.value=1;
     refreshAll();
 });
 
