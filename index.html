@@ -381,39 +381,77 @@ async function getAndDisplayStock(barcode, displayElementId, mode, autoReset = f
     }
 }
 
+// Autocompila l’articolo quando inserisci o scanni un barcode
 scaricoBarcode.addEventListener('input', async () => {
-  const code = scaricoBarcode.value.trim();
-  if (!code) {
-    scaricoArticle.value = '';
-    document.getElementById('scarico-giacenza-display').textContent = ''; // AGGIUNTO: Pulisce la giacenza
-    return;
-  }
+    // ... Logica per barcode ...
+    
+    // ➡️ AGGIORNA LA GIACENZA in tempo reale
+    getAndDisplayStock(code, 'scarico-giacenza-display', 'scarico');
+}); // <-- QUI finisce il primo blocco
 
-  const { data: existing, error } = await supabase
-    .from('magazzino')
-    .select('article')
-    .eq('barcode', code)
-    .maybeSingle();
+// Autocompila barcode e aggiorna giacenza quando si seleziona un articolo dalla select Scarico
+scaricoArticle.addEventListener('change', async () => {
+    // ... Logica per select ...
+    
+    // ➡️ AGGIORNA LA GIACENZA
+    getAndDisplayStock(barcode, 'scarico-giacenza-display', 'scarico');
+}); // <-- QUI inizia il secondo blocco
 
-  if (error) {
-    console.warn('Errore lookup articolo:', error);
-    scaricoArticle.value = '';
-    document.getElementById('scarico-giacenza-display').textContent = ''; // AGGIUNTO: Pulisce in caso di errore
-    return;
-  }
 
-  if (existing) {
-    const option = [...scaricoArticle.options].find(o => o.value === code);
-    if (option) scaricoArticle.value = option.value;
-    else scaricoArticle.value = ''; // barcode non presente nella select
-  } else {
-    scaricoArticle.value = ''; // barcode non trovato
-  }
-  
-  // ➡️ AGGIORNA LA GIACENZA
-  getAndDisplayStock(code, 'scarico-giacenza-display', 'scarico');
+// Autocompila l’articolo quando inserisci o scanni un barcode
+scaricoBarcode.addEventListener('input', async () => {
+    const code = scaricoBarcode.value.trim();
+    if (!code) {
+        scaricoArticle.value = '';
+        document.getElementById('scarico-giacenza-display').textContent = ''; // Pulisce la giacenza
+        return;
+    }
+
+    const { data: existing, error } = await supabase
+        .from('magazzino')
+        .select('article')
+        .eq('barcode', code)
+        .maybeSingle();
+
+    if (error) {
+        console.warn('Errore lookup articolo:', error);
+        scaricoArticle.value = '';
+        document.getElementById('scarico-giacenza-display').textContent = ''; // Pulisce in caso di errore
+        return;
+    }
+
+    if (existing) {
+        const option = [...scaricoArticle.options].find(o => o.value === code);
+        if (option) scaricoArticle.value = option.value;
+        else scaricoArticle.value = ''; // barcode non presente nella select
+    } else {
+        scaricoArticle.value = ''; // barcode non trovato
+    }
+    
+    // ➡️ AGGIORNA LA GIACENZA in tempo reale
+    getAndDisplayStock(code, 'scarico-giacenza-display', 'scarico');
 });
 
+// Autocompila barcode e aggiorna giacenza quando si seleziona un articolo dalla select Scarico
+scaricoArticle.addEventListener('change', async () => {
+    const barcode = scaricoArticle.value;
+
+    // Aggiorna l'input del barcode basandosi sulla selezione
+    if (barcode) {
+        const { data: existing, error } = await supabase
+            .from('magazzino')
+            .select('barcode')
+            .eq('barcode', barcode)
+            .maybeSingle();
+
+        scaricoBarcode.value = (existing && existing.barcode) || '';
+    } else {
+        scaricoBarcode.value = '';
+    }
+    
+    // ➡️ AGGIORNA LA GIACENZA
+    getAndDisplayStock(barcode, 'scarico-giacenza-display', 'scarico');
+});
 
 
 // ================== NOTIFICHE ==================
