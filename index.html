@@ -118,7 +118,7 @@ tr:hover { background-color:#eff6ff; }
         value="1"
       >
     </div>
-
+    <p id="carico-available" style="font-weight:bold;"></p>
     <button type="submit" class="btn-action">✅ Registra Carico</button>
   </form>
 </div>
@@ -162,7 +162,7 @@ tr:hover { background-color:#eff6ff; }
         value="1"
       >
     </div>
-
+     <p id="scarico-available" style="font-weight:bold;"></p>
     <button type="submit" class="btn-delete">🔥 Registra Scarico</button>
   </form>
 </div>
@@ -308,6 +308,46 @@ const scaricoBarcode = document.getElementById('scarico-barcode');
 const scaricoQty = document.getElementById('scarico-qty');
 const notificationElement = document.getElementById('notification');
 
+// ================== QUANTITÀ DISPONIBILI ==================
+async function updateAvailability(barcode, el) {
+  if (!barcode) {
+    el.textContent = '';
+    el.style.color = '';
+    return;
+  }
+
+  const { data: existing } = await supabase
+    .from('magazzino')
+    .select('quantity')
+    .eq('barcode', barcode)
+    .maybeSingle();
+
+  if (!existing) {
+    el.textContent = '❌ Non presente in magazzino';
+    el.style.color = '#dc2626';
+  } else {
+    el.textContent = `Disponibili: ${existing.quantity}`;
+    el.style.color = existing.quantity > 0 ? '#16a34a' : '#dc2626';
+  }
+}
+
+// === CARICO ===
+caricoBarcode.addEventListener('input', async () => {
+  await updateAvailability(caricoBarcode.value.trim(), document.getElementById('carico-available'));
+});
+
+caricoArticle.addEventListener('change', async () => {
+  await updateAvailability(caricoArticle.value, document.getElementById('carico-available'));
+});
+
+// === SCARICO ===
+scaricoBarcode.addEventListener('input', async () => {
+  await updateAvailability(scaricoBarcode.value.trim(), document.getElementById('scarico-available'));
+});
+
+scaricoArticle.addEventListener('change', async () => {
+  await updateAvailability(scaricoArticle.value, document.getElementById('scarico-available'));
+});
 
 // 🔽 nuovo elemento select per lo scarico
 const scaricoArticle = document.getElementById('scarico-article');
