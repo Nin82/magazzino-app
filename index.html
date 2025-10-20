@@ -364,25 +364,30 @@ scaricoArticle.addEventListener('change', async () => {
 
 // Popola la tendina con gli articoli presenti nel magazzino
 async function populateScaricoArticles() {
-  const { data, error } = await supabase.from('magazzino').select('article, barcode');
-
-  scaricoArticle.innerHTML = '<option value="">-- Seleziona Articolo --</option>';
+  const { data, error } = await supabase
+    .from('magazzino')
+    .select('article, barcode, quantity')
+    .order('article', { ascending: true });
 
   if (error) {
     console.error('Errore caricamento articoli:', error);
     return;
   }
 
-  if (data && data.length > 0) {
-    data
-      .sort((a, b) => a.article.localeCompare(b.article))
-      .forEach(item => {
-        const opt = document.createElement('option');
-        opt.value = item.barcode;
-        opt.textContent = item.article;
-        scaricoArticle.appendChild(opt);
-      });
-  }
+  const scaricoArticle = document.getElementById('scarico-article');
+  if (!scaricoArticle) return;
+
+  // 🔄 Svuota la select
+  scaricoArticle.innerHTML = '<option value="">-- Seleziona Articolo --</option>';
+
+  // 🔁 Popola la tendina
+  data.forEach(item => {
+    const opt = document.createElement('option');
+    opt.value = item.barcode;
+    // Mostra “(esaurito)” se quantità 0
+    opt.textContent = `${item.article} ${item.quantity === 0 ? '(esaurito)' : ''}`;
+    scaricoArticle.appendChild(opt);
+  });
 }
 
 // Autocompila l’articolo quando inserisci o scanni un barcode
@@ -401,8 +406,11 @@ scaricoBarcode.addEventListener('input', async () => {
     return;
   }
 
+  const scaricoArticle = document.getElementById('scarico-article');
+  if (!scaricoArticle) return;
+
   if (existing) {
-    const option = [...scaricoArticle.options].find(o => o.textContent === existing.article);
+    const option = [...scaricoArticle.options].find(o => o.textContent.startsWith(existing.article));
     if (option) scaricoArticle.value = option.value;
   } else {
     scaricoArticle.value = ''; // se non esiste, resetta la select
@@ -428,15 +436,39 @@ async function addCarico(barcode, article, qty){
     await supabase.from('log_operazioni').insert([{type:'Carico',barcode,article,quantity:qty}]);
     showNotification(`Carico registrato: ${qty}x ${article}`,'success');
 }
-async function addScarico(barcode, qty){
-    const { data:existing } = await supabase.from('magazzino').select('*').eq('barcode',barcode).single();
-    if(!existing || existing.quantity<qty){ showNotification("Errore: quantità insufficiente",'error'); return; }
+async function addScarico(barcode, qty) {
+    const { data: existing, error } = await supabase
+        .from('magazzino')
+        .select('*')
+        .eq('barcode', barcode)
+        .single();
+
+    if (error || !existing) {
+        showNotification("Errore: articolo non trovato in magazzino", 'error');
+        return;
+    }
+
+    if (existing.quantity < qty) {
+        showNotification("Errore: quantità insufficiente in magazzino", 'error');
+        return;
+    }
+
     const newQty = existing.quantity - qty;
-    if(newQty===0) await supabase.from('magazzino').delete().eq('barcode',barcode);
-    else await supabase.from('magazzino').update({quantity:newQty}).eq('barcode',barcode);
-    await supabase.from('log_operazioni').insert([{type:'Scarico',barcode,article:existing.article,quantity:qty}]);
-    showNotification(`Scarico registrato: ${qty}x ${existing.article}`,'success');
+
+    // ✅ invece di eliminare, aggiorniamo a 0
+    await supabase
+        .from('magazzino')
+        .update({ quantity: newQty })
+        .eq('barcode', barcode);
+
+    // Registra comunque lo scarico nello storico
+    await supabase
+        .from('log_operazioni')
+        .insert([{ type: 'Scarico', barcode, article: existing.article, quantity: qty }]);
+
+    showNotification(`Scarico registrato: ${qty}x ${existing.article}`, 'success');
 }
+
 async function getStockSummary(){ const { data } = await supabase.from('magazzino').select('*'); return data || []; }
 async function getLog(filterType='Tutti',filterArticle=''){ 
     let query = supabase.from('log_operazioni').select('*').order('date',{ascending:false}); 
@@ -475,44 +507,67 @@ async function renderTables(){
         tbody.appendChild(tr);
     });
 }
-async function deleteRecord(id){
-    if(!confirm("Confermi l'eliminazione?")) return;
-    const { data } = await supabase.from('log_operazioni').select('*').eq('id',id).single();
-    if(!data){ showNotification("Record non trovato",'error'); return;}
-    if(data.type==='Carico'){
-        const { data:existing } = await supabase.from('magazzino').select('*').eq('barcode',data.barcode).single();
-        if(existing && existing.quantity>=data.quantity){
-            const newQty = existing.quantity - data.quantity;
-            if(newQty===0) await supabase.from('magazzino').delete().eq('barcode',data.barcode);
-            else await supabase.from('magazzino').update({quantity:newQty}).eq('barcode',data.barcode);
-        }
-    } else {
-        const { data:existing } = await supabase.from('magazzino').select('*').eq('barcode',data.barcode).single();
-        if(existing) await supabase.from('magazzino').update({quantity:existing.quantity+data.quantity}).eq('barcode',data.barcode);
-        else await supabase.from('magazzino').insert([{barcode:data.barcode,article:data.article,quantity:data.quantity}]);
+async function deleteRecord(id) {
+  if (!confirm("Confermi l'eliminazione?")) return;
+
+  const { data } = await supabase
+    .from('log_operazioni')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (!data) {
+    showNotification("Record non trovato", 'error');
+    return;
+  }
+
+  if (data.type === 'Carico') {
+    // Se annulli un carico → sottrai quantità al magazzino
+    const { data: existing } = await supabase
+      .from('magazzino')
+      .select('*')
+      .eq('barcode', data.barcode)
+      .single();
+
+    if (existing && existing.quantity >= data.quantity) {
+      const newQty = existing.quantity - data.quantity;
+
+      // ✅ Aggiorna sempre, anche se newQty = 0 (non cancellare mai l’articolo)
+      await supabase
+        .from('magazzino')
+        .update({ quantity: newQty })
+        .eq('barcode', data.barcode);
     }
-    await supabase.from('log_operazioni').delete().eq('id',id);
-    renderTables();
-    renderStockSummary();
-    showNotification("Record annullato",'success');
+
+  } else if (data.type === 'Scarico') {
+    // Se annulli uno scarico → restituisci la quantità al magazzino
+    const { data: existing } = await supabase
+      .from('magazzino')
+      .select('*')
+      .eq('barcode', data.barcode)
+      .single();
+
+    if (existing) {
+      await supabase
+        .from('magazzino')
+        .update({ quantity: existing.quantity + data.quantity })
+        .eq('barcode', data.barcode);
+    } else {
+      await supabase
+        .from('magazzino')
+        .insert([{ barcode: data.barcode, article: data.article, quantity: data.quantity }]);
+    }
+  }
+
+  // Elimina la riga dallo storico log_operazioni
+  await supabase.from('log_operazioni').delete().eq('id', id);
+
+  // Aggiorna UI
+  renderTables();
+  renderStockSummary();
+  showNotification("Record annullato", 'success');
 }
-async function resetDatabase(){
-    if(!confirm("ATTENZIONE: elimini TUTTO il database?")) return;
 
-    // Cancella prima log_operazioni
-    const { error: logError } = await supabase.from('log_operazioni').delete().neq('id',0);
-    if(logError) { showNotification("Errore cancellazione log: "+logError.message,'error'); return; }
-
-    // Cancella magazzino
-    const { error: stockError } = await supabase.from('magazzino').delete().neq('barcode','');
-    if(stockError) { showNotification("Errore cancellazione magazzino: "+stockError.message,'error'); return; }
-
-    // Aggiorna UI
-    renderTables();
-    renderStockSummary();
-    renderCharts();
-    showNotification("Database resettato",'success');
-}
 async function downloadCSV(filename,data){
     const csv = data.map(r=>Object.values(r).join(',')).join('\n');
     const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
