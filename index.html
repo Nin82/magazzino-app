@@ -108,37 +108,20 @@ tr:hover { background-color:#eff6ff; }
     </div>
 
     <div>
-  <label for="carico-qty">Quantità:</label>
-  <input 
-    type="number" 
-    id="carico-qty" 
-    name="carico-qty"
-    required 
-    min="1" 
-    value="1"
-  >
+      <label for="carico-qty">Quantità:</label>
+      <input 
+        type="number" 
+        id="carico-qty" 
+        name="carico-qty"
+        required 
+        min="1" 
+        value="1"
+      >
+    </div>
+
+    <button type="submit" class="btn-action">✅ Registra Carico</button>
+  </form>
 </div>
-
-<!-- ✅ Qui sotto va il paragrafo per la disponibilità -->
-<p id="carico-available" style="font-weight:bold;"></p>
-
-<button type="submit" class="btn-action">✅ Registra Carico</button><div>
-  <
-label for="carico-qty">Quantità:</label>
-  <input 
-    type="number" 
-    id="carico-qty" 
-    name="carico-qty"
-    required 
-    min="1" 
-    value="1"
-  >
-</div>
-
-<!-- ✅ Qui sotto va il paragrafo per la disponibilità -->
-<p id="carico-available" style="font-weight:bold;"></p>
-
-<button type="submit" class="btn-action">✅ Registra Carico</button>
 
 
 <!-- SCARICO -->
@@ -179,9 +162,6 @@ label for="carico-qty">Quantità:</label>
         value="1"
       >
     </div>
-
-    <!-- ✅ Paragrafo per la disponibilità -->
-    <p id="scarico-available" style="font-weight:bold;"></p>
 
     <button type="submit" class="btn-delete">🔥 Registra Scarico</button>
   </form>
@@ -327,61 +307,7 @@ const caricoQty = document.getElementById('carico-qty');
 const scaricoBarcode = document.getElementById('scarico-barcode');
 const scaricoQty = document.getElementById('scarico-qty');
 const notificationElement = document.getElementById('notification');
-const scaricoAvailable = document.getElementById('scarico-available');
 
-// Aggiorna disponibilità quando si inserisce/scansiona un barcode
-scaricoBarcode.addEventListener('input', async () => {
-    const code = scaricoBarcode.value.trim();
-    if (!code) {
-        scaricoAvailable.textContent = '';
-        return;
-    }
-
-    const { data: existing, error } = await supabase
-        .from('magazzino')
-        .select('quantity, article')
-        .eq('barcode', code)
-        .maybeSingle();
-
-    if (error) {
-        console.warn('Errore lookup magazzino:', error);
-        scaricoAvailable.textContent = '';
-        return;
-    }
-
-    if (existing) {
-        scaricoAvailable.textContent = `Disponibilità: ${existing.quantity} x ${existing.article}`;
-    } else {
-        scaricoAvailable.textContent = 'Articolo non presente in magazzino';
-    }
-});
-
-// Aggiorna disponibilità anche quando si seleziona un articolo dalla select
-scaricoArticle.addEventListener('change', async () => {
-    const barcode = scaricoArticle.value;
-    if (!barcode) {
-        scaricoAvailable.textContent = '';
-        return;
-    }
-
-    const { data: existing, error } = await supabase
-        .from('magazzino')
-        .select('quantity, article')
-        .eq('barcode', barcode)
-        .maybeSingle();
-
-    if (error) {
-        console.warn('Errore lookup magazzino:', error);
-        scaricoAvailable.textContent = '';
-        return;
-    }
-
-    if (existing) {
-        scaricoAvailable.textContent = `Disponibilità: ${existing.quantity} x ${existing.article}`;
-    } else {
-        scaricoAvailable.textContent = 'Articolo non presente in magazzino';
-    }
-});
 
 // 🔽 nuovo elemento select per lo scarico
 const scaricoArticle = document.getElementById('scarico-article');
