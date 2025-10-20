@@ -391,12 +391,14 @@ scaricoBarcode.addEventListener('input', async () => {
 
 // Autocompila barcode e aggiorna giacenza quando si seleziona un articolo dalla select Scarico
 scaricoArticle.addEventListener('change', async () => {
-    // ... Logica per select ...
-    
+    const barcode = scaricoArticle.value; // Il barcode è già il valore dell'opzione selezionata
+
+    // ➡️ CORREZIONE: Assegna direttamente il barcode senza query DB
+    scaricoBarcode.value = barcode;
+
     // ➡️ AGGIORNA LA GIACENZA
     getAndDisplayStock(barcode, 'scarico-giacenza-display', 'scarico');
-}); // <-- QUI inizia il secondo blocco
-
+});
 
 // Autocompila l’articolo quando inserisci o scanni un barcode
 scaricoBarcode.addEventListener('input', async () => {
