@@ -92,14 +92,26 @@ tr:hover { background-color:#eff6ff; }
 </div>
 
 <!-- SCARICO -->
-<div id="tab-scarico" role="tabpanel" class="hidden">
-  <h2>Registra una Nuova Uscita</h2>
-  <form id="scarico-form">
-    <div><label for="scarico-barcode">Barcode:</label><input id="scarico-barcode" placeholder="Codice Barcode" required></div>
-    <div><label for="scarico-qty">Quantità:</label><input type="number" id="scarico-qty" required min="1" value="1"></div>
-    <button type="submit" class="btn-delete">🔥 Registra Scarico</button>
-  </form>
-</div>
+<form id="scarico-form">
+  <div>
+    <label for="scarico-barcode">Barcode:</label>
+    <input id="scarico-barcode" placeholder="Codice Barcode" required>
+  </div>
+
+  <div>
+    <label for="scarico-article">Articolo:</label>
+    <select id="scarico-article" required>
+      <option value="">-- Seleziona Articolo --</option>
+    </select>
+  </div>
+
+  <div>
+    <label for="scarico-qty">Quantità:</label>
+    <input type="number" id="scarico-qty" required min="1" value="1">
+  </div>
+
+  <button type="submit" class="btn-delete">🔥 Registra Scarico</button>
+</form>
 
 <!-- INVENTARIO -->
 <div id="tab-stock-summary" role="tabpanel" class="hidden">
@@ -241,6 +253,59 @@ const caricoQty = document.getElementById('carico-qty');
 const scaricoBarcode = document.getElementById('scarico-barcode');
 const scaricoQty = document.getElementById('scarico-qty');
 const notificationElement = document.getElementById('notification');
+
+
+// 🔽 nuovo elemento select per lo scarico
+const scaricoArticle = document.getElementById('scarico-article');
+
+// ================== FUNZIONI SUPPORTO ==================
+
+// Popola la tendina con gli articoli presenti nel magazzino
+async function populateScaricoArticles() {
+  const { data, error } = await supabase.from('magazzino').select('article, barcode');
+
+  scaricoArticle.innerHTML = '<option value="">-- Seleziona Articolo --</option>';
+
+  if (error) {
+    console.error('Errore caricamento articoli:', error);
+    return;
+  }
+
+  if (data && data.length > 0) {
+    data
+      .sort((a, b) => a.article.localeCompare(b.article))
+      .forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item.barcode;
+        opt.textContent = item.article;
+        scaricoArticle.appendChild(opt);
+      });
+  }
+}
+
+// Autocompila l’articolo quando inserisci o scanni un barcode
+scaricoBarcode.addEventListener('input', async () => {
+  const code = scaricoBarcode.value.trim();
+  if (!code) return;
+
+  const { data: existing, error } = await supabase
+    .from('magazzino')
+    .select('article')
+    .eq('barcode', code)
+    .maybeSingle();
+
+  if (error) {
+    console.warn('Errore lookup articolo:', error);
+    return;
+  }
+
+  if (existing) {
+    const option = [...scaricoArticle.options].find(o => o.textContent === existing.article);
+    if (option) scaricoArticle.value = option.value;
+  } else {
+    scaricoArticle.value = ''; // se non esiste, resetta la select
+  }
+});
 
 // ================== NOTIFICHE ==================
 function showNotification(msg,type='info'){
@@ -471,12 +536,14 @@ document.getElementById('carico-form').addEventListener('submit', async e=>{
 });
 document.getElementById('scarico-form').addEventListener('submit', async e=>{
     e.preventDefault();
-    await addScarico(scaricoBarcode.value,parseInt(scaricoQty.value));
+    await addScarico(scaricoArticle.value || scaricoBarcode.value, parseInt(scaricoQty.value));
     scaricoBarcode.value=''; scaricoQty.value=1;
     refreshAll();
 });
 
 refreshAll();
+
+populateScaricoArticles();
 
 // ====================== QR SCANNER ROBUSTO ======================
 window.videoStream = null;
