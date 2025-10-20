@@ -309,56 +309,6 @@ const scaricoQty = document.getElementById('scarico-qty');
 const notificationElement = document.getElementById('notification');
 
 
-// 🔽 nuovo elemento select per lo scarico
-const scaricoArticle = document.getElementById('scarico-article');
-
-// Autocompila l’articolo quando inserisci o scanni un barcode
-scaricoBarcode.addEventListener('input', async () => {
-  const code = scaricoBarcode.value.trim();
-  if (!code) {
-    scaricoArticle.value = '';
-    return;
-  }
-
-  const { data: existing, error } = await supabase
-    .from('magazzino')
-    .select('article')
-    .eq('barcode', code)
-    .maybeSingle();
-
-  if (error) {
-    console.warn('Errore lookup articolo:', error);
-    scaricoArticle.value = '';
-    return;
-  }
-
-  if (existing) {
-    const option = [...scaricoArticle.options].find(o => o.value === code);
-    if (option) scaricoArticle.value = option.value;
-    else scaricoArticle.value = ''; // barcode non presente nella select
-  } else {
-    scaricoArticle.value = ''; // barcode non trovato
-  }
-});
-
-
-// Autocompila barcode quando si seleziona un articolo dalla select Scarico
-scaricoArticle.addEventListener('change', async () => {
-  const barcode = scaricoArticle.value;
-
-  // Controllo che il barcode esista ancora in magazzino
-  if (barcode) {
-    const { data: existing, error } = await supabase
-      .from('magazzino')
-      .select('barcode')
-      .eq('barcode', barcode)
-      .maybeSingle();
-
-    scaricoBarcode.value = (existing && existing.barcode) || '';
-  } else {
-    scaricoBarcode.value = '';
-  }
-});
 
 // ================== FUNZIONI SUPPORTO ==================
 
