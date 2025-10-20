@@ -643,9 +643,10 @@ document.getElementById('scarico-form').addEventListener('submit', async e=>{
     refreshAll();
 });
 
-refreshAll();
-
-populateScaricoArticles();
+window.addEventListener('DOMContentLoaded', async () => {
+    await refreshAll();
+    await populateScaricoArticles();
+});
 
 // ====================== QR SCANNER ROBUSTO ======================
 window.videoStream = null;
@@ -752,22 +753,6 @@ function stopQRScanner(){
     }
 }
 
-// Bottone Stop Scanner
-document.getElementById('stop-qr').addEventListener('click', stopQRScanner);
-
-// Switch tab start/stop
-document.querySelectorAll('.tab-container button').forEach(btn => {
-    btn.addEventListener('click', async ()=>{
-        document.querySelectorAll('.tab-container button').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-
-        document.querySelectorAll('[role="tabpanel"]').forEach(tab => tab.classList.add('hidden'));
-        document.getElementById(btn.dataset.target).classList.remove('hidden');
-
-        if(btn.dataset.target === 'tab-qr') await startQRScanner();
-        else stopQRScanner();
-    });
-});
 
 // ====================== SWITCH TABS CON START/STOP QR ======================
 document.querySelectorAll('.tab-container button').forEach(btn => {
