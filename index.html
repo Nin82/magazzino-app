@@ -84,12 +84,45 @@ tr:hover { background-color:#eff6ff; }
 <div id="tab-carico" role="tabpanel">
   <h2>Registra un Nuovo Ingresso</h2>
   <form id="carico-form">
-    <div><label for="carico-barcode">Barcode:</label><input id="carico-barcode" placeholder="Codice Barcode" required></div>
-    <div><label for="carico-article">Articolo:</label><input id="carico-article" placeholder="Nome Articolo" required></div>
-    <div><label for="carico-qty">Quantità:</label><input type="number" id="carico-qty" required min="1" value="1"></div>
+    <div>
+      <label for="carico-barcode">Barcode:</label>
+      <input 
+        id="carico-barcode" 
+        name="carico-barcode" 
+        placeholder="Codice Barcode" 
+        required 
+        autocomplete="off" 
+        inputmode="text"
+      >
+    </div>
+
+    <div>
+      <label for="carico-article">Articolo:</label>
+      <input 
+        id="carico-article" 
+        name="carico-article" 
+        placeholder="Nome Articolo" 
+        required 
+        autocomplete="off"
+      >
+    </div>
+
+    <div>
+      <label for="carico-qty">Quantità:</label>
+      <input 
+        type="number" 
+        id="carico-qty" 
+        name="carico-qty"
+        required 
+        min="1" 
+        value="1"
+      >
+    </div>
+
     <button type="submit" class="btn-action">✅ Registra Carico</button>
   </form>
 </div>
+
 
 <!-- SCARICO -->
 <div id="tab-scarico" role="tabpanel" class="hidden">
@@ -97,25 +130,42 @@ tr:hover { background-color:#eff6ff; }
   <form id="scarico-form">
     <div>
       <label for="scarico-barcode">Barcode:</label>
-      <input id="scarico-barcode" placeholder="Codice Barcode" required>
+      <input 
+        id="scarico-barcode" 
+        name="scarico-barcode" 
+        placeholder="Codice Barcode" 
+        required 
+        autocomplete="off" 
+        inputmode="text"
+      >
     </div>
 
     <div>
       <label for="scarico-article">Articolo:</label>
-      <select id="scarico-article" required>
+      <select 
+        id="scarico-article" 
+        name="scarico-article" 
+        required
+      >
         <option value="">-- Seleziona Articolo --</option>
       </select>
     </div>
 
     <div>
       <label for="scarico-qty">Quantità:</label>
-      <input type="number" id="scarico-qty" required min="1" value="1">
+      <input 
+        type="number" 
+        id="scarico-qty" 
+        name="scarico-qty" 
+        required 
+        min="1" 
+        value="1"
+      >
     </div>
 
     <button type="submit" class="btn-delete">🔥 Registra Scarico</button>
   </form>
 </div>
-
 
 <!-- INVENTARIO -->
 <div id="tab-stock-summary" role="tabpanel" class="hidden">
