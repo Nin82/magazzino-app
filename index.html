@@ -351,9 +351,15 @@ const scaricoArticle = document.getElementById('scarico-article');
 // ================== FUNZIONI SUPPORTO ==================
 
 // Popola la tendina con gli articoli presenti nel magazzino
+async function populateArticlesSelect(selectElement) (dovrebbe essere intorno alla riga 376) e sostituiscila integralmente con il blocco qui sotto.
+
+Questo blocco pulisce l'area, rimuove i segnaposto e garantisce che findArticle e refreshScaricoSelect siano correttamente definiti:
+
+JavaScript
+
+// Popola la tendina con gli articoli presenti nel magazzino
 async function populateArticlesSelect(selectElement) {
     const { data, error } = await supabase.from('magazzino').select('article, barcode');
-
     selectElement.innerHTML = '<option value="">-- Seleziona Articolo --</option>';
 
     if (error) {
@@ -371,11 +377,6 @@ async function populateArticlesSelect(selectElement) {
                 selectElement.appendChild(opt);
             });
     }
-}
-
-// 🔹 Nuova funzione per aggiornare la select scarico e selezionare un barcode
-async function refreshScaricoSelect(currentBarcode = '') {
-// ...
 }
 
 // ➡️ Funzione getAndDisplayStock aggiornata con auto-reset
@@ -415,7 +416,7 @@ async function getAndDisplayStock(barcode, displayElementId, mode, autoReset = f
     }
 }
 
-// ================== FUNZIONI DI SUPPORTO AGGIUNTIVE (Mancanti) ==================
+// ================== FUNZIONI DI SUPPORTO AGGIUNTIVE ==================
 
 // 1. Funzione helper per trovare un singolo articolo (Risolve l'errore in addCarico e addScarico)
 async function findArticle(barcode){
@@ -426,7 +427,7 @@ async function findArticle(barcode){
 
 // 2. Funzione per aggiornare la select Scarico (Usata per la scansione QR)
 async function refreshScaricoSelect(currentBarcode = '') {
-    // Re-popola la select con gli articoli attuali (richiama la tua funzione esistente)
+    // Re-popola la select con gli articoli attuali
     await populateArticlesSelect(scaricoArticle); 
 
     // Se un barcode è stato passato (es. da QR), selezionalo e aggiorna l'interfaccia
@@ -436,6 +437,7 @@ async function refreshScaricoSelect(currentBarcode = '') {
         scaricoArticle.dispatchEvent(new Event('change'));
     }
 }
+
 // ================== LISTENER SEZIONE SCARICO ==================
 
 // Autocompila l’articolo e aggiorna giacenza quando inserisci o scanni un barcode
