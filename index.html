@@ -929,26 +929,18 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 caricoNewArticleSwitch.addEventListener('change', () => {
     const isNew = caricoNewArticleSwitch.checked;
-    
-    // 1. Visibilità: mostra solo il campo necessario
-    caricoArticleSelector.style.display = isNew ? 'none' : 'block';
-    caricoArticleInput.style.display = isNew ? 'block' : 'none';
 
-    // 2. Requisiti: rende obbligatorio solo il campo visibile
-    caricoArticleSelector.required = !isNew; 
-    caricoArticleInput.required = isNew;
-
-    // 3. Reset dei campi e pulizia
-    caricoArticleSelector.value = '';
-    caricoArticleInput.value = '';
-    caricoBarcode.value = '';
-    document.getElementById('carico-giacenza-display').textContent = '';
-    
-    // Mette il focus per iniziare l'inserimento
     if (isNew) {
+        // ✅ Mostra input testo per nuovo articolo
+        caricoArticleSelector.style.display = 'none';
+        caricoArticleInput.style.display = 'block';
+        caricoArticleSelector.value = '';
         caricoArticleInput.focus();
     } else {
-        caricoBarcode.focus();
+        // 🔁 Torna alla select esistente
+        caricoArticleSelector.style.display = 'block';
+        caricoArticleInput.style.display = 'none';
+        caricoArticleInput.value = '';
     }
 });
 
