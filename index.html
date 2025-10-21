@@ -285,6 +285,18 @@ tr:hover { background-color:#eff6ff; }
 </div>
 
 <script type="module">
+
+
+
+// ================== VARIABILI GLOBALI ==================
+let caricoBarcode, caricoQty, caricoNewArticleSwitch, caricoArticleInput, caricoArticleSelector;
+let scaricoBarcode, scaricoQty, scaricoArticle;
+let riepilogoTableBody, logTableBody, downloadCsvButton, resetDbButton;
+let tabButtons, tabPanels;
+let qrResult, qrTarget, useQrButton;
+let notificationArea;
+
+
 // ================== SUPABASE ==================
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
@@ -350,18 +362,17 @@ const magazzinoChannel = supabase.channel('realtime-magazzino')
   .subscribe();
 
 // ================== ELEMENTI ==================
-const caricoBarcode = document.getElementById('carico-barcode');
-const caricoArticleSelector = document.getElementById('carico-article-selector'); 
-const caricoArticleInput = document.getElementById('carico-article-input');
-const caricoNewArticleSwitch = document.getElementById('carico-new-article-switch');
-const caricoQty = document.getElementById('carico-qty');
-const scaricoBarcode = document.getElementById('scarico-barcode');
-const scaricoQty = document.getElementById('scarico-qty');
-const notificationElement = document.getElementById('notification');
-
+caricoBarcode = document.getElementById('carico-barcode'); // ❌ RIMOSSO const
+caricoArticleSelector = document.getElementById('carico-article-selector'); // ❌ RIMOSSO const
+caricoArticleInput = document.getElementById('carico-article-input'); // ❌ RIMOSSO const
+caricoNewArticleSwitch = document.getElementById('carico-new-article-switch'); // ❌ RIMOSSO const
+caricoQty = document.getElementById('carico-qty'); // ❌ RIMOSSO const
+scaricoBarcode = document.getElementById('scarico-barcode'); // ❌ RIMOSSO const
+scaricoQty = document.getElementById('scarico-qty'); // ❌ RIMOSSO const
+notificationElement = document.getElementById('notification'); // ❌ RIMOSSO const
 
 // 🔽 nuovo elemento select per lo scarico
-const scaricoArticle = document.getElementById('scarico-article');
+scaricoArticle = document.getElementById('scarico-article-select'); // ❌ RIMOSSO const (Ho corretto anche l'ID in 'scarico-article-select' come in altre parti del codice)
 
 
 // ================== FUNZIONI SUPPORTO ==================
