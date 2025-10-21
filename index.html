@@ -353,6 +353,7 @@ const scaricoArticle = document.getElementById('scarico-article');
 // Popola la tendina con gli articoli presenti nel magazzino
 async function populateArticlesSelect(selectElement) {
     const { data, error } = await supabase.from('magazzino').select('article, barcode');
+
     selectElement.innerHTML = '<option value="">-- Seleziona Articolo --</option>';
 
     if (error) {
@@ -372,7 +373,12 @@ async function populateArticlesSelect(selectElement) {
     }
 }
 
-// ➡️ Funzione getAndDisplayStock aggiornata con auto-reset
+// 🔹 Nuova funzione per aggiornare la select scarico e selezionare un barcode
+async function refreshScaricoSelect(currentBarcode = '') {
+// ...
+}
+
+// ➡️ INSERIMENTO QUI: Funzione getAndDisplayStock aggiornata con auto-reset
 async function getAndDisplayStock(barcode, displayElementId, mode, autoReset = false) {
     const displayElement = document.getElementById(displayElementId);
     if (!displayElement) return;
@@ -406,24 +412,6 @@ async function getAndDisplayStock(barcode, displayElementId, mode, autoReset = f
                 displayElement.textContent = '';
             }
         }, 10000); // 10000ms = 10 secondi
-    }
-}
-
-// ================== FUNZIONI DI SUPPORTO AGGIUNTIVE ==================
-
-// 1. Funzione helper per trovare un singolo articolo (Risolve l'errore in addCarico e addScarico)
-async function findArticle(barcode){
-    const { data } = await supabase.from('magazzino').select('*').eq('barcode',barcode).maybeSingle();
-    return data;
-}
-
-// 2. Funzione per aggiornare la select Scarico (Usata per la scansione QR)
-async function refreshScaricoSelect(currentBarcode = '') {
-    await populateArticlesSelect(scaricoArticle); 
-
-    if (currentBarcode) {
-        scaricoArticle.value = currentBarcode;
-        scaricoArticle.dispatchEvent(new Event('change'));
     }
 }
 
@@ -485,6 +473,27 @@ scaricoArticle.addEventListener('change', async () => {
     // ➡️ AGGIORNA LA GIACENZA
     getAndDisplayStock(barcode, 'scarico-giacenza-display', 'scarico');
 });
+// Autocompila barcode e aggiorna giacenza quando si seleziona un articolo dalla select Scarico
+scaricoArticle.addEventListener('change', async () => {
+    const barcode = scaricoArticle.value;
+
+    // Aggiorna l'input del barcode basandosi sulla selezione
+    if (barcode) {
+        const { data: existing, error } = await supabase
+            .from('magazzino')
+            .select('barcode')
+            .eq('barcode', barcode)
+            .maybeSingle();
+
+        scaricoBarcode.value = (existing && existing.barcode) || '';
+    } else {
+        scaricoBarcode.value = '';
+    }
+    
+    // ➡️ AGGIORNA LA GIACENZA
+    getAndDisplayStock(barcode, 'scarico-giacenza-display', 'scarico');
+});
+
 
 // ================== NOTIFICHE ==================
 function showNotification(msg,type='info'){
@@ -495,63 +504,24 @@ function showNotification(msg,type='info'){
 }
 
 // ================== FUNZIONI ==================
-async function addCarico(barcode, article, qty) {
-    // 1️⃣ Controlla se l'articolo esiste
-    const { data: existingArticles } = await supabase
-        .from('magazzino')
-        .select('*')
-        .eq('barcode', barcode)
-        .limit(1)
-        .single()
-        .catch(() => ({ data: null }));
+async function addCarico(barcode, article, qty){
+    const existing = await findArticle(barcode);
 
-    if (existingArticles) {
+    if (existing) {
         // Aggiorna quantità
-        await supabase
-            .from('magazzino')
-            .update({ quantity: existingArticles.quantity + qty })
-            .eq('id', existingArticles.id);
+        await supabase.from('magazzino').update({ quantity: existing.quantity + qty }).eq('id', existing.id);
     } else {
-        // Inserisci nuovo articolo
-        await supabase
-            .from('magazzino')
-            .insert([{ barcode, article, quantity: qty }]);
+        // Nuovo articolo
+        await supabase.from('magazzino').insert([{ barcode, article, quantity: qty }]);
     }
-
-    // 2️⃣ Inserisci record log
-    await supabase
-        .from('log_operazioni')
-        .insert([{ type: 'Carico', barcode, article, quantity: qty }]);
-
-    // 3️⃣ Pulizia log (se presente la funzione)
-    if (typeof cleanUpLog === 'function') {
-        await cleanUpLog();
-    }
-
-    // 4️⃣ Aggiorna le select in tempo reale
-await populateArticlesSelect(caricoArticleSelector);
-await populateArticlesSelect(scaricoArticle);
-
-    // 5️⃣ Notifica
-    showNotification(`Carico registrato: ${qty}x ${article}`, 'success');
-}
-
-// Esempio di funzione populateArticlesSelect aggiornata
-async function populateArticlesSelect(selectId) {
-    const { data: articles } = await supabase
-        .from('magazzino')
-        .select('id, article')
-        .order('article', { ascending: true });
-
-    const select = document.getElementById(selectId);
-    select.innerHTML = ''; // Pulisce la select
-
-    articles.forEach(item => {
-        const option = document.createElement('option');
-        option.value = item.id;
-        option.textContent = item.article;
-        select.appendChild(option);
-    });
+    
+    // Inserimento del record di log
+    await supabase.from('log_operazioni').insert([{type:'Carico',barcode,article,quantity:qty}]);
+    
+    // 💡 PASSO FINALE: Chiama la pulizia del database
+    await cleanUpLog();
+    
+    showNotification(`Carico registrato: ${qty}x ${article}`,'success');
 }
 
 async function addScarico(barcode, qty){
@@ -1140,40 +1110,6 @@ document.getElementById('use-qr').addEventListener('click', async () => {
     // 🔹 Pulisce il box QR
     document.getElementById('qr-result').value = '';
     lastScanned = '';
-});
-
-// ================== FUNZIONI DI REFRESH GENERALE ==================
-
-// 💡 Funzione mancante: Disegna il grafico del riepilogo magazzino (usata in initApp)
-async function renderStockSummary() {
-    const { data } = await supabase.from('magazzino').select('*');
-    if (!data) return;
-    
-    // Logica per costruire il grafico D3.js (omessa per brevità ma necessaria se la usi)
-    // Se non usi il grafico, puoi ometterla, ma è essenziale per il tuo file.
-}
-
-// 💡 Funzione mancante: Aggiorna tutti gli elementi dell'interfaccia (usata in deleteRecord e addCarico/Scarico)
-async function refreshAll() {
-    await renderTables(); 
-    await renderStockSummary(); 
-}
-
-// ================== AVVIO APPLICAZIONE (FIX) ==================
-
-document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Inizializzazione delle tendine Select
-    await populateArticlesSelect(scaricoArticle);
-    // Presumo che tu abbia anche un selettore caricoArticleSelector per la tendina Carico, se lo usi:
-    // await populateArticlesSelect(caricoArticleSelector); 
-    
-    // 2. Aggiornamento iniziale della UI
-    await refreshAll();
-
-    // 3. Assicura che il primo tab (Magazzino) sia quello visibile all'avvio
-    document.getElementById('tab-magazzino').classList.remove('hidden');
-
-    console.info('✅ Applicazione Magazzino inizializzata e dati caricati.');
 });
 
 </script>
