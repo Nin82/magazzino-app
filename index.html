@@ -251,6 +251,7 @@ tr:hover { background-color:#eff6ff; }
 
 <div id="notification" style="color:#fff;background:#4f46e5;padding:12px;margin-bottom:20px;border-radius:8px;display:none;"></div>
 <hr>
+
 <h2>Storico Completo Operazioni</h2>
 <div class="controls-container">
   <label for="filter-type">Tipo Operazione:</label>
@@ -260,6 +261,13 @@ tr:hover { background-color:#eff6ff; }
     <option value="Scarico">Scarico</option>
   </select>
 
+  <label for="filter-limit">Limite Record:</label>
+  <select id="filter-limit">
+    <option value="20">20</option>
+    <option value="40">40</option>
+    <option value="60">60</option>
+    <option value="80" selected>80</option>
+  </select>
   <label for="filter-articolo">Articolo (Ricerca):</label>
   <input id="filter-articolo" placeholder="Cerca articolo..." style="flex-grow:1; max-width: 250px;">
   
@@ -407,34 +415,19 @@ async function getAndDisplayStock(barcode, displayElementId, mode, autoReset = f
     }
 }
 
-// Autocompila l’articolo quando inserisci o scanni un barcode
-scaricoBarcode.addEventListener('input', async () => {
-    // ... Logica per barcode ...
-    
-    // ➡️ AGGIORNA LA GIACENZA in tempo reale
-    getAndDisplayStock(code, 'scarico-giacenza-display', 'scarico');
-}); // <-- QUI finisce il primo blocco
+// ================== LISTENER SEZIONE SCARICO ==================
 
-// Autocompila barcode e aggiorna giacenza quando si seleziona un articolo dalla select Scarico
-scaricoArticle.addEventListener('change', async () => {
-    const barcode = scaricoArticle.value; // Il barcode è già il valore dell'opzione selezionata
-
-    // ➡️ CORREZIONE: Assegna direttamente il barcode senza query DB
-    scaricoBarcode.value = barcode;
-
-    // ➡️ AGGIORNA LA GIACENZA
-    getAndDisplayStock(barcode, 'scarico-giacenza-display', 'scarico');
-});
-
-// Autocompila l’articolo quando inserisci o scanni un barcode
+// Autocompila l’articolo e aggiorna giacenza quando inserisci o scanni un barcode
 scaricoBarcode.addEventListener('input', async () => {
     const code = scaricoBarcode.value.trim();
+    
     if (!code) {
         scaricoArticle.value = '';
         document.getElementById('scarico-giacenza-display').textContent = ''; // Pulisce la giacenza
         return;
     }
 
+    // Cerca l'articolo corrispondente al barcode
     const { data: existing, error } = await supabase
         .from('magazzino')
         .select('article')
@@ -444,43 +437,42 @@ scaricoBarcode.addEventListener('input', async () => {
     if (error) {
         console.warn('Errore lookup articolo:', error);
         scaricoArticle.value = '';
-        document.getElementById('scarico-giacenza-display').textContent = ''; // Pulisce in caso di errore
+        document.getElementById('scarico-giacenza-display').textContent = ''; 
         return;
     }
 
+    // Sincronizza il campo Select (scaricoArticle)
     if (existing) {
+        // Cerca l'opzione corrispondente al barcode/valore
         const option = [...scaricoArticle.options].find(o => o.value === code);
-        if (option) scaricoArticle.value = option.value;
-        else scaricoArticle.value = ''; // barcode non presente nella select
+        if (option) {
+            scaricoArticle.value = option.value;
+        } else {
+            scaricoArticle.value = ''; // Barcode presente nel DB ma non nella select (forse appena caricato)
+        }
     } else {
-        scaricoArticle.value = ''; // barcode non trovato
+        scaricoArticle.value = ''; // Barcode non trovato
     }
     
     // ➡️ AGGIORNA LA GIACENZA in tempo reale
     getAndDisplayStock(code, 'scarico-giacenza-display', 'scarico');
 });
 
-// Autocompila barcode e aggiorna giacenza quando si seleziona un articolo dalla select Scarico
+// Sincronizza il barcode e aggiorna la giacenza quando si seleziona un articolo dalla select
 scaricoArticle.addEventListener('change', async () => {
-    const barcode = scaricoArticle.value;
+    const barcode = scaricoArticle.value; // Il barcode è il valore dell'opzione selezionata
 
     // Aggiorna l'input del barcode basandosi sulla selezione
     if (barcode) {
-        const { data: existing, error } = await supabase
-            .from('magazzino')
-            .select('barcode')
-            .eq('barcode', barcode)
-            .maybeSingle();
-
-        scaricoBarcode.value = (existing && existing.barcode) || '';
+        // Non serve una query al DB, basta assegnare il valore della select all'input Barcode
+        scaricoBarcode.value = barcode;
     } else {
-        scaricoBarcode.value = '';
+        scaricoBarcode.value = ''; // Pulisce il barcode se si torna a "Seleziona Articolo"
     }
     
     // ➡️ AGGIORNA LA GIACENZA
     getAndDisplayStock(barcode, 'scarico-giacenza-display', 'scarico');
 });
-
 
 // ================== NOTIFICHE ==================
 function showNotification(msg,type='info'){
@@ -492,30 +484,106 @@ function showNotification(msg,type='info'){
 
 // ================== FUNZIONI ==================
 async function addCarico(barcode, article, qty){
-    const { data:existing } = await supabase.from('magazzino').select('*').eq('barcode',barcode).single();
-    if(existing){
-        await supabase.from('magazzino').update({quantity:existing.quantity+qty}).eq('barcode',barcode);
+    const existing = await findArticle(barcode);
+
+    if (existing) {
+        // Aggiorna quantità
+        await supabase.from('magazzino').update({ quantity: existing.quantity + qty }).eq('id', existing.id);
     } else {
-        await supabase.from('magazzino').insert([{barcode,article,quantity:qty}]);
+        // Nuovo articolo
+        await supabase.from('magazzino').insert([{ barcode, article, quantity: qty }]);
     }
+    
+    // Inserimento del record di log
     await supabase.from('log_operazioni').insert([{type:'Carico',barcode,article,quantity:qty}]);
+    
+    // 💡 PASSO FINALE: Chiama la pulizia del database
+    await cleanUpLog();
+    
     showNotification(`Carico registrato: ${qty}x ${article}`,'success');
 }
+
 async function addScarico(barcode, qty){
-    const { data:existing } = await supabase.from('magazzino').select('*').eq('barcode',barcode).single();
-    if(!existing || existing.quantity<qty){ showNotification("Errore: quantità insufficiente",'error'); return; }
-    const newQty = existing.quantity - qty;
-    await supabase.from('magazzino').update({quantity:newQty}).eq('barcode', barcode);
+    const existing = await findArticle(barcode);
+    
+    if (!existing) {
+        showNotification('Errore: Barcode non trovato in magazzino.', 'error');
+        return;
+    }
+    
+    if (existing.quantity < qty) {
+        showNotification(`Errore: Quantità insufficiente. Disponibile: ${existing.quantity}`, 'error');
+        return;
+    }
+    
+    // Aggiorna quantità
+    await supabase.from('magazzino').update({ quantity: existing.quantity - qty }).eq('id', existing.id);
+    
+    // Inserimento del record di log
     await supabase.from('log_operazioni').insert([{type:'Scarico',barcode,article:existing.article,quantity:qty}]);
+    
+    // 💡 PASSO FINALE: Chiama la pulizia del database
+    await cleanUpLog();
+    
     showNotification(`Scarico registrato: ${qty}x ${existing.article}`,'success');
 }
-async function getStockSummary(){ const { data } = await supabase.from('magazzino').select('*'); return data || []; }
-async function getLog(filterType='Tutti',filterArticle=''){ 
-    let query = supabase.from('log_operazioni').select('*').order('date',{ascending:false}); 
-    if(filterType!=='Tutti') query=query.eq('type',filterType); 
-    if(filterArticle) query=query.ilike('article',`%${filterArticle}%`);
-    const { data } = await query; return data || []; 
+
+async function getStockSummary(){ 
+    const { data } = await supabase.from('magazzino').select('*'); 
+    return data || []; 
 }
+
+// 💡 SOSTITUISCI LA VECCHIA getLog CON QUESTA 💡
+async function getLog(filterType='Tutti', filterArticle='', limit = 80){ 
+    let query = supabase.from('log_operazioni')
+        .select('*')
+        .order('date', { ascending: false }); 
+        
+    if(filterType !== 'Tutti') query = query.eq('type', filterType); 
+    if(filterArticle) query = query.ilike('article', `%${filterArticle}%`);
+    
+    // 👈 APPLICA IL NUOVO LIMITE DINAMICO
+    query = query.limit(limit); 
+    
+    const { data } = await query; 
+    return data || []; 
+}
+
+// Imposta il limite massimo FISSO di record da mantenere nel database (DB)
+const MAX_LOG_RECORDS = 80;
+
+/**
+ * Funzione asincrona che elimina tutti i record dalla tabella 'log_operazioni' 
+ * che sono più vecchi dell'80° record più recente, mantenendo il DB snello.
+ */
+async function cleanUpLog() {
+    // 1. Ottiene la data dell'80° record più recente (l'ultimo che vogliamo tenere)
+    const { data: recentLogs, error: recentError } = await supabase
+        .from('log_operazioni')
+        .select('date')
+        .order('date', { ascending: false })
+        .limit(MAX_LOG_RECORDS); 
+
+    if (recentError || !recentLogs || recentLogs.length < MAX_LOG_RECORDS) {
+        return;
+    }
+
+    // 2. Data di soglia: è la data dell'ultimo (80°) record da mantenere
+    const dateThreshold = recentLogs[MAX_LOG_RECORDS - 1].date; 
+
+    // 3. Elimina tutti i record che sono strettamente più vecchi di quella data
+    const { error: deleteError } = await supabase
+        .from('log_operazioni')
+        .delete()
+        .lt('date', dateThreshold); 
+
+    if (deleteError) {
+        console.error("❌ Errore nell'eliminazione dei record vecchi:", deleteError);
+    } else {
+        console.log(`✅ Log pulito: eliminati i record più vecchi di ${MAX_LOG_RECORDS}.`);
+    }
+}
+
 async function renderStockSummary(){
     const tbody = document.querySelector('#stock-summary tbody');
     const data = await getStockSummary();
@@ -529,11 +597,25 @@ async function renderStockSummary(){
 }
 async function renderTables(){
     const typeFilter = document.getElementById('filter-type').value;
-    const articoloFilter = document.getElementById('filter-articolo').value.toLowerCase();
+    
+    // ❌ RIMUOVE .toLowerCase() - l'operatore 'ilike' nel DB è già case-insensitive
+    const articoloFilter = document.getElementById('filter-articolo').value;
+    
+    // 💡 PASSO 1: Leggi il nuovo valore limite e convertilo in numero intero
+    const limitFilter = parseInt(document.getElementById('filter-limit').value || 80); 
+    
     const tbody = document.querySelector('#full-log tbody');
-    const data = await getLog(typeFilter,articoloFilter);
+    
+    // 💡 PASSO 2: Chiama getLog con il nuovo parametro limitFilter
+    const data = await getLog(typeFilter, articoloFilter, limitFilter); 
+    
     tbody.innerHTML='';
-    if(data.length===0){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:20px">Nessun risultato trovato.</td></tr>'; return;}
+    
+    if(data.length===0){
+        tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:20px">Nessun risultato trovato.</td></tr>'; 
+        return;
+    }
+    
     data.forEach(r=>{
         const color = r.type==='Carico'?'#059669':'#dc2626';
         const icon = r.type==='Carico'?'⬆️':'⬇️';
@@ -547,7 +629,6 @@ async function renderTables(){
         tbody.appendChild(tr);
     });
 }
-
 
 async function deleteRecord(id){
     if(!confirm("Confermi l'eliminazione?")) return;
@@ -704,12 +785,24 @@ async function refreshAll(){
 }
 
 // ================== FILTRI ==================
+
+// L'azione di applica filtro ricarica la tabella
 document.getElementById('apply-filter').addEventListener('click', renderTables);
+
+// 💡 NUOVO: Ricarica la tabella quando si cambia il limite record
+document.getElementById('filter-limit').addEventListener('change', renderTables); 
+
+// L'azione di rimuovi filtro resetta i valori e ricarica la tabella
 document.getElementById('clear-filter').addEventListener('click', ()=>{
-    document.getElementById('filter-type').value='Tutti';
-    document.getElementById('filter-articolo').value='';
+    document.getElementById('filter-type').value = 'Tutti';
+    document.getElementById('filter-articolo').value = '';
+    
+    // 💡 NUOVO: Resetta il selettore del limite al valore massimo di default
+    document.getElementById('filter-limit').value = '80'; 
+    
     renderTables();
 });
+
 
 // ================== FORM ==================
 caricoBarcode.addEventListener('input', async () => {
