@@ -82,50 +82,55 @@ tr:hover { background-color:#eff6ff; }
 
 <!-- CARICO -->
 <div id="tab-carico" role="tabpanel">
-  <h2>Registra un Nuovo Ingresso</h2>
-  <form id="carico-form">
-    <div>
-      <label for="carico-barcode">Barcode:</label>
-      <input 
-        id="carico-barcode" 
-        name="carico-barcode" 
-        placeholder="Codice Barcode" 
-        required 
-        autocomplete="off" 
-        inputmode="text"
-      >
-    </div>
+    <h2>Registra un Nuovo Ingresso</h2>
+    <form id="carico-form">
+        <div>
+            <label for="carico-barcode">Barcode:</label>
+            <input 
+                id="carico-barcode" 
+                name="carico-barcode" 
+                placeholder="Codice Barcode" 
+                required 
+                autocomplete="off" 
+                inputmode="text"
+            >
+        </div>
 
-   <div>
-    <label for="carico-article-selector">Articolo:</label>
-    
-    <select id="carico-article-selector" name="carico-article" autocomplete="off" required>
-        <option value="">-- Seleziona Articolo --</option>
-    </select>
+        <div>
+            <label for="carico-article-selector">Articolo:</label>
+            
+            <select id="carico-article-selector" name="carico-article" autocomplete="off" required>
+                <option value="">-- Seleziona Articolo --</option>
+            </select>
 
-    <input 
-        id="carico-article-input" 
-        name="carico-article-input-text" 
-        placeholder="Inserisci nuovo articolo" 
-        style="display:none;" 
-        autocomplete="off"
-    >
-</div>
+            <input 
+                id="carico-article-input" 
+                name="carico-article-input-text" 
+                placeholder="Inserisci nuovo articolo" 
+                autocomplete="off"
+                style="display:none;"
+            >
+        </div>
 
-    <div>
-      <label for="carico-qty">Quantità:</label>
-      <input 
-        type="number" 
-        id="carico-qty" 
-        name="carico-qty"
-        required 
-        min="1" 
-        value="1"
-      >
-    </div>
-	<div id="carico-giacenza-display" style="font-weight:700; color:#4f46e5; margin-top:10px; min-width:180px;"></div>
-    <button type="submit" class="btn-action">✅ Registra Carico</button>
-  </form>
+        <div style="display: flex; align-items: center; gap: 10px; margin-top: 5px; margin-bottom: 10px;">
+            <input type="checkbox" id="carico-new-article-switch">
+            <label for="carico-new-article-switch" style="font-weight: normal; margin: 0;">Articolo Nuovo</label>
+        </div>
+        
+        <div>
+            <label for="carico-qty">Quantità:</label>
+            <input 
+                type="number" 
+                id="carico-qty" 
+                name="carico-qty"
+                required 
+                min="1" 
+                value="1"
+            >
+        </div>
+        <div id="carico-giacenza-display" style="font-weight:700; color:#4f46e5; margin-top:10px; min-width:180px;"></div>
+        <button type="submit" class="btn-action">✅ Registra Carico</button>
+    </form>
 </div>
 
 
@@ -309,7 +314,7 @@ const magazzinoChannel = supabase.channel('realtime-magazzino')
 const caricoBarcode = document.getElementById('carico-barcode');
 const caricoArticleSelector = document.getElementById('carico-article-selector'); 
 const caricoArticleInput = document.getElementById('carico-article-input');
-
+const caricoNewArticleSwitch = document.getElementById('carico-new-article-switch');
 const caricoQty = document.getElementById('carico-qty');
 const scaricoBarcode = document.getElementById('scarico-barcode');
 const scaricoQty = document.getElementById('scarico-qty');
@@ -323,28 +328,27 @@ const scaricoArticle = document.getElementById('scarico-article');
 // ================== FUNZIONI SUPPORTO ==================
 
 // Popola la tendina con gli articoli presenti nel magazzino
-async function populateScaricoArticles() {
-  const { data, error } = await supabase.from('magazzino').select('article, barcode');
+async function populateArticlesSelect(selectElement) {
+    const { data, error } = await supabase.from('magazzino').select('article, barcode');
 
-  scaricoArticle.innerHTML = '<option value="">-- Seleziona Articolo --</option>';
+    selectElement.innerHTML = '<option value="">-- Seleziona Articolo --</option>';
 
-  if (error) {
-    console.error('Errore caricamento articoli:', error);
-    return;
-  }
+    if (error) {
+        console.error('Errore caricamento articoli:', error);
+        return;
+    }
 
-  if (data && data.length > 0) {
-    data
-      .sort((a, b) => a.article.localeCompare(b.article))
-      .forEach(item => {
-        const opt = document.createElement('option');
-        opt.value = item.barcode;
-        opt.textContent = item.article;
-        scaricoArticle.appendChild(opt);
-      });
-  }
+    if (data && data.length > 0) {
+        data
+            .sort((a, b) => a.article.localeCompare(b.article))
+            .forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.barcode;
+                opt.textContent = item.article;
+                selectElement.appendChild(opt);
+            });
+    }
 }
-
 
 // 🔹 Nuova funzione per aggiornare la select scarico e selezionare un barcode
 async function refreshScaricoSelect(currentBarcode = '') {
@@ -677,9 +681,12 @@ async function refreshAll(){
     await renderStockSummary();
     await renderTables();
     await renderCharts();
-    await renderAndamentoGiornaliero(); 
+    await renderAndamentoGiornaliero();
+    
+    // ✅ AGGIUNTA NECESSARIA: Popola entrambe le tendine dopo l'aggiornamento
+    await populateArticlesSelect(scaricoArticle);
+    await populateArticlesSelect(caricoArticleSelector); 
 }
-
 
 // ================== FILTRI ==================
 document.getElementById('apply-filter').addEventListener('click', renderTables);
@@ -690,58 +697,64 @@ document.getElementById('clear-filter').addEventListener('click', ()=>{
 });
 
 // ================== FORM ==================
-caricoBarcode.addEventListener('input', async ()=>{
-    const barcode = caricoBarcode.value;
+caricoBarcode.addEventListener('input', async () => {
+    const barcode = caricoBarcode.value.trim();
     
-    // 1. Pulisce e imposta la visibilità predefinita
-    caricoArticleSelector.value = ''; // Pulisce la select
-    caricoArticleInput.value = ''; // Pulisce l'input text
-    caricoArticleInput.style.display = 'none'; // Nasconde l'input text
-    caricoArticleSelector.style.display = 'block'; // Mostra la select per default
-
-    if(!barcode) {
-        document.getElementById('carico-giacenza-display').textContent = '';
-        return;
+    // La ricerca e la selezione funzionano SOLO se NON è spuntato "Articolo Nuovo"
+    if (barcode && !caricoNewArticleSwitch.checked) {
+        const { data: existing } = await supabase.from('magazzino').select('article').eq('barcode', barcode).maybeSingle();
+        if (existing) {
+            const option = [...caricoArticleSelector.options].find(o => o.value === barcode);
+            if (option) caricoArticleSelector.value = option.value;
+        } else {
+            caricoArticleSelector.value = '';
+        }
     }
     
-    const { data:existing } = await supabase.from('magazzino').select('article').eq('barcode',barcode).maybeSingle();
-    
-    if(existing) {
-        // Articolo ESISTENTE: Seleziona l'opzione nella SELECT
-        const option = [...caricoArticleSelector.options].find(o => o.value === barcode);
-        if (option) caricoArticleSelector.value = option.value;
-    } else {
-        // Articolo NUOVO: Nasconde la SELECT e mostra l'INPUT di testo
-        caricoArticleSelector.style.display = 'none';
-        caricoArticleInput.style.display = 'block';
-        caricoArticleInput.focus(); 
+    // Pulisce il campo input se non è in modalità "Nuovo Articolo"
+    if (!caricoNewArticleSwitch.checked) {
+        caricoArticleInput.value = '';
     }
     
-    // ➡️ AGGIORNA LA GIACENZA
+    // AGGIORNA LA GIACENZA
     getAndDisplayStock(barcode, 'carico-giacenza-display', 'carico');
 });
 
-document.getElementById('carico-form').addEventListener('submit', async e=>{
+
+document.getElementById('carico-form').addEventListener('submit', async e => {
     e.preventDefault();
     const currentBarcode = caricoBarcode.value;
+    const isNew = caricoNewArticleSwitch.checked;
     
-    // ➡️ 1. SCELTA DEL NOME ARTICOLO CORRETTO:
-    // Controlla quale campo è nascosto per capire dove leggere il nome
-    const articleName = caricoArticleSelector.style.display === 'none' 
-        ? caricoArticleInput.value // Legge il nome dall'INPUT di testo (nuovo articolo)
-        : caricoArticleSelector.options[caricoArticleSelector.selectedIndex].textContent; // Legge il nome dalla SELECT (articolo esistente)
+    // SCELTA DEL NOME ARTICOLO CORRETTO:
+    const articleName = isNew 
+        ? caricoArticleInput.value // Legge dall'INPUT di testo se è un nuovo articolo
+        : caricoArticleSelector.options[caricoArticleSelector.selectedIndex]?.textContent || ''; // Legge dalla SELECT per esistenti
     
-    // 2. Esegue il carico
+    if (!currentBarcode) {
+        showNotification('Inserisci il Barcode!', 'error');
+        return;
+    }
+
+    if (!articleName) {
+        showNotification('Seleziona o inserisci il nome dell\'articolo!', 'error');
+        return;
+    }
+    
+    // Esegue il carico
     await addCarico(currentBarcode, articleName, parseInt(caricoQty.value));
     
-    // 3. AGGIORNA E MOSTRA PER 10s LA NUOVA GIACENZA
+    // Aggiorna e mostra la giacenza
     await getAndDisplayStock(currentBarcode, 'carico-giacenza-display', 'carico', true); 
     
-    // 4. Resetta i campi e ripristina la visualizzazione della SELECT
-    caricoBarcode.value=''; 
-    caricoArticleSelector.value='';
-    caricoArticleInput.value='';
-    caricoQty.value=1;
+    // Resetta i campi e lo switch per il prossimo inserimento
+    caricoBarcode.value = ''; 
+    caricoArticleSelector.value = '';
+    caricoArticleInput.value = '';
+    caricoQty.value = 1;
+    caricoNewArticleSwitch.checked = false; 
+    
+    // Riporta la visualizzazione alla SELECT (stato predefinito)
     caricoArticleInput.style.display = 'none';
     caricoArticleSelector.style.display = 'block';
 
@@ -777,8 +790,37 @@ document.getElementById('scarico-form').addEventListener('submit', async e=>{
 });
 
 window.addEventListener('DOMContentLoaded', async () => {
+    // Prima chiama tutte le funzioni di aggiornamento
     await refreshAll();
-    await populateScaricoArticles();
+    
+    // Poi assicura che le tendine siano piene per l'uso immediato
+    await populateArticlesSelect(scaricoArticle);
+    await populateArticlesSelect(caricoArticleSelector); 
+});
+
+caricoNewArticleSwitch.addEventListener('change', () => {
+    const isNew = caricoNewArticleSwitch.checked;
+    
+    // 1. Visibilità: mostra solo il campo necessario
+    caricoArticleSelector.style.display = isNew ? 'none' : 'block';
+    caricoArticleInput.style.display = isNew ? 'block' : 'none';
+
+    // 2. Requisiti: rende obbligatorio solo il campo visibile
+    caricoArticleSelector.required = !isNew; 
+    caricoArticleInput.required = isNew;
+
+    // 3. Reset dei campi e pulizia
+    caricoArticleSelector.value = '';
+    caricoArticleInput.value = '';
+    caricoBarcode.value = '';
+    document.getElementById('carico-giacenza-display').textContent = '';
+    
+    // Mette il focus per iniziare l'inserimento
+    if (isNew) {
+        caricoArticleInput.focus();
+    } else {
+        caricoBarcode.focus();
+    }
 });
 
 // ====================== QR SCANNER ROBUSTO ======================
