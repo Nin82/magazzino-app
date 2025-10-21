@@ -372,7 +372,7 @@ scaricoQty = document.getElementById('scarico-qty'); // ❌ RIMOSSO const
 notificationElement = document.getElementById('notification'); // ❌ RIMOSSO const
 
 // 🔽 nuovo elemento select per lo scarico
-scaricoArticle = document.getElementById('scarico-article-select'); // ❌ RIMOSSO const (Ho corretto anche l'ID in 'scarico-article-select' come in altre parti del codice)
+scaricoArticle = document.getElementById('scarico-article');
 
 
 // ================== FUNZIONI SUPPORTO ==================
@@ -529,6 +529,17 @@ function showNotification(msg,type='info'){
     notificationElement.style.backgroundColor = type==='success'?'#10b981': type==='error'?'#ef4444':'#4f46e5';
     setTimeout(()=>{notificationElement.style.display='none'},3000);
 }
+
+// ================== FUNZIONE GENERALE DI REFRESH ==================
+async function refreshAll() {
+    await populateArticlesSelect(caricoArticleSelector);
+    await populateArticlesSelect(scaricoArticle); 
+    
+    // Le altre funzioni di rendering non sono bloccanti, le avviamo e basta.
+    renderTables(); 
+    renderStockSummary();
+    renderCharts();
+    renderAndamentoGiornaliero();
 
 // ================== FUNZIONI ==================
 async function addCarico(barcode, article, qty){
@@ -1133,6 +1144,23 @@ document.getElementById('use-qr').addEventListener('click', async () => {
     document.getElementById('qr-result').value = '';
     lastScanned = '';
 });
+
+// ================== FILTRI & AVVIO ==================
+
+// Listener per i filtri del log
+document.getElementById('apply-filter').addEventListener('click', renderTables);
+document.getElementById('clear-filter').addEventListener('click', ()=>{
+    document.getElementById('filter-type').value = 'Tutti';
+    document.getElementById('filter-articolo').value = '';
+    document.getElementById('filter-limit').value = '80'; // Resetta al valore di default
+    renderTables();
+});
+// Listener per la selezione del limite e la ricerca articolo (input in tempo reale)
+document.getElementById('filter-limit').addEventListener('change', renderTables);
+document.getElementById('filter-articolo').addEventListener('input', renderTables);
+
+// 🚀 CHIAMATA CRITICA: Avvia il caricamento iniziale di tutti i dati!
+refreshAll();
 
 </script>
 </body>
