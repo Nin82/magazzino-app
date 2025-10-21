@@ -96,16 +96,21 @@ tr:hover { background-color:#eff6ff; }
       >
     </div>
 
-    <div>
-      <label for="carico-article">Articolo:</label>
-      <input 
-        id="carico-article" 
-        name="carico-article" 
-        placeholder="Nome Articolo" 
-        required 
+   <div>
+    <label for="carico-article-selector">Articolo:</label>
+    
+    <select id="carico-article-selector" name="carico-article" autocomplete="off" required>
+        <option value="">-- Seleziona Articolo --</option>
+    </select>
+
+    <input 
+        id="carico-article-input" 
+        name="carico-article-input-text" 
+        placeholder="Inserisci nuovo articolo" 
+        style="display:none;" 
         autocomplete="off"
-      >
-    </div>
+    >
+</div>
 
     <div>
       <label for="carico-qty">Quantità:</label>
@@ -302,7 +307,9 @@ const magazzinoChannel = supabase.channel('realtime-magazzino')
 
 // ================== ELEMENTI ==================
 const caricoBarcode = document.getElementById('carico-barcode');
-const caricoArticle = document.getElementById('carico-article');
+const caricoArticleSelector = document.getElementById('carico-article-selector'); 
+const caricoArticleInput = document.getElementById('carico-article-input');
+
 const caricoQty = document.getElementById('carico-qty');
 const scaricoBarcode = document.getElementById('scarico-barcode');
 const scaricoQty = document.getElementById('scarico-qty');
@@ -685,12 +692,30 @@ document.getElementById('clear-filter').addEventListener('click', ()=>{
 // ================== FORM ==================
 caricoBarcode.addEventListener('input', async ()=>{
     const barcode = caricoBarcode.value;
+    
+    // 1. Pulisce e imposta la visibilità predefinita
+    caricoArticleSelector.value = ''; // Pulisce la select
+    caricoArticleInput.value = ''; // Pulisce l'input text
+    caricoArticleInput.style.display = 'none'; // Nasconde l'input text
+    caricoArticleSelector.style.display = 'block'; // Mostra la select per default
+
     if(!barcode) {
         document.getElementById('carico-giacenza-display').textContent = '';
         return;
     }
+    
     const { data:existing } = await supabase.from('magazzino').select('article').eq('barcode',barcode).maybeSingle();
-    if(existing) caricoArticle.value = existing.article;
+    
+    if(existing) {
+        // Articolo ESISTENTE: Seleziona l'opzione nella SELECT
+        const option = [...caricoArticleSelector.options].find(o => o.value === barcode);
+        if (option) caricoArticleSelector.value = option.value;
+    } else {
+        // Articolo NUOVO: Nasconde la SELECT e mostra l'INPUT di testo
+        caricoArticleSelector.style.display = 'none';
+        caricoArticleInput.style.display = 'block';
+        caricoArticleInput.focus(); 
+    }
     
     // ➡️ AGGIORNA LA GIACENZA
     getAndDisplayStock(barcode, 'carico-giacenza-display', 'carico');
@@ -698,19 +723,40 @@ caricoBarcode.addEventListener('input', async ()=>{
 
 document.getElementById('carico-form').addEventListener('submit', async e=>{
     e.preventDefault();
-    // 1. Salva il barcode prima che il campo venga resettato
-    const currentBarcode = caricoBarcode.value; 
+    const currentBarcode = caricoBarcode.value;
+    
+    // ➡️ 1. SCELTA DEL NOME ARTICOLO CORRETTO:
+    // Controlla quale campo è nascosto per capire dove leggere il nome
+    const articleName = caricoArticleSelector.style.display === 'none' 
+        ? caricoArticleInput.value // Legge il nome dall'INPUT di testo (nuovo articolo)
+        : caricoArticleSelector.options[caricoArticleSelector.selectedIndex].textContent; // Legge il nome dalla SELECT (articolo esistente)
     
     // 2. Esegue il carico
-    await addCarico(currentBarcode,caricoArticle.value,parseInt(caricoQty.value));
+    await addCarico(currentBarcode, articleName, parseInt(caricoQty.value));
     
     // 3. AGGIORNA E MOSTRA PER 10s LA NUOVA GIACENZA
-    // Il 'true' attiva il setTimeout di 10 secondi nella funzione getAndDisplayStock
     await getAndDisplayStock(currentBarcode, 'carico-giacenza-display', 'carico', true); 
     
-    // 4. Resetta i campi del form e aggiorna le tabelle
-    caricoBarcode.value=''; caricoArticle.value=''; caricoQty.value=1;
+    // 4. Resetta i campi e ripristina la visualizzazione della SELECT
+    caricoBarcode.value=''; 
+    caricoArticleSelector.value='';
+    caricoArticleInput.value='';
+    caricoQty.value=1;
+    caricoArticleInput.style.display = 'none';
+    caricoArticleSelector.style.display = 'block';
+
     refreshAll();
+});
+
+caricoArticleSelector.addEventListener('change', async () => {
+    const barcode = caricoArticleSelector.value; 
+    
+    // Assegna il barcode selezionato
+    caricoBarcode.value = barcode;
+    caricoArticleInput.value = ''; // Pulisce l'input per sicurezza
+
+    // ➡️ AGGIORNA LA GIACENZA
+    getAndDisplayStock(barcode, 'carico-giacenza-display', 'carico');
 });
 
 document.getElementById('scarico-form').addEventListener('submit', async e=>{
