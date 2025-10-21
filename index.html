@@ -351,13 +351,6 @@ const scaricoArticle = document.getElementById('scarico-article');
 // ================== FUNZIONI SUPPORTO ==================
 
 // Popola la tendina con gli articoli presenti nel magazzino
-async function populateArticlesSelect(selectElement) (dovrebbe essere intorno alla riga 376) e sostituiscila integralmente con il blocco qui sotto.
-
-Questo blocco pulisce l'area, rimuove i segnaposto e garantisce che findArticle e refreshScaricoSelect siano correttamente definiti:
-
-JavaScript
-
-// Popola la tendina con gli articoli presenti nel magazzino
 async function populateArticlesSelect(selectElement) {
     const { data, error } = await supabase.from('magazzino').select('article, barcode');
     selectElement.innerHTML = '<option value="">-- Seleziona Articolo --</option>';
@@ -420,20 +413,16 @@ async function getAndDisplayStock(barcode, displayElementId, mode, autoReset = f
 
 // 1. Funzione helper per trovare un singolo articolo (Risolve l'errore in addCarico e addScarico)
 async function findArticle(barcode){
-    // Utilizza maybeSingle() per gestire il caso in cui il barcode non esista
     const { data } = await supabase.from('magazzino').select('*').eq('barcode',barcode).maybeSingle();
     return data;
 }
 
 // 2. Funzione per aggiornare la select Scarico (Usata per la scansione QR)
 async function refreshScaricoSelect(currentBarcode = '') {
-    // Re-popola la select con gli articoli attuali
     await populateArticlesSelect(scaricoArticle); 
 
-    // Se un barcode è stato passato (es. da QR), selezionalo e aggiorna l'interfaccia
     if (currentBarcode) {
         scaricoArticle.value = currentBarcode;
-        // Simula l'evento change per sincronizzare l'input barcode e aggiornare la giacenza
         scaricoArticle.dispatchEvent(new Event('change'));
     }
 }
