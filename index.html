@@ -868,12 +868,12 @@ caricoBarcode.addEventListener('input', async () => {
 
 document.getElementById('carico-form').addEventListener('submit', async e => {
     e.preventDefault();
-    const currentBarcode = caricoBarcode.value;
+    const currentBarcode = caricoBarcode.value.trim();
     const isNew = caricoNewArticleSwitch.checked;
     
     // SCELTA DEL NOME ARTICOLO CORRETTO:
     const articleName = isNew 
-        ? caricoArticleInput.value // Legge dall'INPUT di testo se è un nuovo articolo
+        ? caricoArticleInput.value.trim() // Legge dall'INPUT di testo se è un nuovo articolo
         : caricoArticleSelector.options[caricoArticleSelector.selectedIndex]?.textContent || ''; // Legge dalla SELECT per esistenti
     
     if (!currentBarcode) {
@@ -890,8 +890,8 @@ document.getElementById('carico-form').addEventListener('submit', async e => {
     await addCarico(currentBarcode, articleName, parseInt(caricoQty.value));
     
     // Aggiorna e mostra la giacenza
-    await getAndDisplayStock(currentBarcode, 'carico-giacenza-display', 'carico', true); 
-    
+    await getAndDisplayStock(currentBarcode, 'carico-giacenza-display', 'carico', true);
+
     // Resetta i campi e lo switch per il prossimo inserimento
     caricoBarcode.value = ''; 
     caricoArticleSelector.value = '';
@@ -919,18 +919,21 @@ caricoArticleSelector.addEventListener('change', async () => {
 
 document.getElementById('scarico-form').addEventListener('submit', async e=>{
     e.preventDefault();
-    // 1. Salva il barcode (può venire dal select o dall'input)
-    const currentBarcode = scaricoArticle.value || scaricoBarcode.value; 
+    // 1. Salva il barcode (deve venire dall'input o dalla select)
+    const currentBarcode = scaricoBarcode.value.trim();
     
     // 2. Esegue lo scarico
     await addScarico(currentBarcode, parseInt(scaricoQty.value));
     
     // 3. AGGIORNA E MOSTRA PER 10s LA NUOVA GIACENZA
-    // La funzione getAndDisplayStock deve essere quella modificata con il setTimeout.
     await getAndDisplayStock(currentBarcode, 'scarico-giacenza-display', 'scarico', true); 
     
     // 4. Resetta i campi e aggiorna
-    scaricoBarcode.value=''; scaricoQty.value=1;
+    scaricoBarcode.value=''; 
+    scaricoQty.value=1;
+    scaricoArticle.value = ''; // Resetta anche la select
+    document.getElementById('scarico-giacenza-display').textContent = ''; // Pulisce il display
+    
     refreshAll();
 });
 
