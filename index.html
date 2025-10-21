@@ -1103,28 +1103,31 @@ document.getElementById('use-qr').addEventListener('click', async () => {
     lastScanned = '';
 });
 
-// ================== INIZIALIZZAZIONE APP (MANCANTE) ==================
+// ================== INIZIALIZZAZIONE APP (FIX) ==================
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    // 1) Aggiorna UI / dati
+    await refreshAll();
 
-/**
- * Funzione di inizializzazione che carica tutti gli elementi
- * necessari all'avvio dell'applicazione (storico, magazzino, select).
- */
-function initApp() {
-    // Carica il riepilogo del magazzino (grafico e tabella principale)
-    renderStockSummary(); 
-    
-    // Carica la tabella dello storico operazioni con i filtri di default
-    renderTables(); 
-    
-    // Popola la select degli articoli (usata per lo scarico)
-    populateArticlesSelect(scaricoArticle); 
-    
-    // Assicura che il primo tab (Magazzino) sia quello visibile all'avvio
-    document.getElementById('tab-magazzino').classList.remove('hidden');
-}
+    // 2) Popola le tendine (assicurati vengano popolate una sola volta)
+    await populateArticlesSelect(scaricoArticle);
+    await populateArticlesSelect(caricoArticleSelector);
 
-// 🛑 CHIAMA LA FUNZIONE DI INIZIALIZZAZIONE QUANDO IL DOCUMENTO È PRONTO
-document.addEventListener('DOMContentLoaded', initApp);
+    // 3) Assicura che il tab "carico" sia visibile/attivo all'avvio
+    document.querySelectorAll('.tab-container button').forEach(b => b.classList.remove('active'));
+    const caricoBtn = document.querySelector('.tab-container button[data-target="tab-carico"]');
+    if (caricoBtn) caricoBtn.classList.add('active');
+
+    document.querySelectorAll('[role="tabpanel"]').forEach(tab => tab.classList.add('hidden'));
+    const caricoPanel = document.getElementById('tab-carico');
+    if (caricoPanel) caricoPanel.classList.remove('hidden');
+
+    // 4) Assicura che i listeners già registrati non falliscano: mostra console.info
+    console.info('✅ App inizializzata correttamente');
+  } catch (err) {
+    console.error('Errore inizializzazione app:', err);
+  }
+});
 
 </script>
 </body>
