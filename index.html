@@ -511,6 +511,9 @@ async function addCarico(barcode, article, qty){
     
     // 💡 PASSO FINALE: Chiama la pulizia del database
     await cleanUpLog();
+
+    await populateArticlesSelect(caricoArticleSelector);
+    await populateArticlesSelect(scaricoArticle);
     
     showNotification(`Carico registrato: ${qty}x ${article}`,'success');
 }
