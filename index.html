@@ -1114,6 +1114,29 @@ document.getElementById('use-qr').addEventListener('click', async () => {
     lastScanned = '';
 });
 
+// ================== INIZIALIZZAZIONE APP (MANCANTE) ==================
+
+/**
+ * Funzione di inizializzazione che carica tutti gli elementi
+ * necessari all'avvio dell'applicazione (storico, magazzino, select).
+ */
+function initApp() {
+    // Carica il riepilogo del magazzino (grafico e tabella principale)
+    renderStockSummary(); 
+    
+    // Carica la tabella dello storico operazioni con i filtri di default
+    renderTables(); 
+    
+    // Popola la select degli articoli (usata per lo scarico)
+    populateArticlesSelect(scaricoArticle); 
+    
+    // Assicura che il primo tab (Magazzino) sia quello visibile all'avvio
+    document.getElementById('tab-magazzino').classList.remove('hidden');
+}
+
+// 🛑 CHIAMA LA FUNZIONE DI INIZIALIZZAZIONE QUANDO IL DOCUMENTO È PRONTO
+document.addEventListener('DOMContentLoaded', initApp);
+
 </script>
 </body>
 </html>
