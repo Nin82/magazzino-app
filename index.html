@@ -1146,22 +1146,24 @@ document.getElementById('use-qr').addEventListener('click', async () => {
     lastScanned = '';
 });
 
-// ================== FILTRI & AVVIO ==================
+// // ================== AVVIO APPLICAZIONE ==================
 
-// Listener per i filtri del log
-document.getElementById('apply-filter').addEventListener('click', renderTables);
-document.getElementById('clear-filter').addEventListener('click', ()=>{
-    document.getElementById('filter-type').value = 'Tutti';
-    document.getElementById('filter-articolo').value = '';
-    document.getElementById('filter-limit').value = '80'; // Resetta al valore di default
-    renderTables();
+document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Aggiunge i listener per i filtri del log
+    document.getElementById('apply-filter').addEventListener('click', renderTables);
+    document.getElementById('clear-filter').addEventListener('click', () => {
+        document.getElementById('filter-type').value = 'Tutti';
+        document.getElementById('filter-articolo').value = '';
+        document.getElementById('filter-limit').value = '80'; // Resetta al valore di default
+        renderTables();
+    });
+    // Listener per la selezione del limite e la ricerca articolo (input in tempo reale)
+    document.getElementById('filter-limit').addEventListener('change', renderTables);
+    document.getElementById('filter-articolo').addEventListener('input', renderTables);
+
+    // 2. 🚀 CHIAMATA CRITICA: Avvia il caricamento iniziale di tutti i dati
+    await refreshAll();
 });
-// Listener per la selezione del limite e la ricerca articolo (input in tempo reale)
-document.getElementById('filter-limit').addEventListener('change', renderTables);
-document.getElementById('filter-articolo').addEventListener('input', renderTables);
-
-// 🚀 CHIAMATA CRITICA: Avvia il caricamento iniziale di tutti i dati!
-refreshAll();
 
 </script>
 </body>
