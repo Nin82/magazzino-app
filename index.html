@@ -495,27 +495,63 @@ function showNotification(msg,type='info'){
 }
 
 // ================== FUNZIONI ==================
-async function addCarico(barcode, article, qty){
-    const existing = await findArticle(barcode);
+async function addCarico(barcode, article, qty) {
+    // 1️⃣ Controlla se l'articolo esiste
+    const { data: existingArticles } = await supabase
+        .from('magazzino')
+        .select('*')
+        .eq('barcode', barcode)
+        .limit(1)
+        .single()
+        .catch(() => ({ data: null }));
 
-    if (existing) {
+    if (existingArticles) {
         // Aggiorna quantità
-        await supabase.from('magazzino').update({ quantity: existing.quantity + qty }).eq('id', existing.id);
+        await supabase
+            .from('magazzino')
+            .update({ quantity: existingArticles.quantity + qty })
+            .eq('id', existingArticles.id);
     } else {
-        // Nuovo articolo
-        await supabase.from('magazzino').insert([{ barcode, article, quantity: qty }]);
+        // Inserisci nuovo articolo
+        await supabase
+            .from('magazzino')
+            .insert([{ barcode, article, quantity: qty }]);
     }
-    
-    // Inserimento del record di log
-    await supabase.from('log_operazioni').insert([{type:'Carico',barcode,article,quantity:qty}]);
-    
-    // 💡 PASSO FINALE: Chiama la pulizia del database
-    await cleanUpLog();
 
-    await populateArticlesSelect(caricoArticleSelector);
-    await populateArticlesSelect(scaricoArticle);
-    
-    showNotification(`Carico registrato: ${qty}x ${article}`,'success');
+    // 2️⃣ Inserisci record log
+    await supabase
+        .from('log_operazioni')
+        .insert([{ type: 'Carico', barcode, article, quantity: qty }]);
+
+    // 3️⃣ Pulizia log (se presente la funzione)
+    if (typeof cleanUpLog === 'function') {
+        await cleanUpLog();
+    }
+
+    // 4️⃣ Aggiorna le select in tempo reale
+await populateArticlesSelect(caricoArticleSelector);
+await populateArticlesSelect(scaricoArticle);
+
+    // 5️⃣ Notifica
+    showNotification(`Carico registrato: ${qty}x ${article}`, 'success');
+}
+
+// Esempio di funzione populateArticlesSelect aggiornata
+async function populateArticlesSelect(selectId) {
+    const { data: articles } = await supabase
+        .from('magazzino')
+        .select('id, article')
+        .order('article', { ascending: true });
+
+    const select = document.getElementById(selectId);
+    select.innerHTML = ''; // Pulisce la select
+
+    articles.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item.id;
+        option.textContent = item.article;
+        select.appendChild(option);
+    });
 }
 
 async function addScarico(barcode, qty){
