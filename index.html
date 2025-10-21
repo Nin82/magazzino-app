@@ -311,17 +311,16 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 
-// Cerca un articolo per nome
-async function findArticle(name) {
+async function findArticle(barcode) { // rinominato l'argomento per chiarezza
   const { data, error } = await supabase
     .from('magazzino')
     .select('*')
-    .eq('nome', name)
-    .single();
-
-  if (error && error.code !== 'PGRST116') { // PGRST116 = record non trovato
-    console.error('Errore findArticle:', error);
-    return null;
+    // Modifica qui: cerchiamo per 'barcode' anziché per 'nome'
+    .eq('barcode', barcode) 
+    .maybeSingle(); // Usiamo maybeSingle invece di single (PGRST116 = record non trovato)
+  if (error && error.code !== 'PGRST116') { // PGRST116 = record non trovato [cite: 47]
+    console.error('Errore findArticle:', error); [cite: 48]
+    return null; [cite: 48]
   }
 
   return data;
@@ -392,7 +391,28 @@ async function populateArticlesSelect(selectElement) {
 
 // 🔹 Nuova funzione per aggiornare la select scarico e selezionare un barcode
 async function refreshScaricoSelect(currentBarcode = '') {
-// ...
+
+    // 1. Ripopola completamente la tendina per includere articoli appena caricati
+    await populateArticlesSelect(scaricoArticle);
+
+    // 2. Se un barcode è fornito, cerca e seleziona l'opzione corrispondente
+    if (currentBarcode) {
+        const option = [...scaricoArticle.options].find(o => o.value === currentBarcode);
+        if (option) {
+            scaricoArticle.value = currentBarcode;
+        } else {
+            // Se non trova l'opzione (es. articolo appena scaricato a zero), pulisce la select.
+            scaricoArticle.value = '';
+        }
+    } else {
+        scaricoArticle.value = '';
+    }
+    
+    // 3. Assicura che anche il campo input barcode sia aggiornato
+    scaricoBarcode.value = currentBarcode;
+    
+    // 4. Aggiorna il display della giacenza
+    getAndDisplayStock(currentBarcode, 'scarico-giacenza-display', 'scarico');
 }
 
 // ➡️ INSERIMENTO QUI: Funzione getAndDisplayStock aggiornata con auto-reset
@@ -490,27 +510,6 @@ scaricoArticle.addEventListener('change', async () => {
     // ➡️ AGGIORNA LA GIACENZA
     getAndDisplayStock(barcode, 'scarico-giacenza-display', 'scarico');
 });
-// Autocompila barcode e aggiorna giacenza quando si seleziona un articolo dalla select Scarico
-scaricoArticle.addEventListener('change', async () => {
-    const barcode = scaricoArticle.value;
-
-    // Aggiorna l'input del barcode basandosi sulla selezione
-    if (barcode) {
-        const { data: existing, error } = await supabase
-            .from('magazzino')
-            .select('barcode')
-            .eq('barcode', barcode)
-            .maybeSingle();
-
-        scaricoBarcode.value = (existing && existing.barcode) || '';
-    } else {
-        scaricoBarcode.value = '';
-    }
-    
-    // ➡️ AGGIORNA LA GIACENZA
-    getAndDisplayStock(barcode, 'scarico-giacenza-display', 'scarico');
-});
-
 
 // ================== NOTIFICHE ==================
 function showNotification(msg,type='info'){
