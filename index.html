@@ -31,7 +31,22 @@ h1 { color: #1e3a8a; font-weight: 800; margin-bottom: 24px; }
 h2,h3 { color: #374151; border-bottom:2px solid #e5e7eb; padding-bottom:8px; margin-top:30px; }
 hr { border:0; border-top:1px solid #e0e7eb; margin:30px 0; }
 /* Tabs */
-.tab-container { margin-bottom:24px; }
+/* Tabs */
+.tab-container { 
+    /* ✅ NUOVE PROPRIETÀ PER FISSARE LA BARRA */
+    position: sticky; 
+    top: 0; 
+    z-index: 100; 
+    background-color: #f8fafc; /* Sfondo per nascondere lo scroll sottostante */
+
+    /* Regolazioni per allargare a tutta pagina e compensare il padding del body (24px) */
+    margin: -24px -24px 24px -24px; /* Margini negativi su lato e sopra */
+    padding-top: 24px; /* Ripristina il padding in alto */
+    padding-left: 24px;
+    padding-right: 24px;
+    padding-bottom: 10px; /* Spazio sotto i pulsanti */
+    border-bottom: 1px solid #e2e8f0; /* Linea di separazione */
+}
 .tab-container button { background:#fff; color:#6b7280; font-weight:600; border:1px solid #e5e7eb; border-bottom:none; padding:10px 20px; border-radius:8px 8px 0 0; margin-right:-1px; transition:all 0.2s; outline:none; }
 .tab-container button:hover { background:#f3f4f6; color:#1f2937; }
 .tab-container button.active { background:#fff; color:#1e3a8a; border-color:#1e3a8a; border-bottom:2px solid #fff; position:relative; z-index:10; }
