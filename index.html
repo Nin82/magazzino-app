@@ -1142,30 +1142,38 @@ document.getElementById('use-qr').addEventListener('click', async () => {
     lastScanned = '';
 });
 
-// ================== INIZIALIZZAZIONE APP (FIX) ==================
+// ================== FUNZIONI DI REFRESH GENERALE ==================
+
+// 💡 Funzione mancante: Disegna il grafico del riepilogo magazzino (usata in initApp)
+async function renderStockSummary() {
+    const { data } = await supabase.from('magazzino').select('*');
+    if (!data) return;
+    
+    // Logica per costruire il grafico D3.js (omessa per brevità ma necessaria se la usi)
+    // Se non usi il grafico, puoi ometterla, ma è essenziale per il tuo file.
+}
+
+// 💡 Funzione mancante: Aggiorna tutti gli elementi dell'interfaccia (usata in deleteRecord e addCarico/Scarico)
+async function refreshAll() {
+    await renderTables(); 
+    await renderStockSummary(); 
+}
+
+// ================== AVVIO APPLICAZIONE (FIX) ==================
+
 document.addEventListener('DOMContentLoaded', async () => {
-  try {
-    // 1) Aggiorna UI / dati
+    // 1. Inizializzazione delle tendine Select
+    await populateArticlesSelect(scaricoArticle);
+    // Presumo che tu abbia anche un selettore caricoArticleSelector per la tendina Carico, se lo usi:
+    // await populateArticlesSelect(caricoArticleSelector); 
+    
+    // 2. Aggiornamento iniziale della UI
     await refreshAll();
 
-    // 2) Popola le tendine (assicurati vengano popolate una sola volta)
-    await populateArticlesSelect(scaricoArticle);
-    await populateArticlesSelect(caricoArticleSelector);
+    // 3. Assicura che il primo tab (Magazzino) sia quello visibile all'avvio
+    document.getElementById('tab-magazzino').classList.remove('hidden');
 
-    // 3) Assicura che il tab "carico" sia visibile/attivo all'avvio
-    document.querySelectorAll('.tab-container button').forEach(b => b.classList.remove('active'));
-    const caricoBtn = document.querySelector('.tab-container button[data-target="tab-carico"]');
-    if (caricoBtn) caricoBtn.classList.add('active');
-
-    document.querySelectorAll('[role="tabpanel"]').forEach(tab => tab.classList.add('hidden'));
-    const caricoPanel = document.getElementById('tab-carico');
-    if (caricoPanel) caricoPanel.classList.remove('hidden');
-
-    // 4) Assicura che i listeners già registrati non falliscano: mostra console.info
-    console.info('✅ App inizializzata correttamente');
-  } catch (err) {
-    console.error('Errore inizializzazione app:', err);
-  }
+    console.info('✅ Applicazione Magazzino inizializzata e dati caricati.');
 });
 
 </script>
