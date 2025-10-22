@@ -682,11 +682,13 @@ async function refreshAll(){
 
 
 // ================== FILTRI ==================
-document.getElementById('apply-filter').addEventListener('click', renderTables);
+document.getElementById('filter-type').addEventListener('change', renderTables); // Applica filtro tipo su cambio
+document.getElementById('filter-articolo').addEventListener('input', renderTables); // Applica filtro articolo su ogni digitazione
 document.getElementById('clear-filter').addEventListener('click', ()=>{
-    document.getElementById('filter-type').value='Tutti';
-    document.getElementById('filter-articolo').value='';
-    renderTables();
+    document.getElementById('filter-type').value='Tutti';
+    document.getElementById('filter-articolo').value='';
+    renderTables();
+
 });
 
 // ================== FORM ==================
