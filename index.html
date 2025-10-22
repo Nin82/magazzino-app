@@ -4,9 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gestione Magazzino Completo</title>
+<!-- ================= PWA SETTINGS ================= -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#4f46e5">
 
+<!-- Icona per dispositivi Apple -->
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
 <script>
@@ -17,226 +19,274 @@
       .catch(err => console.log('❌ Errore Service Worker', err));
   }
 </script>
+<!-- Libreria QR Code -->
 <script src="https://unpkg.com/html5-qrcode" defer></script>
+<!-- =============================================== -->
 <script src="https://d3js.org/d3.v7.min.js"></script>
-
 <style>
 /* ================= STILE ================= */
-body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif; margin: 0; padding: 24px; background: #f8fafc; color: #1f2937; } 
-.hidden { display: none; } 
-h1 { color: #1e3a8a; font-weight: 800; margin-bottom: 24px; } 
-h2,h3 { color: #374151; border-bottom:2px solid #e5e7eb; padding-bottom:8px; margin-top:30px; } 
-hr { border:0; border-top:1px solid #e0e7eb; margin:30px 0; } 
-
-/* Tabs */ 
+body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif; margin: 0; padding: 24px; background: #f8fafc; color: #1f2937; }
+.hidden { display: none; }
+h1 { color: #1e3a8a; font-weight: 800; margin-bottom: 24px; }
+h2,h3 { color: #374151; border-bottom:2px solid #e5e7eb; padding-bottom:8px; margin-top:30px; }
+hr { border:0; border-top:1px solid #e0e7eb; margin:30px 0; }
+/* Tabs */
+/* Tabs */
 .tab-container { 
-    /* ✅ NUOVE PROPRIETÀ PER FISSARE LA BARRA */ 
-    position: sticky; top: 0; z-index: 100; background-color: #f8fafc; 
-    /* Regolazioni per allargare a tutta pagina e compensare il padding del body (24px) */ 
-    margin: -24px -24px 24px -24px; 
-    padding-top: 24px; padding-left: 24px; padding-right: 24px; padding-bottom: 10px; 
-    border-bottom: 1px solid #e2e8f0; 
-} 
-.tab-container button { background:#fff; color:#6b7280; font-weight:600; border:1px solid #e5e7eb; border-bottom:none; padding:10px 20px; border-radius:8px 8px 0 0; margin-right:-1px; transition:all 0.2s; outline:none; } 
-.tab-container button:hover { background:#f3f4f6; color:#1f2937; } 
-.tab-container button.active { background:#fff; color:#1e3a8a; border-color:#1e3a8a; border-bottom:2px solid #fff; position:relative; z-index:10; } 
-[role="tabpanel"] { background:#fff; padding:20px; border:1px solid #e5e7eb; border-radius:0 8px 8px 8px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); position:relative; top:-1px; } 
+    /* ✅ NUOVE PROPRIETÀ PER FISSARE LA BARRA */
+    position: sticky; 
+    top: 0; 
+    z-index: 100; 
+    background-color: #f8fafc; /* Sfondo per nascondere lo scroll sottostante */
 
-/* Pulsanti */ 
-button { cursor:pointer; background:#4f46e5; color:#fff; border:none; padding:10px 18px; border-radius:8px; margin:5px 5px 5px 0; transition:all 0.2s ease-in-out; font-weight:600; white-space:nowrap; box-shadow:0 2px 4px rgba(0,0,0,0.1); } 
-button:hover { background:#4338ca; transform:translateY(-1px); box-shadow:0 4px 8px rgba(0,0,0,0.15); } 
-.btn-action { background:#10b981; } 
-.btn-action:hover { background:#059669; } 
-.btn-delete { background:#ef4444; } 
-.btn-delete:hover { background:#dc2626; } 
-.btn-secondary { background:#e5e7eb; color:#374151; box-shadow:none; } 
-.btn-secondary:hover { background:#d1d5db; transform:translateY(-1px); box-shadow:0 2px 4px rgba(0,0,0,0.1);} 
-.btn-reset { background:#991b1b; font-weight:700;} 
-.btn-reset:hover { background:#7f1d1d; } 
-
-/* Form */ 
-input, select { padding:10px 12px; border:1px solid #d1d5db; border-radius:6px; margin-right:10px; width:100%; max-width:250px; transition:border-color 0.2s, box-shadow 0.2s; font-size:1rem; } 
-input:focus, select:focus { border-color:#4f46e5; box-shadow:0 0 0 3px rgba(79,70,229,0.2); outline:none; } 
-input[readonly] { background-color:#f3f4f6; cursor:not-allowed; } 
-label { font-weight:600; margin-bottom:4px; display:block; color:#374151; } 
-#carico-form, #scarico-form { display:flex; gap:20px; flex-wrap:wrap; align-items:flex-end; } 
-#carico-form div, #scarico-form div { display:flex; flex-direction:column; flex-grow:1; min-width:180px; } 
-#carico-form button, #scarico-form button { margin-top:10px; } 
-
-/* Notifica */ 
-#notification { font-weight:600; text-align:center; box-shadow:0 2px 4px rgba(0,0,0,0.1); } 
-
-/* Tabelle */ 
-table { width:100%; border-collapse:separate; border-spacing:0; margin-top:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); border-radius:8px; overflow:hidden; } 
-th, td { padding:12px 16px; text-align:left; border-bottom:1px solid #f3f4f6; } 
-th { background:#eef2ff; font-size:0.8rem; color:#1e3a8a; font-weight:700; text-transform:uppercase; } 
+    /* Regolazioni per allargare a tutta pagina e compensare il padding del body (24px) */
+    margin: -24px -24px 24px -24px; /* Margini negativi su lato e sopra */
+    padding-top: 24px; /* Ripristina il padding in alto */
+    padding-left: 24px;
+    padding-right: 24px;
+    padding-bottom: 10px; /* Spazio sotto i pulsanti */
+    border-bottom: 1px solid #e2e8f0; /* Linea di separazione */
+}
+.tab-container button { background:#fff; color:#6b7280; font-weight:600; border:1px solid #e5e7eb; border-bottom:none; padding:10px 20px; border-radius:8px 8px 0 0; margin-right:-1px; transition:all 0.2s; outline:none; }
+.tab-container button:hover { background:#f3f4f6; color:#1f2937; }
+.tab-container button.active { background:#fff; color:#1e3a8a; border-color:#1e3a8a; border-bottom:2px solid #fff; position:relative; z-index:10; }
+[role="tabpanel"] { background:#fff; padding:20px; border:1px solid #e5e7eb; border-radius:0 8px 8px 8px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); position:relative; top:-1px; }
+/* Pulsanti */
+button { cursor:pointer; background:#4f46e5; color:#fff; border:none; padding:10px 18px; border-radius:8px; margin:5px 5px 5px 0; transition:all 0.2s ease-in-out; font-weight:600; white-space:nowrap; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
+button:hover { background:#4338ca; transform:translateY(-1px); box-shadow:0 4px 8px rgba(0,0,0,0.15); }
+.btn-action { background:#10b981; } .btn-action:hover { background:#059669; }
+.btn-delete { background:#ef4444; } .btn-delete:hover { background:#dc2626; }
+.btn-secondary { background:#e5e7eb; color:#374151; box-shadow:none; } .btn-secondary:hover { background:#d1d5db; transform:translateY(-1px); box-shadow:0 2px 4px rgba(0,0,0,0.1);}
+.btn-reset { background:#991b1b; font-weight:700; } .btn-reset:hover { background:#7f1d1d; }
+/* Form */
+input, select { padding:10px 12px; border:1px solid #d1d5db; border-radius:6px; margin-right:10px; width:100%; max-width:250px; transition:border-color 0.2s, box-shadow 0.2s; font-size:1rem; }
+input:focus, select:focus { border-color:#4f46e5; box-shadow:0 0 0 3px rgba(79,70,229,0.2); outline:none; }
+input[readonly] { background-color:#f3f4f6; cursor:not-allowed; }
+label { font-weight:600; margin-bottom:4px; display:block; color:#374151; }
+#carico-form, #scarico-form { display:flex; gap:20px; flex-wrap:wrap; align-items:flex-end; }
+#carico-form div, #scarico-form div { display:flex; flex-direction:column; flex-grow:1; min-width:180px; }
+#carico-form button, #scarico-form button { margin-top:10px; }
+/* Notifica */
+#notification { font-weight:600; text-align:center; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
+/* Tabelle */
+table { width:100%; border-collapse:separate; border-spacing:0; margin-top:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); border-radius:8px; overflow:hidden; }
+th, td { padding:12px 16px; text-align:left; border-bottom:1px solid #f3f4f6; }
+th { background:#eef2ff; font-size:0.8rem; color:#1e3a8a; font-weight:700; text-transform:uppercase; }
 tr:last-child td { border-bottom:none; } 
-tr:nth-child(even) { background-color:#f9fafb; } 
-tr:hover { background-color:#eff6ff; } 
-.qty-cell { font-weight:700; color:#10b981; font-size:1.1rem; } 
-.qty-low { color:#f97316; background-color:#fff7ed; border-radius:4px; padding:2px 6px; display:inline-block; } 
-
-/* Dashboard e filtri */ 
-#chart-giacenze, #chart-andamento { background:#fff; padding:20px; margin-bottom:20px; border-radius:8px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); } 
-.controls-container { background:#f3f4f6; padding:15px; border-radius:8px; box-shadow:inset 0 1px 3px rgba(0,0,0,0.05); display:flex; gap:10px; flex-wrap:wrap; align-items:center; } 
-@media(max-width:768px){ 
-    body{padding:12px;} 
-    #carico-form,#scarico-form{flex-direction:column;align-items:stretch;gap:15px;} 
-    #carico-form div,#scarico-form div{min-width:100%;} 
-    input,select{max-width:100%;margin-right:0;} 
-    .controls-container{flex-direction:column;align-items:stretch;} 
-    .controls-container label{margin-bottom:0;} 
-    .controls-container button{width:100%;margin-right:0;} 
-    th,td{font-size:0.75rem;padding:8px 10px;} 
-} 
+tr:nth-child(even) { background-color:#f9fafb; }
+tr:hover { background-color:#eff6ff; }
+.qty-cell { font-weight:700; color:#10b981; font-size:1.1rem; }
+.qty-low { color:#f97316; background-color:#fff7ed; border-radius:4px; padding:2px 6px; display:inline-block; }
+/* Dashboard e filtri */
+#chart-giacenze, #chart-andamento { background:#fff; padding:20px; margin-bottom:20px; border-radius:8px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); }
+.controls-container { background:#f3f4f6; padding:15px; border-radius:8px; box-shadow:inset 0 1px 3px rgba(0,0,0,0.05); display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+@media(max-width:768px){ body{padding:12px;} #carico-form,#scarico-form{flex-direction:column;align-items:stretch;gap:15px;} #carico-form div,#scarico-form div{min-width:100%;} input,select{max-width:100%;margin-right:0;} .controls-container{flex-direction:column;align-items:stretch;} .controls-container label{margin-bottom:0;} .controls-container button{width:100%;margin-right:0;} th,td{font-size:0.75rem;padding:8px 10px;} }
 </style>
 </head>
 <body>
-
 <h1>📦 Gestione Magazzino Completo</h1>
 
+<!-- Tabs -->
 <div class="tab-container">
-    <button role="tab" aria-controls="tab-carico" data-target="tab-carico" class="active">➕ Carico</button>
-    <button role="tab" aria-controls="tab-scarico" data-target="tab-scarico">➖ Scarico</button>
-    <button role="tab" aria-controls="tab-stock-summary" data-target="tab-stock-summary">📜 Riepilogo Giacenze</button>
-    <button role="tab" aria-controls="tab-dashboard" data-target="tab-dashboard">📊 Dashboard</button>
-    <button role="tab" aria-controls="tab-qr" data-target="tab-qr">📷 QR Scanner</button>
+  <button role="tab" aria-controls="tab-carico" data-target="tab-carico" class="active">➕ Carico</button>
+  <button role="tab" aria-controls="tab-scarico" data-target="tab-scarico">➖ Scarico</button>
+  <button role="tab" aria-controls="tab-stock-summary" data-target="tab-stock-summary">📜 Riepilogo Giacenze</button>
+  <button role="tab" aria-controls="tab-dashboard" data-target="tab-dashboard">📊 Dashboard</button>
+  <button role="tab" aria-controls="tab-qr" data-target="tab-qr">📷 QR Scanner</button>
 </div>
 
+<!-- CARICO -->
 <div id="tab-carico" role="tabpanel">
     <h2>Registra un Nuovo Ingresso</h2>
     <form id="carico-form">
         <div>
             <label for="carico-barcode">Barcode:</label>
-            <input id="carico-barcode" name="carico-barcode" placeholder="Codice Barcode" required autocomplete="off" inputmode="text" >
+            <input 
+                id="carico-barcode" 
+                name="carico-barcode" 
+                placeholder="Codice Barcode" 
+                required 
+                autocomplete="off" 
+                inputmode="text"
+            >
         </div>
+
         <div>
             <label for="carico-article-selector">Articolo:</label>
+            
             <select id="carico-article-selector" name="carico-article" autocomplete="off" required>
                 <option value="">-- Seleziona Articolo --</option>
             </select>
-            <input id="carico-article-input" name="carico-article-input-text" placeholder="Inserisci nuovo articolo" autocomplete="off" style="display:none;" >
+
+            <input 
+                id="carico-article-input" 
+                name="carico-article-input-text" 
+                placeholder="Inserisci nuovo articolo" 
+                autocomplete="off"
+                style="display:none;"
+            >
         </div>
+
         <div style="display: flex; align-items: center; gap: 10px; margin-top: 5px; margin-bottom: 10px;">
             <input type="checkbox" id="carico-new-article-switch">
             <label for="carico-new-article-switch" style="font-weight: normal; margin: 0;">Articolo Nuovo</label>
         </div>
+        
         <div>
             <label for="carico-qty">Quantità:</label>
-            <input type="number" id="carico-qty" name="carico-qty" required min="1" value="1" >
+            <input 
+                type="number" 
+                id="carico-qty" 
+                name="carico-qty"
+                required 
+                min="1" 
+                value="1"
+            >
         </div>
         <div id="carico-giacenza-display" style="font-weight:700; color:#4f46e5; margin-top:10px; min-width:180px;"></div>
         <button type="submit" class="btn-action">✅ Registra Carico</button>
     </form>
 </div>
 
+
+<!-- SCARICO -->
 <div id="tab-scarico" role="tabpanel" class="hidden">
-    <h2>Registra uno Scarico</h2>
-    <form id="scarico-form">
-        <div>
-            <label for="scarico-barcode">Barcode:</label>
-            <input id="scarico-barcode" name="scarico-barcode" placeholder="Codice Barcode" required autocomplete="off" inputmode="text" >
-        </div>
-        <div>
-            <label for="scarico-article">Articolo:</label>
-            <select id="scarico-article" name="scarico-article" required >
-                <option value="">-- Seleziona Articolo --</option>
-            </select>
-        </div>
-        <div>
-            <label for="scarico-qty">Quantità:</label>
-            <input type="number" id="scarico-qty" name="scarico-qty" required min="1" value="1" >
-        </div>
-        <div id="scarico-giacenza-display" style="font-weight:700; color:#ef4444; margin-top:10px; min-width:180px;"></div>
-        <button type="submit" class="btn-delete">🔥 Registra Scarico</button>
-    </form>
+  <h2>Registra uno Scarico</h2>
+  <form id="scarico-form">
+    <div>
+      <label for="scarico-barcode">Barcode:</label>
+      <input 
+        id="scarico-barcode" 
+        name="scarico-barcode" 
+        placeholder="Codice Barcode" 
+        required 
+        autocomplete="off" 
+        inputmode="text"
+      >
+    </div>
+
+    <div>
+      <label for="scarico-article">Articolo:</label>
+      <select 
+        id="scarico-article" 
+        name="scarico-article" 
+        required
+      >
+        <option value="">-- Seleziona Articolo --</option>
+      </select>
+    </div>
+
+    <div>
+      <label for="scarico-qty">Quantità:</label>
+      <input 
+        type="number" 
+        id="scarico-qty" 
+        name="scarico-qty" 
+        required 
+        min="1" 
+        value="1"
+      >
+    </div>
+	<div id="scarico-giacenza-display" style="font-weight:700; color:#ef4444; margin-top:10px; min-width:180px;"></div>
+    <button type="submit" class="btn-delete">🔥 Registra Scarico</button>
+  </form>
 </div>
 
+<!-- INVENTARIO -->
 <div id="tab-stock-summary" role="tabpanel" class="hidden">
-    <h2>Inventario Attuale</h2>
-    <div style="margin-bottom: 15px; margin-top: 15px;">
-        <button onclick="downloadSummaryCSV()" class="btn-secondary">⬇️ Scarica Riepilogo CSV</button>
-    </div>
-    <div id="stock-summary-container">
-        <table id="stock-summary">
-            <thead><tr><th>Articolo</th><th>Barcode</th><th>Giacenza Totale</th></tr></thead>
-            <tbody></tbody>
-        </table>
-    </div>
+  <h2>Inventario Attuale</h2>
+  <div style="margin-bottom: 15px; margin-top: 15px;">
+    <button onclick="downloadSummaryCSV()" class="btn-secondary">⬇️ Scarica Riepilogo CSV</button>
+  </div>
+  <div id="stock-summary-container">
+    <table id="stock-summary">
+      <thead><tr><th>Articolo</th><th>Barcode</th><th>Giacenza Totale</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
 </div>
 
+<!-- DASHBOARD -->
 <div id="tab-dashboard" role="tabpanel" class="hidden">
-    <h2>Metriche Magazzino</h2>
-    <h3>Top 10 Giacenze per Quantità</h3>
-    <div id="chart-giacenze"></div>
-    <h3>Andamento Giornaliero Movimenti Netto</h3>
-    <div id="chart-andamento"></div>
+  <h2>Metriche Magazzino</h2>
+  <h3>Top 10 Giacenze per Quantità</h3>
+  <div id="chart-giacenze"></div>
+  <h3>Andamento Giornaliero Movimenti Netto</h3>
+  <div id="chart-andamento"></div>
 </div>
 
+<!-- Tab QR Scanner -->
 <div id="tab-qr" role="tabpanel" class="hidden">
-    <h2>Scansiona QR / Barcode</h2>
-    <p id="qr-status" style="font-weight:bold; color:#6b7280; margin-bottom:8px;"> ⛔ Scanner disattivato </p>
-    <video id="qr-video" autoplay muted playsinline style="width:100%; max-width:420px; border-radius:8px; border:1px solid #d1d5db;"></video>
-    <div style="margin-top:12px;">
-        <label for="qr-result">Codice rilevato</label>
-        <input id="qr-result" readonly placeholder="Inquadra un codice..." style="width:100%; max-width:420px;">
-    </div>
-    <div style="margin-top:12px;">
-        <label for="qr-target">Destinazione:</label>
-        <select id="qr-target" style="width:100%; max-width:200px;">
-            <option value="carico">Carico</option>
-            <option value="scarico">Scarico</option>
-        </select>
-    </div>
-    <div style="margin-top:10px;">
-        <button id="use-qr" class="btn-action">Usa barcode</button>
-        <button id="stop-qr" class="btn-secondary">Stop scanner</button>
-    </div>
-    <p style="margin-top:12px;color:#6b7280"> Se il browser non supporta la scansione nativa, verrà usato un fallback. </p>
+  <h2>Scansiona QR / Barcode</h2>
+
+  <p id="qr-status" style="font-weight:bold; color:#6b7280; margin-bottom:8px;">
+    ⛔ Scanner disattivato
+  </p>
+
+  <video id="qr-video" autoplay muted playsinline style="width:100%; max-width:420px; border-radius:8px; border:1px solid #d1d5db;"></video>
+
+  <div style="margin-top:12px;">
+    <label for="qr-result">Codice rilevato</label>
+    <input id="qr-result" readonly placeholder="Inquadra un codice..." style="width:100%; max-width:420px;">
+  </div>
+
+  <!-- Selettore destinazione -->
+  <div style="margin-top:12px;">
+    <label for="qr-target">Destinazione:</label>
+    <select id="qr-target" style="width:100%; max-width:200px;">
+      <option value="carico">Carico</option>
+      <option value="scarico">Scarico</option>
+    </select>
+  </div>
+
+  <div style="margin-top:10px;">
+    <button id="use-qr" class="btn-action">Usa barcode</button>
+    <button id="stop-qr" class="btn-secondary">Stop scanner</button>
+  </div>
+
+  <p style="margin-top:12px;color:#6b7280">
+    Se il browser non supporta la scansione nativa, verrà usato un fallback.
+  </p>
 </div>
 
 <div id="notification" style="color:#fff;background:#4f46e5;padding:12px;margin-bottom:20px;border-radius:8px;display:none;"></div>
-
 <hr>
 
 <h2>Storico Completo Operazioni</h2>
-
 <div class="controls-container">
-    <label for="filter-type">Tipo Operazione:</label>
-    <select id="filter-type">
-        <option value="Tutti">Tutti</option>
-        <option value="Carico">Carico</option>
-        <option value="Scarico">Scarico</option>
-    </select>
+  <label for="filter-type">Tipo Operazione:</label>
+  <select id="filter-type">
+    <option value="Tutti">Tutti</option>
+    <option value="Carico">Carico</option>
+    <option value="Scarico">Scarico</option>
+  </select>
 
-    <label for="filter-limit">Limite Record:</label>
-    <select id="filter-limit">
-        <option value="20">20</option>
-        <option value="40">40</option>
-        <option value="60">60</option>
-        <option value="80" selected>80</option>
-    </select>
-
-    <label for="filter-articolo">Articolo (Ricerca):</label>
-    <input id="filter-articolo" placeholder="Cerca articolo..." style="flex-grow:1; max-width: 250px;">
-
-    <button id="apply-filter" class="btn-secondary">🔎 Applica Filtro</button>
-    <button id="clear-filter" class="btn-secondary">🗑️ Rimuovi Filtro</button>
-    <button onclick="downloadLogCSV()" class="btn-secondary">⬇️ Scarica Log CSV</button>
-    <button onclick="resetDatabase()" class="btn-reset">⚠️ Resetta Database (Cancella Tutto)</button>
+  <label for="filter-limit">Limite Record:</label>
+  <select id="filter-limit">
+    <option value="20">20</option>
+    <option value="40">40</option>
+    <option value="60">60</option>
+    <option value="80" selected>80</option>
+  </select>
+  <label for="filter-articolo">Articolo (Ricerca):</label>
+  <input id="filter-articolo" placeholder="Cerca articolo..." style="flex-grow:1; max-width: 250px;">
+  
+  <button id="apply-filter" class="btn-secondary">🔎 Applica Filtro</button>
+  <button id="clear-filter" class="btn-secondary">🗑️ Rimuovi Filtro</button>
+  <button onclick="downloadLogCSV()" class="btn-secondary">⬇️ Scarica Log CSV</button>
+  <button onclick="resetDatabase()" class="btn-reset">⚠️ Resetta Database (Cancella Tutto)</button> 
 </div>
 
 <div id="full-log-container">
-    <table id="full-log">
-        <thead><tr><th>Data/Ora</th><th>Tipo</th><th>Barcode</th><th>Articolo</th><th>Quantità</th><th>Azioni</th></tr></thead>
-        <tbody></tbody>
-    </table>
+  <table id="full-log">
+    <thead><tr><th>Data/Ora</th><th>Tipo</th><th>Barcode</th><th>Articolo</th><th>Quantità</th><th>Azioni</th></tr></thead>
+    <tbody></tbody>
+  </table>
 </div>
 
-
 <script type="module">
-// ================== SUPABASE (FIX: Usa la versione con '+esm' per 'type="module"') ==================
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@latest/+esm'
+// ================== SUPABASE ==================
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
 // ================== SUONO BEEP ==================
 function playBeep(duration = 100, frequency = 440, volume = 0.5) {
@@ -248,84 +298,49 @@ function playBeep(duration = 100, frequency = 440, volume = 0.5) {
     oscillator.connect(gainNode);
     gainNode.connect(audioCtx.destination);
 
-    oscillator.type = 'square'; // tipo di onda: square, sine, sawtooth, triangle
+    oscillator.type = 'square';       // tipo di onda: square, sine, sawtooth, triangle
     oscillator.frequency.value = frequency; // frequenza in Hz
-    gainNode.gain.value = volume; // volume (0-1)
+    gainNode.gain.value = volume;     // volume (0-1)
 
     oscillator.start();
-    setTimeout(() => oscillator.stop(), duration); // ferma dopo duration ms
+    setTimeout(() => oscillator.stop(), duration); // ferma dopo `duration` ms
 }
 
 const supabaseUrl = 'https://eevwzkcesmfofpecuxwv.supabase.co'
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnd6a2Nlc21mb2ZwZWN1eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2ODkxOTAsImV4cCI6MjA3NjI2NTE5MH0.j7TQnwbw-gW2S6QBjyp4wscJrXUVYmg3wwVWVPRe1b4'
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnd6a2Nlc21mb2ZwZWN1eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2ODkxOTAsImV4cCI6MjA3NjI2NTE5MH0.j7TQnwbw-gW2S6QBjyp4wsQJrXUVYmg3wwVWVPRe1b4'
 const supabase = createClient(supabaseUrl, supabaseKey)
 
-// ================== SUPABASE REALTIME ==================
-// Inizializza i canali Realtime, chiamando gli aggiornamenti
-const logChannel = supabase.channel('realtime-log_operazioni')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'log_operazioni' }, payload => {
-        console.log('Realtime log_operazioni:', payload);
-        renderTables();
-        renderStockSummary();
-        renderCharts();
-        renderAndamentoGiornaliero();
-    })
-    .subscribe();
 
-const magazzinoChannel = supabase.channel('realtime-magazzino')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'magazzino' }, payload => {
-        console.log('Realtime magazzino:', payload);
-        renderStockSummary();
-        renderCharts();
-        renderAndamentoGiornaliero();
-    })
-    .subscribe();
+// ================== ELEMENTI DOM (Dichiarazione Unica) ==================
 
-
-// ================== ELEMENTI ==================
 const caricoBarcode = document.getElementById('carico-barcode');
-const caricoArticleSelector = document.getElementById('carico-article-selector');
-const caricoArticleInput = document.getElementById('carico-article-input');
+const caricoArticleSelector = document.getElementById('carico-article-selector'); // Select o Input (per articoli esistenti)
+const caricoArticleInput = document.getElementById('carico-article-input');     // Input testuale per NUOVI articoli
 const caricoNewArticleSwitch = document.getElementById('carico-new-article-switch');
 const caricoQty = document.getElementById('carico-qty');
+
 const scaricoBarcode = document.getElementById('scarico-barcode');
 const scaricoQty = document.getElementById('scarico-qty');
+const scaricoArticle = document.getElementById('scarico-article'); // La select principale per lo scarico
+
+// Elementi Filtri Storico
+const filtroTipo = document.getElementById('filter-type');
+const filtroLimite = document.getElementById('filter-limit');
+const filtroArticolo = document.getElementById('filter-articolo');
+
+// Elementi di notifica e Display (aggiungi qui tutti i tuoi display della giacenza)
 const notificationElement = document.getElementById('notification');
-// 🔽 nuovo elemento select per lo scarico
-const scaricoArticle = document.getElementById('scarico-article');
+// const caricoGiacenzaDisplay = document.getElementById('carico-giacenza-display'); // Esempio
+// const scaricoGiacenzaDisplay = document.getElementById('scarico-giacenza-display'); // Esempio
 
 
-// ================== NOTIFICHE ==================
-function showNotification(msg, type = 'info') {
-    notificationElement.textContent = msg;
-    notificationElement.style.display = 'block';
-    notificationElement.style.backgroundColor = 
-        type === 'success' ? '#10b981' : 
-        type === 'error' ? '#ef4444' : '#4f46e5';
-    setTimeout(() => { notificationElement.style.display = 'none' }, 3000);
-}
+// ================== FUNZIONI SUPPORTO ==================
 
-
-// ================== FUNZIONI DI SUPPORTO ==================
-
-/**
- * Funzione helper per trovare un singolo articolo nel magazzino.
- * @param {string} barcode 
- * @returns {Promise<Object|null>} L'oggetto articolo o null.
- */
-async function findArticle(barcode) {
-    const { data } = await supabase.from('magazzino').select('*').eq('barcode', barcode).maybeSingle();
-    return data;
-}
-
-/**
- * Aggiorna la select degli articoli (usando i barcode come value).
- * @param {HTMLElement} selectElement 
- */
+// Popola la tendina con gli articoli presenti nel magazzino
 async function populateArticlesSelect(selectElement) {
     const { data, error } = await supabase.from('magazzino').select('article, barcode');
+    selectElement.innerHTML = '<option value="">-- Seleziona Articolo --</option>';
 
-    selectElement.innerHTML = '<option value="">-- Seleziona Articolo --</option>'; 
     if (error) {
         console.error('Errore caricamento articoli:', error);
         return;
@@ -343,26 +358,7 @@ async function populateArticlesSelect(selectElement) {
     }
 }
 
-/**
- * Aggiorna la select Scarico (chiamata dopo Carico o da QR Scanner).
- * @param {string} currentBarcode Barcode da selezionare automaticamente dopo il refresh.
- */
-async function refreshScaricoSelect(currentBarcode = '') {
-    await populateArticlesSelect(scaricoArticle);
-    if (currentBarcode) {
-        scaricoArticle.value = currentBarcode;
-        scaricoArticle.dispatchEvent(new Event('change')); // Attiva il listener per aggiornare la giacenza
-    }
-}
-
-
-/**
- * Mostra la giacenza attuale di un barcode.
- * @param {string} barcode 
- * @param {string} displayElementId ID dell'elemento HTML dove mostrare la giacenza.
- * @param {'carico'|'scarico'} mode 
- * @param {boolean} autoReset Se true, pulisce dopo 10 secondi.
- */
+// ➡️ Funzione getAndDisplayStock aggiornata con auto-reset
 async function getAndDisplayStock(barcode, displayElementId, mode, autoReset = false) {
     const displayElement = document.getElementById(displayElementId);
     if (!displayElement) return;
@@ -388,91 +384,169 @@ async function getAndDisplayStock(barcode, displayElementId, mode, autoReset = f
             displayElement.textContent = 'Articolo NON in giacenza';
         }
     }
-
-    // LOGICA AGGIUNTA: Auto-reset dopo 10 secondi (tipico per feedback immediato)
+    
+    // LOGICA AGGIUNTA: Auto-reset dopo 10 secondi
     if (autoReset) {
         setTimeout(() => {
-            // Controlla se il barcode è ancora lo stesso nel campo di input
-            let currentInputBarcode;
-            if (mode === 'carico') {
-                currentInputBarcode = caricoBarcode.value;
-            } else {
-                currentInputBarcode = scaricoBarcode.value;
-            }
-
-            // Pulisce solo se il campo di input è vuoto O se è ancora la notifica iniziale
-            if (currentInputBarcode === '' || displayElement.textContent.includes('Giacenza')) {
-                 displayElement.textContent = '';
+            if (displayElement.textContent.includes('Giacenza Attuale') || displayElement.textContent.includes('NUOVO Articolo')) {
+                displayElement.textContent = '';
             }
         }, 10000); // 10000ms = 10 secondi
     }
 }
 
-/**
- * Rimuove le righe del log di operazione.
- * @param {number} logId ID del record da eliminare.
- */
-async function deleteLogEntry(logId) {
-    if (!confirm('Sei sicuro di voler eliminare questa operazione? Non è reversibile!')) {
+
+// ================== FUNZIONI MANCANTI/ESSENZIALI ==================
+
+// 1. Funzione helper per trovare un singolo articolo (Risolve l'errore in addCarico/addScarico)
+async function findArticle(barcode) {
+    const { data } = await supabase
+        .from('magazzino')
+        .select('*')
+        .eq('barcode', barcode)
+        .maybeSingle(); // Usiamo maybeSingle per non crashare se non trova nulla
+    return data;
+}
+
+// 2. Funzione per pulire il log (chiamata dopo Carico/Scarico)
+async function cleanUpLog() {
+    // Logica di pulizia log (se presente, altrimenti stub)
+    console.log('Esecuzione pulizia log...');
+    // Se la tua logica di pulizia è complessa, lasciala qui. Se non la usi,
+    // puoi lasciare uno stub come questo.
+}
+
+// 3. Funzioni di rendering (CHIAMATE NEL REALTIME, DEVONO ESSERE DEFINITE)
+async function renderTables() {
+    // Logica per popolare la tabella log_operazioni.
+    console.log('Rendering tabella log...');
+    // **ASSICURATI CHE IL TUO CODICE DI renderTables COMPLETO SIA QUI.**
+}
+
+async function renderStockSummary() {
+    // Logica per popolare la tabella stock-summary.
+    console.log('Rendering riepilogo magazzino...');
+    // **ASSICURATI CHE IL TUO CODICE DI renderStockSummary COMPLETO SIA QUI.**
+}
+
+async function renderCharts() {
+    // Logica per disegnare i grafici della Dashboard.
+    console.log('Rendering charts...');
+}
+
+async function renderAndamentoGiornaliero() {
+    // Logica per disegnare il grafico andamento.
+    console.log('Rendering andamento...');
+}
+
+async function refreshAll() {
+    await renderTables();
+    await renderStockSummary();
+    await renderCharts();
+}
+
+// ================== FUNZIONI DI SUPPORTO AGGIUNTIVE ==================
+
+// 1. Funzione helper per trovare un singolo articolo (Risolve l'errore in addCarico e addScarico)
+async function findArticle(barcode){
+    const { data } = await supabase.from('magazzino').select('*').eq('barcode',barcode).maybeSingle();
+    return data;
+}
+
+// 2. Funzione per aggiornare la select Scarico (Usata per la scansione QR)
+async function refreshScaricoSelect(currentBarcode = '') {
+    await populateArticlesSelect(scaricoArticle); 
+
+    if (currentBarcode) {
+        scaricoArticle.value = currentBarcode;
+        scaricoArticle.dispatchEvent(new Event('change'));
+    }
+}
+
+// ================== LISTENER SEZIONE SCARICO ==================
+
+// Autocompila l’articolo e aggiorna giacenza quando inserisci o scanni un barcode
+scaricoBarcode.addEventListener('input', async () => {
+    const code = scaricoBarcode.value.trim();
+    
+    if (!code) {
+        scaricoArticle.value = '';
+        document.getElementById('scarico-giacenza-display').textContent = ''; // Pulisce la giacenza
         return;
     }
-    const { error } = await supabase
-        .from('log_operazioni')
-        .delete()
-        .eq('id', logId);
+
+    // Cerca l'articolo corrispondente al barcode
+    const { data: existing, error } = await supabase
+        .from('magazzino')
+        .select('article')
+        .eq('barcode', code)
+        .maybeSingle();
 
     if (error) {
-        showNotification('Errore eliminazione log: ' + error.message, 'error');
-    } else {
-        showNotification('Operazione eliminata con successo.', 'success');
-        // Il Realtime si occupa di chiamare renderTables()
-    }
-}
-
-/**
- * Pulisce il magazzino e il log.
- */
-async function resetDatabase() {
-    if (!confirm('ATTENZIONE: Stai per ELIMINARE TUTTI I DATI dal Magazzino e dal Log. CONTINUARE?')) {
+        console.warn('Errore lookup articolo:', error);
+        scaricoArticle.value = '';
+        document.getElementById('scarico-giacenza-display').textContent = ''; 
         return;
     }
-    const { error: logError } = await supabase.from('log_operazioni').delete().neq('id', 0);
-    const { error: magazzinoError } = await supabase.from('magazzino').delete().neq('id', 0);
 
-    if (logError || magazzinoError) {
-        showNotification('Errore nel reset: ' + (logError?.message || magazzinoError?.message), 'error');
+    // Sincronizza il campo Select (scaricoArticle)
+    if (existing) {
+        // Cerca l'opzione corrispondente al barcode/valore
+        const option = [...scaricoArticle.options].find(o => o.value === code);
+        if (option) {
+            scaricoArticle.value = option.value;
+        } else {
+            scaricoArticle.value = ''; // Barcode presente nel DB ma non nella select (forse appena caricato)
+        }
     } else {
-        showNotification('Database resettato! Tutti i dati eliminati.', 'success');
-        await refreshAll();
+        scaricoArticle.value = ''; // Barcode non trovato
     }
+    
+    // ➡️ AGGIORNA LA GIACENZA in tempo reale
+    getAndDisplayStock(code, 'scarico-giacenza-display', 'scarico');
+});
+
+// Sincronizza il barcode e aggiorna la giacenza quando si seleziona un articolo dalla select
+scaricoArticle.addEventListener('change', async () => {
+    const barcode = scaricoArticle.value; // Il barcode è il valore dell'opzione selezionata
+
+    // Aggiorna l'input del barcode basandosi sulla selezione
+    if (barcode) {
+        // Non serve una query al DB, basta assegnare il valore della select all'input Barcode
+        scaricoBarcode.value = barcode;
+    } else {
+        scaricoBarcode.value = ''; // Pulisce il barcode se si torna a "Seleziona Articolo"
+    }
+    
+    // ➡️ AGGIORNA LA GIACENZA
+    getAndDisplayStock(barcode, 'scarico-giacenza-display', 'scarico');
+});
+
+// ================== NOTIFICHE ==================
+function showNotification(msg,type='info'){
+    notificationElement.textContent = msg;
+    notificationElement.style.display='block';
+    notificationElement.style.backgroundColor = type==='success'?'#10b981': type==='error'?'#ef4444':'#4f46e5';
+    setTimeout(()=>{notificationElement.style.display='none'},3000);
 }
 
-/**
- * Elimina le righe di magazzino con quantity = 0.
- */
-async function cleanUpMagazzino() {
-    const { error } = await supabase.from('magazzino').delete().eq('quantity', 0);
-    if (error) console.error("Errore pulizia magazzino:", error);
-}
-
-// ================== FUNZIONI DI OPERAZIONE ==================
-
-/**
- * Registra un carico in magazzino e nel log.
- * @param {string} barcode 
- * @param {string} article 
- * @param {number} qty 
- */
+// ================== FUNZIONI ==================
 async function addCarico(barcode, article, qty) {
     // 1️⃣ Controlla se l'articolo esiste
-    let existingArticle = await findArticle(barcode);
+    const { data: existingArticles } = await supabase
+        .from('magazzino')
+        .select('*')
+        .eq('barcode', barcode)
+        .limit(1)
+        .single()
+        .catch(() => ({ data: null }));
 
-    if (existingArticle) {
+    if (existingArticles) {
         // Aggiorna quantità
         await supabase
             .from('magazzino')
-            .update({ quantity: existingArticle.quantity + qty })
-            .eq('id', existingArticle.id);
+            .update({ quantity: existingArticles.quantity + qty })
+            .eq('id', existingArticles.id);
     } else {
         // Inserisci nuovo articolo
         await supabase
@@ -484,624 +558,591 @@ async function addCarico(barcode, article, qty) {
     await supabase
         .from('log_operazioni')
         .insert([{ type: 'Carico', barcode, article, quantity: qty }]);
-    
-    // 3️⃣ Aggiorna le select per Carico e Scarico
-    await populateArticlesSelect(caricoArticleSelector);
-    await populateArticlesSelect(scaricoArticle);
-    
-    // 4️⃣ Notifica
+
+    // 3️⃣ Pulizia log (se presente la funzione)
+    if (typeof cleanUpLog === 'function') {
+        await cleanUpLog();
+    }
+
+    // 4️⃣ Aggiorna le select in tempo reale
+await populateArticlesSelect(caricoArticleSelector);
+await populateArticlesSelect(scaricoArticle);
+
+    // 5️⃣ Notifica
     showNotification(`Carico registrato: ${qty}x ${article}`, 'success');
 }
 
-/**
- * Registra uno scarico in magazzino e nel log.
- * @param {string} barcode 
- * @param {number} qty 
- */
-async function addScarico(barcode, qty) {
-    const existing = await findArticle(barcode);
+// Esempio di funzione populateArticlesSelect aggiornata
+async function populateArticlesSelect(selectId) {
+    const { data: articles } = await supabase
+        .from('magazzino')
+        .select('id, article')
+        .order('article', { ascending: true });
 
+    const select = document.getElementById(selectId);
+    select.innerHTML = ''; // Pulisce la select
+
+    articles.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item.id;
+        option.textContent = item.article;
+        select.appendChild(option);
+    });
+}
+
+async function addScarico(barcode, qty){
+    const existing = await findArticle(barcode);
+    
     if (!existing) {
         showNotification('Errore: Barcode non trovato in magazzino.', 'error');
         return;
     }
+    
     if (existing.quantity < qty) {
         showNotification(`Errore: Quantità insufficiente. Disponibile: ${existing.quantity}`, 'error');
         return;
     }
-
-    // 1️⃣ Aggiorna quantità
-    await supabase.from('magazzino').update({ quantity: existing.quantity - qty }).eq('id', existing.id);
-
-    // 2️⃣ Inserimento del record di log
-    await supabase.from('log_operazioni').insert([{ type: 'Scarico', barcode, article: existing.article, quantity: qty }]);
-
-    // 3️⃣ Pulizia (rimuove il record di magazzino se la giacenza arriva a zero)
-    if (existing.quantity - qty === 0) {
-        await cleanUpMagazzino();
-    }
     
-    // 4️⃣ Aggiorna le select per Carico e Scarico
-    await populateArticlesSelect(caricoArticleSelector);
-    await populateArticlesSelect(scaricoArticle);
-
-    // 5️⃣ Notifica
-    showNotification(`Scarico registrato: ${qty}x ${existing.article}`, 'success');
+    // Aggiorna quantità
+    await supabase.from('magazzino').update({ quantity: existing.quantity - qty }).eq('id', existing.id);
+    
+    // Inserimento del record di log
+    await supabase.from('log_operazioni').insert([{type:'Scarico',barcode,article:existing.article,quantity:qty}]);
+    
+    // 💡 PASSO FINALE: Chiama la pulizia del database
+    await cleanUpLog();
+    
+    showNotification(`Scarico registrato: ${qty}x ${existing.article}`,'success');
 }
 
-
-// ================== RENDERING (Tabelle e Grafici) ==================
-
-/**
- * Recupera i dati di riepilogo magazzino.
- */
-async function getStockSummary() {
-    const { data } = await supabase.from('magazzino').select('*').order('article', { ascending: true });
-    return data || [];
+async function getStockSummary(){ 
+    const { data } = await supabase.from('magazzino').select('*'); 
+    return data || []; 
 }
 
-/**
- * Visualizza la tabella di riepilogo giacenze.
- */
-async function renderStockSummary() {
-    const summaryData = await getStockSummary();
-    const tableBody = document.querySelector('#stock-summary tbody');
-    tableBody.innerHTML = '';
-
-    if (summaryData.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Nessun articolo in giacenza.</td></tr>';
-        return;
-    }
-
-    summaryData.forEach(item => {
-        const row = tableBody.insertRow();
-        const qtyClass = item.quantity < 5 && item.quantity > 0 ? 'qty-low' : '';
-        
-        row.insertCell().textContent = item.article;
-        row.insertCell().textContent = item.barcode;
-        row.insertCell().innerHTML = `<span class="qty-cell ${qtyClass}">${item.quantity}</span>`;
-    });
-}
-
-/**
- * Recupera e filtra i dati del log di operazione.
- */
-async function getLog(filterType = 'Tutti', filterArticle = '', limit = 80) {
+// 💡 SOSTITUISCI LA VECCHIA getLog CON QUESTA 💡
+async function getLog(filterType='Tutti', filterArticle='', limit = 80){ 
     let query = supabase.from('log_operazioni')
         .select('*')
-        .order('date', { ascending: false })
-        .limit(limit);
-
-    if (filterType !== 'Tutti') {
-        query = query.eq('type', filterType);
-    }
-    if (filterArticle) {
-        query = query.ilike('article', `%${filterArticle}%`);
-    }
-
-    const { data } = await query;
-    return data || [];
+        .order('date', { ascending: false }); 
+        
+    if(filterType !== 'Tutti') query = query.eq('type', filterType); 
+    if(filterArticle) query = query.ilike('article', `%${filterArticle}%`);
+    
+    // 👈 APPLICA IL NUOVO LIMITE DINAMICO
+    query = query.limit(limit); 
+    
+    const { data } = await query; 
+    return data || []; 
 }
 
-/**
- * Visualizza la tabella del log completo (Storico Operazioni).
- */
-async function renderTables() {
-    const filterType = document.getElementById('filter-type').value;
-    const filterArticle = document.getElementById('filter-articolo').value.trim();
-    const filterLimit = parseInt(document.getElementById('filter-limit').value);
-    
-    const logData = await getLog(filterType, filterArticle, filterLimit);
-    const tableBody = document.querySelector('#full-log tbody');
-    tableBody.innerHTML = '';
+// Imposta il limite massimo FISSO di record da mantenere nel database (DB)
+const MAX_LOG_RECORDS = 80;
 
-    if (logData.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nessuna operazione trovata.</td></tr>';
+/**
+ * Funzione asincrona che elimina tutti i record dalla tabella 'log_operazioni' 
+ * che sono più vecchi dell'80° record più recente, mantenendo il DB snello.
+ */
+async function cleanUpLog() {
+    // 1. Ottiene la data dell'80° record più recente (l'ultimo che vogliamo tenere)
+    const { data: recentLogs, error: recentError } = await supabase
+        .from('log_operazioni')
+        .select('date')
+        .order('date', { ascending: false })
+        .limit(MAX_LOG_RECORDS); 
+
+    if (recentError || !recentLogs || recentLogs.length < MAX_LOG_RECORDS) {
         return;
     }
 
-    logData.forEach(item => {
-        const date = new Date(item.date).toLocaleString('it-IT');
-        const row = tableBody.insertRow();
-        const typeClass = item.type === 'Carico' ? 'color:#10b981;' : 'color:#ef4444;';
+    // 2. Data di soglia: è la data dell'ultimo (80°) record da mantenere
+    const dateThreshold = recentLogs[MAX_LOG_RECORDS - 1].date; 
 
-        row.insertCell().textContent = date;
-        row.insertCell().innerHTML = `<span style="${typeClass} font-weight:600;">${item.type}</span>`;
-        row.insertCell().textContent = item.barcode;
-        row.insertCell().textContent = item.article;
-        row.insertCell().textContent = item.quantity;
-        
-        // Colonna Azioni
-        const actionCell = row.insertCell();
-        const deleteBtn = document.createElement('button');
-        deleteBtn.textContent = '❌';
-        deleteBtn.className = 'btn-delete';
-        deleteBtn.style.padding = '5px 10px';
-        deleteBtn.style.margin = '0';
-        deleteBtn.onclick = () => deleteLogEntry(item.id);
-        actionCell.appendChild(deleteBtn);
+    // 3. Elimina tutti i record che sono strettamente più vecchi di quella data
+    const { error: deleteError } = await supabase
+        .from('log_operazioni')
+        .delete()
+        .lt('date', dateThreshold); 
+
+    if (deleteError) {
+        console.error("❌ Errore nell'eliminazione dei record vecchi:", deleteError);
+    } else {
+        console.log(`✅ Log pulito: eliminati i record più vecchi di ${MAX_LOG_RECORDS}.`);
+    }
+}
+
+async function renderStockSummary(){
+    const tbody = document.querySelector('#stock-summary tbody');
+    const data = await getStockSummary();
+    tbody.innerHTML='';
+    if(data.length===0){tbody.innerHTML='<tr><td colspan="3" style="text-align:center;padding:20px">Nessun articolo in giacenza.</td></tr>'; return;}
+    data.sort((a,b)=>b.quantity-a.quantity).forEach(item=>{
+        const qtyClass = item.quantity<10?'qty-low':'';
+        const row = tbody.insertRow();
+        row.innerHTML=`<td>${item.article}</td><td>${item.barcode}</td><td class="qty-cell"><span class="${qtyClass}">${item.quantity}</span></td>`;
+    });
+}
+async function renderTables(){
+    const typeFilter = document.getElementById('filter-type').value;
+    
+    // ❌ RIMUOVE .toLowerCase() - l'operatore 'ilike' nel DB è già case-insensitive
+    const articoloFilter = document.getElementById('filter-articolo').value;
+    
+    // 💡 PASSO 1: Leggi il nuovo valore limite e convertilo in numero intero
+    const limitFilter = parseInt(document.getElementById('filter-limit').value || 80); 
+    
+    const tbody = document.querySelector('#full-log tbody');
+    
+    // 💡 PASSO 2: Chiama getLog con il nuovo parametro limitFilter
+    const data = await getLog(typeFilter, articoloFilter, limitFilter); 
+    
+    tbody.innerHTML='';
+    
+    if(data.length===0){
+        tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:20px">Nessun risultato trovato.</td></tr>'; 
+        return;
+    }
+    
+    data.forEach(r=>{
+        const color = r.type==='Carico'?'#059669':'#dc2626';
+        const icon = r.type==='Carico'?'⬆️':'⬇️';
+        const tr = document.createElement('tr');
+        tr.innerHTML=`<td>${new Date(r.date).toLocaleString()}</td>
+                      <td style="color:${color};font-weight:bold">${icon} ${r.type}</td>
+                      <td>${r.barcode}</td>
+                      <td>${r.article}</td>
+                      <td>${r.quantity}</td>
+                      <td><button class="btn-delete" onclick="deleteRecord(${r.id})">❌ Annulla</button></td>`;
+        tbody.appendChild(tr);
     });
 }
 
+async function deleteRecord(id){
+    if(!confirm("Confermi l'eliminazione?")) return;
 
-// ================== FUNZIONI GRAFICI (D3.js) ==================
-
-/**
- * Raggruppa i dati del log per giorno e calcola il saldo netto.
- */
-async function getDailyNetMovement() {
-    const { data: logData, error } = await supabase.from('log_operazioni').select('type, quantity, date');
-
-    if (error) {
-        console.error('Errore recupero log per grafici:', error);
-        return [];
+    const { data } = await supabase.from('log_operazioni').select('*').eq('id',id).maybeSingle();
+    if(!data){ 
+        showNotification("Record non trovato",'error'); 
+        return; 
     }
 
-    const dailyNet = d3.rollups(
-        logData,
-        v => d3.sum(v, d => d.type === 'Carico' ? d.quantity : -d.quantity),
-        d => d.date.substring(0, 10) // Raggruppa per giorno (YYYY-MM-DD)
-    )
-    .map(([date, net]) => ({ date: new Date(date), net }));
+    // Aggiorna il magazzino senza cancellare articoli a zero
+    const { data:existing } = await supabase.from('magazzino').select('*').eq('barcode',data.barcode).maybeSingle();
 
-    // Ordina per data
-    dailyNet.sort((a, b) => a.date - b.date);
-    return dailyNet;
+    if(data.type==='Carico'){
+        // Se annullo un carico, diminuisco la quantità
+        const newQty = (existing ? existing.quantity : 0) - data.quantity;
+        await supabase.from('magazzino').upsert({ barcode: data.barcode, article: data.article, quantity: Math.max(newQty,0) });
+    } else {
+        // Se annullo uno scarico, aumento la quantità
+        const newQty = (existing ? existing.quantity : 0) + data.quantity;
+        await supabase.from('magazzino').upsert({ barcode: data.barcode, article: data.article, quantity: newQty });
+    }
+
+    // Elimina il record dallo storico
+    await supabase.from('log_operazioni').delete().eq('id',id);
+
+    renderTables();
+    renderStockSummary();
+    showNotification("Record annullato",'success');
+
+}
+
+async function resetDatabase(){
+    if(!confirm("ATTENZIONE: elimini TUTTO il database?")) return;
+
+    // Cancella prima log_operazioni
+    const { error: logError } = await supabase.from('log_operazioni').delete().neq('id',0);
+    if(logError) { showNotification("Errore cancellazione log: "+logError.message,'error'); return; }
+
+    // Cancella magazzino
+    const { error: stockError } = await supabase.from('magazzino').delete().neq('barcode','');
+    if(stockError) { showNotification("Errore cancellazione magazzino: "+stockError.message,'error'); return; }
+
+    // Aggiorna UI
+    renderTables();
+    renderStockSummary();
+    renderCharts();
+    showNotification("Database resettato",'success');
+}
+async function downloadCSV(filename,data){
+    const csv = data.map(r=>Object.values(r).join(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+}
+async function downloadSummaryCSV(){
+    const data = await getStockSummary();
+    downloadCSV('riepilogo_giacenze.csv',data);
+}
+async function downloadLogCSV(){
+    const data = await getLog();
+    downloadCSV('log_operazioni.csv',data);
+}
+
+// ================== DASHBOARD ==================
+async function renderCharts(){
+    const data = await getStockSummary();
+    const top10 = data.sort((a,b)=>b.quantity-a.quantity).slice(0,10);
+    d3.select("#chart-giacenze").html('');
+    const width=600,height=300;
+    const svg=d3.select("#chart-giacenze").append("svg").attr("width",width).attr("height",height);
+    const x=d3.scaleBand().domain(top10.map(d=>d.article)).range([50,width-20]).padding(0.2);
+    const y=d3.scaleLinear().domain([0,d3.max(top10,d=>d.quantity)]).range([height-40,20]);
+    svg.append("g").attr("transform",`translate(0,${height-40})`).call(d3.axisBottom(x)).selectAll("text").attr("transform","rotate(-40)").style("text-anchor","end");
+    svg.append("g").attr("transform","translate(50,0)").call(d3.axisLeft(y));
+    svg.selectAll("rect").data(top10).enter().append("rect")
+       .attr("x",d=>x(d.article)).attr("y",d=>y(d.quantity))
+       .attr("width",x.bandwidth()).attr("height",d=>height-40-y(d.quantity))
+       .attr("fill","#4f46e5");
 }
 
 
-/**
- * Renderizza il grafico Top 10 Giacenze (Bar Chart).
- */
-async function renderCharts() {
-    const giacenzeData = await getStockSummary();
-    const top10 = giacenzeData.sort((a, b) => b.quantity - a.quantity).slice(0, 10);
-    const container = document.getElementById('chart-giacenze');
-    container.innerHTML = ''; 
-
-    if (top10.length === 0) {
-         container.innerHTML = '<p style="text-align:center;">Nessun dato di giacenza per il grafico.</p>';
-         return;
-    }
-
-    const margin = { top: 20, right: 30, bottom: 80, left: 50 },
-          width = container.clientWidth - margin.left - margin.right,
-          height = 400 - margin.top - margin.bottom;
-
-    const svg = d3.select("#chart-giacenze")
-        .append("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-        .append("g")
-        .attr("transform", `translate(${margin.left},${margin.top})`);
-
-    // Scale
-    const x = d3.scaleBand()
-        .range([0, width])
-        .domain(top10.map(d => d.article))
-        .padding(0.2);
-
-    const y = d3.scaleLinear()
-        .domain([0, d3.max(top10, d => d.quantity) || 10]) // Assicura un minimo di 10
-        .range([height, 0]);
-
-    // Aggiungi assi
-    svg.append("g")
-        .attr("transform", `translate(0,${height})`)
-        .call(d3.axisBottom(x))
-        .selectAll("text")
-        .attr("transform", "translate(-10,0)rotate(-45)")
-        .style("text-anchor", "end");
-
-    svg.append("g")
-        .call(d3.axisLeft(y));
-
-    // Barre
-    svg.selectAll("mybar")
-        .data(top10)
-        .join("rect")
-        .attr("x", d => x(d.article))
-        .attr("y", d => y(d.quantity))
-        .attr("width", x.bandwidth())
-        .attr("height", d => height - y(d.quantity))
-        .attr("fill", "#4f46e5");
-}
-
-/**
- * Renderizza il grafico Andamento Giornaliero (Line/Area Chart).
- */
 async function renderAndamentoGiornaliero() {
-    const andamentoData = await getDailyNetMovement();
-    const container = document.getElementById('chart-andamento');
-    container.innerHTML = ''; 
+    const { data: logData } = await supabase
+        .from('log_operazioni')
+        .select('date,type,quantity');
 
-    if (andamentoData.length === 0) {
-         container.innerHTML = '<p style="text-align:center;">Nessun movimento registrato per il grafico.</p>';
-         return;
+    if(!logData || logData.length === 0){
+        d3.select("#chart-andamento").html("Nessun dato disponibile");
+        return;
     }
-    
-    const margin = { top: 20, right: 30, bottom: 40, left: 50 },
-          width = container.clientWidth - margin.left - margin.right,
-          height = 400 - margin.top - margin.bottom;
 
-    const svg = d3.select("#chart-andamento")
-        .append("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-        .append("g")
-        .attr("transform", `translate(${margin.left},${margin.top})`);
-        
-    // Scale
+    // Raggruppa per giorno
+    const dailyMap = {};
+    logData.forEach(r => {
+        const day = new Date(r.date).toISOString().slice(0,10); // YYYY-MM-DD
+        if(!dailyMap[day]) dailyMap[day] = 0;
+        dailyMap[day] += r.type === 'Carico' ? r.quantity : -r.quantity;
+    });
+
+    // Trasforma in array ordinato
+    const dailyArray = Object.entries(dailyMap)
+        .map(([date, qty]) => ({ date: new Date(date), qty }))
+        .sort((a,b)=>a.date - b.date);
+
+    // Imposta dimensioni grafico
+    const width = 600, height = 300;
+    d3.select("#chart-andamento").html('');
+    const svg = d3.select("#chart-andamento").append("svg").attr("width", width).attr("height", height);
+
     const x = d3.scaleTime()
-        .domain(d3.extent(andamentoData, d => d.date))
-        .range([0, width]);
-
-    const yMin = d3.min(andamentoData, d => d.net) < 0 ? d3.min(andamentoData, d => d.net) : 0;
-    const yMax = d3.max(andamentoData, d => d.net) > 0 ? d3.max(andamentoData, d => d.net) : 10; 
-
+        .domain(d3.extent(dailyArray, d => d.date))
+        .range([50, width-20]);
     const y = d3.scaleLinear()
-        .domain([yMin, yMax])
-        .range([height, 0]);
+        .domain([d3.min(dailyArray, d=>d.qty), d3.max(dailyArray, d=>d.qty)])
+        .range([height-40, 20]);
 
-    // Aggiungi assi
-    svg.append("g")
-        .attr("transform", `translate(0,${height})`)
-        .call(d3.axisBottom(x).ticks(d3.timeDay.every(1)).tickFormat(d3.timeFormat("%d/%m"))); // Ticks giornalieri
-        
-    svg.append("g")
-        .call(d3.axisLeft(y));
-        
-    // Linea a Zero
-    svg.append("line")
-        .attr("x1", 0)
-        .attr("y1", y(0))
-        .attr("x2", width)
-        .attr("y2", y(0))
-        .attr("stroke", "#9ca3af")
-        .attr("stroke-dasharray", "4");
-
-    // Linea
+    // Line generator
     const line = d3.line()
         .x(d => x(d.date))
-        .y(d => y(d.net));
+        .y(d => y(d.qty))
+        .curve(d3.curveMonotoneX);
 
+    // Assi
+    svg.append("g").attr("transform",`translate(0,${height-40})`).call(d3.axisBottom(x));
+    svg.append("g").attr("transform","translate(50,0)").call(d3.axisLeft(y));
+
+    // Linea andamento
     svg.append("path")
-        .datum(andamentoData)
-        .attr("fill", "none")
-        .attr("stroke", "#4f46e5")
-        .attr("stroke-width", 2)
+        .datum(dailyArray)
+        .attr("fill","none")
+        .attr("stroke","#10b981")
+        .attr("stroke-width",2)
         .attr("d", line);
-        
-    // Punti
-    svg.selectAll("dot")
-        .data(andamentoData)
-        .enter().append("circle")
-        .attr("r", 5)
-        .attr("cx", d => x(d.date))
-        .attr("cy", d => y(d.net))
-        .attr("fill", d => d.net >= 0 ? "#10b981" : "#ef4444")
-        .on("mouseover", function(event, d) {
-            d3.select(this).attr("r", 8);
-            tooltip.transition()
-                .duration(200)
-                .style("opacity", .9);
-            tooltip.html(`Netto ${d.net}`)
-                .style("left", (event.pageX + 10) + "px")
-                .style("top", (event.pageY - 28) + "px");
-        })
-        .on("mouseout", function(d) {
-            d3.select(this).attr("r", 5);
-            tooltip.transition()
-                .duration(500)
-                .style("opacity", 0);
-        });
-        
-    // Tooltip D3 (necessita di stile CSS esterno o inline)
-    const tooltip = d3.select("body").append("div")
-        .attr("class", "tooltip")
-        .style("opacity", 0)
-        .style("position", "absolute")
-        .style("padding", "5px 10px")
-        .style("background", "rgba(0,0,0,0.7)")
-        .style("color", "#fff")
-        .style("border-radius", "4px")
-        .style("pointer-events", "none");
 }
 
+// ================== INIT ==================
+window.downloadLogCSV = downloadLogCSV;
+window.downloadSummaryCSV = downloadSummaryCSV;
+window.deleteRecord = deleteRecord;
+window.resetDatabase = resetDatabase;
 
-// ================== FUNZIONI CSV (Download) ==================
-
-/**
- * Converte i dati in formato CSV e avvia il download.
- * @param {Array<Object>} data 
- * @param {string} filename 
- */
-function exportCSV(data, filename) {
-    if (data.length === 0) {
-        showNotification('Nessun dato da esportare.', 'error');
-        return;
-    }
-    const headers = Object.keys(data[0]).join(',');
-    const rows = data.map(obj => Object.values(obj).map(val => 
-        (typeof val === 'string' && (val.includes(',') || val.includes('\n'))) ? `"${val.replace(/"/g, '""')}"` : val
-    ).join(','));
-    const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join('\n');
-    
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showNotification(`File ${filename} scaricato.`, 'success');
-}
-
-/** Scarica il riepilogo giacenze. */
-async function downloadSummaryCSV() {
-    const data = await getStockSummary();
-    exportCSV(data, 'giacenze_magazzino.csv');
-}
-
-/** Scarica il log operazioni. */
-async function downloadLogCSV() {
-    // Usa il filtro attuale per l'esportazione
-    const filterType = document.getElementById('filter-type').value;
-    const filterArticle = document.getElementById('filter-articolo').value.trim();
-    // Scarica tutti i record disponibili (limite alto)
-    const data = await getLog(filterType, filterArticle, 50000); 
-    exportCSV(data, 'log_operazioni.csv');
-}
-
-
-// ================== FUNZIONI QR/BARCODE SCANNER ==================
-
-let html5QrcodeScanner = null;
-let lastScanned = '';
-const qrStatus = document.getElementById('qr-status');
-
-/** Avvia lo scanner QR. */
-async function startScanner() {
-    if (html5QrcodeScanner) return; // Già avviato
-    const videoElement = document.getElementById('qr-video');
-    
-    // Controlla se html5Qrcode è disponibile
-    if (typeof Html5QrcodeScanner === 'undefined') {
-        qrStatus.textContent = "❌ Errore: libreria QR Code non caricata.";
-        return;
-    }
-
-    html5QrcodeScanner = new Html5QrcodeScanner(
-        "qr-video", // ID dell'elemento video
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        /* verbose= */ false
-    );
-    
-    const onScanSuccess = (decodedText, decodedResult) => {
-        if (decodedText !== lastScanned) {
-            document.getElementById('qr-result').value = decodedText;
-            qrStatus.textContent = `✅ Codice Rilevato: ${decodedText}`;
-            playBeep();
-            lastScanned = decodedText; // Aggiorna l'ultimo scansionato
-        }
-    };
-    
-    const onScanFailure = (errorMessage) => {
-        // console.warn(`Code scan error = ${errorMessage}`);
-        qrStatus.textContent = "🔍 Scanner attivo, inquadra un codice...";
-    };
-
-    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-    
-    document.getElementById('stop-qr').onclick = stopScanner;
-    qrStatus.textContent = "🔍 Scanner attivo, inquadra un codice...";
-}
-
-/** Ferma lo scanner QR. */
-function stopScanner() {
-    if (html5QrcodeScanner) {
-        html5QrcodeScanner.clear().catch(error => {
-            console.error("Failed to clear html5QrcodeScanner. ", error);
-        });
-        html5QrcodeScanner = null;
-        document.getElementById('qr-result').value = '';
-        qrStatus.textContent = "⛔ Scanner disattivato";
-        lastScanned = '';
-    }
-}
-
-
-// ================== LISTENER PRINCIPALI ==================
-
-/** Funzione per chiamare tutti gli aggiornamenti UI/dati */
-async function refreshAll() {
-    await populateArticlesSelect(caricoArticleSelector);
-    await populateArticlesSelect(scaricoArticle);
-    await renderTables();
+async function refreshAll(){
     await renderStockSummary();
+    await renderTables();
     await renderCharts();
     await renderAndamentoGiornaliero();
+    
+    // ✅ AGGIUNTA NECESSARIA: Popola entrambe le tendine dopo l'aggiornamento
+    await populateArticlesSelect(scaricoArticle);
+    await populateArticlesSelect(caricoArticleSelector); 
 }
 
-// 1. LISTENER CARICO FORM
-document.getElementById('carico-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
+// ================== FILTRI ==================
 
-    const barcode = caricoBarcode.value.trim();
-    let article = '';
-    const qty = parseInt(caricoQty.value);
-    const isNew = caricoNewArticleSwitch.checked;
+// L'azione di applica filtro ricarica la tabella
+document.getElementById('apply-filter').addEventListener('click', renderTables);
 
-    if (!barcode || qty < 1) {
-        showNotification('Barcode e quantità (>=1) sono obbligatori.', 'error');
-        return;
-    }
+// 💡 NUOVO: Ricarica la tabella quando si cambia il limite record
+document.getElementById('filter-limit').addEventListener('change', renderTables); 
 
-    if (isNew) {
-        article = caricoArticleInput.value.trim();
-        if (!article) {
-             showNotification('Il nome del nuovo articolo è obbligatorio.', 'error');
-             return;
-        }
-    } else {
-        // Se non è nuovo, prendi l'articolo dal campo input del selector o dal selector stesso.
-        const selectedOption = caricoArticleSelector.options[caricoArticleSelector.selectedIndex];
-        // Prendi il nome dell'articolo (textContent) anche se il value è il barcode.
-        article = selectedOption.textContent === '-- Seleziona Articolo --' ? '' : selectedOption.textContent;
-
-        if (!article) {
-            showNotification('Seleziona un articolo esistente.', 'error');
-            return;
-        }
-    }
-
-    await addCarico(barcode, article, qty);
-
-    // Pulisce i campi
-    caricoBarcode.value = '';
-    caricoQty.value = '1';
-    caricoArticleInput.value = '';
-    caricoArticleSelector.value = '';
-    caricoNewArticleSwitch.checked = false;
-    caricoArticleInput.style.display = 'none';
-
-    // Rimuove la giacenza attuale dal display (con l'auto-reset non serve più)
-    // document.getElementById('carico-giacenza-display').textContent = ''; 
+// L'azione di rimuovi filtro resetta i valori e ricarica la tabella
+document.getElementById('clear-filter').addEventListener('click', ()=>{
+    document.getElementById('filter-type').value = 'Tutti';
+    document.getElementById('filter-articolo').value = '';
+    
+    // 💡 NUOVO: Resetta il selettore del limite al valore massimo di default
+    document.getElementById('filter-limit').value = '80'; 
+    
+    renderTables();
 });
 
-// Listener per la selezione Articolo Nuovo nel Carico
-caricoNewArticleSwitch.addEventListener('change', () => {
-    const isChecked = caricoNewArticleSwitch.checked;
-    if (isChecked) {
-        caricoArticleInput.style.display = 'block';
-        caricoArticleSelector.style.display = 'none';
-        caricoArticleSelector.value = ''; // Pulisce la selezione esistente
-        caricoArticleInput.focus();
-    } else {
-        caricoArticleInput.style.display = 'none';
-        caricoArticleInput.value = ''; // Pulisce l'input del nuovo articolo
-        caricoArticleSelector.style.display = 'block';
-    }
-});
 
-// Listener per il Carico: aggiorna giacenza e sincronizza articolo
+// ================== FORM ==================
 caricoBarcode.addEventListener('input', async () => {
-    const code = caricoBarcode.value.trim();
-    const existing = await findArticle(code);
-
-    if (existing) {
-        // Se l'articolo esiste, sincronizza la select e disattiva il "Nuovo Articolo"
-        caricoArticleSelector.style.display = 'block';
-        caricoArticleInput.style.display = 'none';
-        caricoNewArticleSwitch.checked = false;
-        caricoArticleInput.value = '';
-
-        // Cerca l'opzione che ha il barcode come value
-        const option = [...caricoArticleSelector.options].find(o => o.value === code);
-        if (option) {
-             caricoArticleSelector.value = option.value;
+    const barcode = caricoBarcode.value.trim();
+    
+    // La ricerca e la selezione funzionano SOLO se NON è spuntato "Articolo Nuovo"
+    if (barcode && !caricoNewArticleSwitch.checked) {
+        const { data: existing } = await supabase.from('magazzino').select('article').eq('barcode', barcode).maybeSingle();
+        if (existing) {
+            const option = [...caricoArticleSelector.options].find(o => o.value === barcode);
+            if (option) caricoArticleSelector.value = option.value;
         } else {
-            // Caso teorico: se l'articolo esiste ma non è nella select, lo forziamo
-            // Questo non dovrebbe succedere con populateArticlesSelect
             caricoArticleSelector.value = '';
         }
-    } else if (!caricoNewArticleSwitch.checked) {
-        // Se non esiste e l'utente non ha attivato "Nuovo Articolo", deseleziona
-        caricoArticleSelector.value = '';
     }
-
-    // ➡️ AGGIORNA LA GIACENZA in tempo reale
-    getAndDisplayStock(code, 'carico-giacenza-display', 'carico');
+    
+    // Pulisce il campo input se non è in modalità "Nuovo Articolo"
+    if (!caricoNewArticleSwitch.checked) {
+        caricoArticleInput.value = '';
+    }
+    
+    // AGGIORNA LA GIACENZA
+    getAndDisplayStock(barcode, 'carico-giacenza-display', 'carico');
 });
 
 
-// 2. LISTENER SCARICO FORM
-document.getElementById('scarico-form').addEventListener('submit', async (e) => {
+document.getElementById('carico-form').addEventListener('submit', async e => {
     e.preventDefault();
-
-    const barcode = scaricoBarcode.value.trim();
-    const qty = parseInt(scaricoQty.value);
-
-    if (!barcode || qty < 1) {
-        showNotification('Barcode e quantità (>=1) sono obbligatori.', 'error');
+    const currentBarcode = caricoBarcode.value;
+    const isNew = caricoNewArticleSwitch.checked;
+    
+    // SCELTA DEL NOME ARTICOLO CORRETTO:
+    const articleName = isNew 
+        ? caricoArticleInput.value // Legge dall'INPUT di testo se è un nuovo articolo
+        : caricoArticleSelector.options[caricoArticleSelector.selectedIndex]?.textContent || ''; // Legge dalla SELECT per esistenti
+    
+    if (!currentBarcode) {
+        showNotification('Inserisci il Barcode!', 'error');
         return;
     }
 
-    // Esegui lo scarico
-    await addScarico(barcode, qty);
-
-    // Pulisce i campi
-    scaricoBarcode.value = '';
-    scaricoQty.value = '1';
-    scaricoArticle.value = '';
-    
-    // Rimuove la giacenza attuale dal display (con l'auto-reset non serve più)
-    // document.getElementById('scarico-giacenza-display').textContent = ''; 
-});
-
-// LISTENER SEZIONE SCARICO
-// Autocompila l’articolo e aggiorna giacenza quando inserisci o scanni un barcode
-scaricoBarcode.addEventListener('input', async () => {
-    const code = scaricoBarcode.value.trim();
-    if (!code) {
-        scaricoArticle.value = '';
-        document.getElementById('scarico-giacenza-display').textContent = ''; // Pulisce la giacenza
+    if (!articleName) {
+        showNotification('Seleziona o inserisci il nome dell\'articolo!', 'error');
         return;
     }
+    
+    // Esegue il carico
+    await addCarico(currentBarcode, articleName, parseInt(caricoQty.value));
+    
+    // Aggiorna e mostra la giacenza
+    await getAndDisplayStock(currentBarcode, 'carico-giacenza-display', 'carico', true); 
+    
+    // Resetta i campi e lo switch per il prossimo inserimento
+    caricoBarcode.value = ''; 
+    caricoArticleSelector.value = '';
+    caricoArticleInput.value = '';
+    caricoQty.value = 1;
+    caricoNewArticleSwitch.checked = false; 
+    
+    // Riporta la visualizzazione alla SELECT (stato predefinito)
+    caricoArticleInput.style.display = 'none';
+    caricoArticleSelector.style.display = 'block';
 
-    // Sincronizza il campo Select (scaricoArticle)
-    const option = [...scaricoArticle.options].find(o => o.value === code);
-    if (option) {
-        scaricoArticle.value = option.value;
-    } else {
-        scaricoArticle.value = ''; // Barcode non trovato o non in giacenza
-    }
-
-    // ➡️ AGGIORNA LA GIACENZA in tempo reale
-    getAndDisplayStock(code, 'scarico-giacenza-display', 'scarico');
+    refreshAll();
 });
 
-// Sincronizza il barcode e aggiorna la giacenza quando si seleziona un articolo dalla select
-scaricoArticle.addEventListener('change', async () => {
-    const barcode = scaricoArticle.value; // Il barcode è il valore dell'opzione selezionata
-    // Aggiorna l'input del barcode basandosi sulla selezione
-    scaricoBarcode.value = barcode; 
+caricoArticleSelector.addEventListener('change', async () => {
+    const barcode = caricoArticleSelector.value; 
     
+    // Assegna il barcode selezionato
+    caricoBarcode.value = barcode;
+    caricoArticleInput.value = ''; // Pulisce l'input per sicurezza
+
     // ➡️ AGGIORNA LA GIACENZA
-    getAndDisplayStock(barcode, 'scarico-giacenza-display', 'scarico');
+    getAndDisplayStock(barcode, 'carico-giacenza-display', 'carico');
 });
 
+document.getElementById('scarico-form').addEventListener('submit', async e=>{
+    e.preventDefault();
+    // 1. Salva il barcode (può venire dal select o dall'input)
+    const currentBarcode = scaricoArticle.value || scaricoBarcode.value; 
+    
+    // 2. Esegue lo scarico
+    await addScarico(currentBarcode, parseInt(scaricoQty.value));
+    
+    // 3. AGGIORNA E MOSTRA PER 10s LA NUOVA GIACENZA
+    // La funzione getAndDisplayStock deve essere quella modificata con il setTimeout.
+    await getAndDisplayStock(currentBarcode, 'scarico-giacenza-display', 'scarico', true); 
+    
+    // 4. Resetta i campi e aggiorna
+    scaricoBarcode.value=''; scaricoQty.value=1;
+    refreshAll();
+});
 
-// 3. LISTENER TAB SWITCH
-document.querySelectorAll('.tab-container button').forEach(button => {
-    button.addEventListener('click', async () => {
-        const targetId = button.getAttribute('data-target');
+window.addEventListener('DOMContentLoaded', async () => {
+    // Prima chiama tutte le funzioni di aggiornamento
+    await refreshAll();
+    
+    // Poi assicura che le tendine siano piene per l'uso immediato
+    await populateArticlesSelect(scaricoArticle);
+    await populateArticlesSelect(caricoArticleSelector); 
+});
 
-        // 1. Attiva/disattiva lo scanner QR
-        if (targetId === 'tab-qr') {
-            startScanner();
+caricoNewArticleSwitch.addEventListener('change', () => {
+    const isNew = caricoNewArticleSwitch.checked;
+    
+    // 1. Visibilità: mostra solo il campo necessario
+    caricoArticleSelector.style.display = isNew ? 'none' : 'block';
+    caricoArticleInput.style.display = isNew ? 'block' : 'none';
+
+    // 2. Requisiti: rende obbligatorio solo il campo visibile
+    caricoArticleSelector.required = !isNew; 
+    caricoArticleInput.required = isNew;
+
+    // 3. Reset dei campi e pulizia
+    caricoArticleSelector.value = '';
+    caricoArticleInput.value = '';
+    caricoBarcode.value = '';
+    document.getElementById('carico-giacenza-display').textContent = '';
+    
+    // Mette il focus per iniziare l'inserimento
+    if (isNew) {
+        caricoArticleInput.focus();
+    } else {
+        caricoBarcode.focus();
+    }
+});
+
+// ====================== QR SCANNER ROBUSTO ======================
+window.videoStream = null;
+window.html5QrInstance = null;
+window.lastScanned = '';
+window.scanCooldown = false;
+window.isScanning = false;
+
+async function startQRScanner() {
+    if(window.isScanning) return; // previene doppi start
+    window.isScanning = true;
+
+    const video = document.getElementById('qr-video');
+    const resultInput = document.getElementById('qr-result');
+    const statusLabel = document.getElementById('qr-status');
+
+    try {
+        if ('BarcodeDetector' in window) {
+            window.videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            video.srcObject = window.videoStream;
+
+            const detector = new BarcodeDetector({ formats: ['qr_code', 'code_128', 'ean_13', 'ean_8'] });
+
+            const scanLoop = async () => {
+                if(!window.videoStream) return;
+
+                try {
+                    const barcodes = await detector.detect(video);
+                    if(barcodes.length > 0 && barcodes[0].rawValue !== window.lastScanned && !window.scanCooldown){
+                        window.lastScanned = barcodes[0].rawValue;
+                        resultInput.value = window.lastScanned;
+                        showNotification(`📷 Codice rilevato: ${window.lastScanned}`, 'success');
+                        playBeep(150, 600, 0.5);
+
+                        window.scanCooldown = true;
+                        setTimeout(()=> window.scanCooldown=false, 1000);
+                    }
+                } catch(err){ console.warn(err); }
+
+                requestAnimationFrame(scanLoop);
+            };
+
+            requestAnimationFrame(scanLoop);
+
         } else {
-            stopScanner();
+            if(!window.html5QrInstance) window.html5QrInstance = new Html5Qrcode("qr-video");
+
+            await window.html5QrInstance.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: Math.min(window.innerWidth*0.8, 300) },
+                qrCodeMessage => {
+                    if(qrCodeMessage !== window.lastScanned && !window.scanCooldown){
+                        window.lastScanned = qrCodeMessage;
+                        resultInput.value = window.lastScanned;
+                        showNotification(`📷 Codice rilevato: ${window.lastScanned}`, 'success');
+                        playBeep(150, 600, 0.5);
+                        window.scanCooldown = true;
+                        setTimeout(()=> window.scanCooldown=false, 1000);
+                    }
+                },
+                errorMessage => { /* ignora errori */ }
+            );
         }
 
-        // 2. Gestisce classi attive/nascoste
-        document.querySelectorAll('.tab-container button').forEach(b => b.classList.remove('active'));
-        button.classList.add('active');
-        document.querySelectorAll('[role="tabpanel"]').forEach(tab => tab.classList.add('hidden'));
-        document.getElementById(targetId).classList.remove('hidden');
+        if(statusLabel){
+            statusLabel.textContent = '📸 Scanner attivo';
+            statusLabel.style.color = '#16a34a';
+        }
 
-        // 3. Ricarica dati/grafici se necessario
-        if (targetId === 'tab-stock-summary') {
-            await renderStockSummary();
-        } else if (targetId === 'tab-dashboard') {
-            await renderCharts();
-            await renderAndamentoGiornaliero();
+    } catch(err){
+        console.error('Errore fotocamera:', err);
+        alert('Impossibile accedere alla fotocamera. Controlla permessi e browser.');
+        window.isScanning = false;
+    }
+}
+
+function stopQRScanner(){
+    const statusLabel = document.getElementById('qr-status');
+    const resultInput = document.getElementById('qr-result');
+
+    window.lastScanned = '';
+    window.scanCooldown = false;
+    window.isScanning = false;
+
+    if(resultInput) resultInput.value = '';
+
+    if(window.videoStream){
+        window.videoStream.getTracks().forEach(track => track.stop());
+        window.videoStream = null;
+    }
+
+    if(window.html5QrInstance){
+        window.html5QrInstance.stop()
+            .then(()=>{
+                window.html5QrInstance.clear();
+                window.html5QrInstance = null;
+            })
+            .catch(err => console.warn('Errore stop QR:', err));
+    }
+
+    if(statusLabel){
+        statusLabel.textContent = '⛔ Scanner disattivato';
+        statusLabel.style.color = '#dc2626';
+    }
+}
+
+
+// ====================== SWITCH TABS CON START/STOP QR ======================
+document.querySelectorAll('.tab-container button').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        document.querySelectorAll('.tab-container button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        document.querySelectorAll('[role="tabpanel"]').forEach(tab => tab.classList.add('hidden'));
+        document.getElementById(btn.dataset.target).classList.remove('hidden');
+
+        // 🔹 Gestione QR scanner: start/stop automatico
+        if (btn.dataset.target === 'tab-qr') {
+            await startQRScanner();
+        } else {
+            stopQRScanner();
         }
     });
 });
 
-
-// 4. LISTENER QR READER
+// ====================== PULSANTE "USA BARCODE" OTTIMIZZATO ======================
 document.getElementById('use-qr').addEventListener('click', async () => {
     const qrCode = document.getElementById('qr-result').value;
     const target = document.getElementById('qr-target').value;
@@ -1114,23 +1155,21 @@ document.getElementById('use-qr').addEventListener('click', async () => {
     // Cambia automaticamente il tab
     const tabId = target === 'carico' ? 'tab-carico' : 'tab-scarico';
     document.querySelectorAll('.tab-container button').forEach(b => b.classList.remove('active'));
-    
-    // Simula il click del tab per attivare tutti i comportamenti (es. stop scanner)
-    const targetButton = document.querySelector(`.tab-container button[data-target="${tabId}"]`);
-    if (targetButton) {
-        targetButton.click();
-    }
-    
+    document.querySelector(`.tab-container button[data-target="${tabId}"]`).classList.add('active');
+
+    document.querySelectorAll('[role="tabpanel"]').forEach(tab => tab.classList.add('hidden'));
+    document.getElementById(tabId).classList.remove('hidden');
+
     // Inserisce il codice nel campo corretto e autofocus su quantità
     if (target === 'carico') {
         caricoBarcode.value = qrCode;
-        caricoBarcode.dispatchEvent(new Event('input')); // attiva il listener per autocompletare l'articolo e giacenza
+        caricoBarcode.dispatchEvent(new Event('input')); // autocompleta articolo
         caricoQty.focus();
         showNotification(`Barcode inserito nel Carico: ${qrCode}`, 'success');
     } else {
         scaricoBarcode.value = qrCode;
-        await refreshScaricoSelect(qrCode); // ✅ aggiorna select e aggiunge barcode
         scaricoQty.focus();
+        await refreshScaricoSelect(qrCode); // ✅ aggiorna select e aggiunge barcode se manca
         showNotification(`Barcode inserito nello Scarico: ${qrCode}`, 'success');
     }
 
@@ -1139,40 +1178,87 @@ document.getElementById('use-qr').addEventListener('click', async () => {
     lastScanned = '';
 });
 
+// ================== LOGICA CAMBIO TAB ==================
+document.querySelectorAll('.tab-container button').forEach(button => {
+    button.addEventListener('click', (e) => {
+        const targetId = e.target.getAttribute('data-target');
 
-// ================== INIZIALIZZAZIONE APP (FIX) ==================
+        // Rimuove la classe 'active' da tutti i pulsanti e nasconde tutti i pannelli
+        document.querySelectorAll('.tab-container button').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('[role="tabpanel"]').forEach(panel => panel.classList.add('hidden'));
+
+        // Mostra il pannello target e attiva il pulsante
+        e.target.classList.add('active');
+        document.getElementById(targetId).classList.remove('hidden');
+
+        // Azioni specifiche (es. riavviare lo scanner solo quando si va al tab QR)
+        if (targetId === 'tab-qr') {
+            // Se hai una funzione initScanner, chiamala qui
+            // initScanner(); 
+        } else {
+            // Se hai una funzione stopScanner, chiamala qui
+            // stopScanner(); 
+        }
+    });
+});
+
+// ================== FUNZIONI DI REFRESH GENERALE ==================
+
+// 💡 Funzione mancante: Disegna il grafico del riepilogo magazzino (usata in initApp)
+async function renderStockSummary() {
+    const { data } = await supabase.from('magazzino').select('*');
+    if (!data) return;
+    
+    // Logica per costruire il grafico D3.js (omessa per brevità ma necessaria se la usi)
+    // Se non usi il grafico, puoi ometterla, ma è essenziale per il tuo file.
+}
+
+// 💡 Funzione mancante: Aggiorna tutti gli elementi dell'interfaccia (usata in deleteRecord e addCarico/Scarico)
+async function refreshAll() {
+    await renderTables(); 
+    await renderStockSummary(); 
+}
+
+// ================== SUPABASE REALTIME ==================
+
+// Realtime su log_operazioni
+const logChannel = supabase.channel('realtime-log_operazioni')
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'log_operazioni' }, payload => {
+    console.log('Realtime log_operazioni:', payload);
+    renderTables();
+    renderStockSummary();
+    renderCharts();
+    renderAndamentoGiornaliero();
+  })
+  .subscribe();
+
+// Realtime su magazzino
+const magazzinoChannel = supabase.channel('realtime-magazzino')
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'magazzino' }, payload => {
+    console.log('Realtime magazzino:', payload);
+    renderStockSummary();
+    renderCharts();
+    renderAndamentoGiornaliero();
+  })
+  .subscribe();
+
+
+
+// ================== AVVIO APPLICAZIONE (FIX) ==================
 
 document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        // Aggiunge i listener per i filtri del log
-        document.getElementById('apply-filter').addEventListener('click', renderTables);
-        document.getElementById('clear-filter').addEventListener('click', () => {
-            document.getElementById('filter-type').value = 'Tutti';
-            document.getElementById('filter-articolo').value = '';
-            document.getElementById('filter-limit').value = '80'; // Resetta al valore di default
-            renderTables();
-        });
-        // Listener per la selezione del limite e la ricerca articolo (input in tempo reale)
-        document.getElementById('filter-limit').addEventListener('change', renderTables);
-        document.getElementById('filter-articolo').addEventListener('input', renderTables);
+    // 1. Inizializzazione delle tendine Select
+    await populateArticlesSelect(scaricoArticle);
+    // Presumo che tu abbia anche un selettore caricoArticleSelector per la tendina Carico, se lo usi:
+    // await populateArticlesSelect(caricoArticleSelector); 
+    
+    // 2. Aggiornamento iniziale della UI
+    await refreshAll();
 
-        // 1. 🚀 CHIAMATA CRITICA: Avvia il caricamento iniziale di tutti i dati
-        await refreshAll(); 
-        
-        // 2. Assicura che il tab "carico" sia visibile/attivo all'avvio (gestito meglio da refreshAll)
-        document.querySelectorAll('.tab-container button').forEach(b => b.classList.remove('active'));
-        const caricoBtn = document.querySelector('.tab-container button[data-target="tab-carico"]');
-        if (caricoBtn) caricoBtn.classList.add('active');
+    // 3. Assicura che il primo tab (Magazzino) sia quello visibile all'avvio
+    document.getElementById('tab-magazzino').classList.remove('hidden');
 
-        document.querySelectorAll('[role="tabpanel"]').forEach(tab => tab.classList.add('hidden'));
-        const caricoPanel = document.getElementById('tab-carico');
-        if (caricoPanel) caricoPanel.classList.remove('hidden');
-
-        console.info('✅ App inizializzata correttamente');
-    } catch (err) {
-        console.error('❌ Errore inizializzazione app (potrebbe mancare la connessione Supabase):', err);
-        showNotification('Errore di caricamento app. Controlla la console del browser (F12).', 'error');
-    }
+    console.info('✅ Applicazione Magazzino inizializzata e dati caricati.');
 });
 
 </script>
