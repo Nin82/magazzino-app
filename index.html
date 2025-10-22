@@ -81,35 +81,40 @@ hr { border:0; border-top:1px solid #e0e7eb; margin:30px 0; }
     padding: 15px 24px;
 }
 @media(max-width:768px){ 
-    /* 🚨 1. AZZERA IL PADDING LATERALE DEL BODY SU MOBILE */
-    /* Manteniamo 12px per sopra/sotto, ma azzeriamo i lati per dare tutta la larghezza ai contenitori. */
+    /* 🚨 1. CORREZIONE BODY: Reimposta il padding standard, ma azzera i margini */
     body{
-        padding: 12px 0 !important; 
-        margin: 0 !important;
+        padding: 12px 12px; /* Riportiamo il padding laterale a 12px */
+        margin: 0; /* Assicuriamo che il body non abbia margini esterni */
+        width: 100vw; /* Forza il body a coprire l'intera larghezza del viewport */
+        box-sizing: border-box;
     } 
     
     #carico-form,#scarico-form{flex-direction:column;align-items:stretch;gap:15px;} 
     #carico-form div,#scarico-form div{min-width:100%;} 
     input,select{max-width:100%;margin-right:0;} 
 
-    /* 🚨 2. CORREZIONE CHIAVE: FORZIAMO LA LARGHEZZA AL 100% DEL VIEWPORT */
-    /* Non c'è più bisogno di calc() o margini negativi. */
+    /* 🚨 2. CORREZIONE CHIAVE: ESPANSIONE COMPENSATA */
+    /* Usiamo di nuovo calc() + margini negativi per sfondare il padding laterale del body (12px) */
     .tab-container,
     [role="tabpanel"],
     .controls-container,
-    table { /* Applichiamo 100vw anche alla tabella, per consistenza */
-        width: 100vw !important; /* Copre il 100% della larghezza dello schermo (Viewport) */
-        margin-left: 0 !important; 
-        margin-right: 0 !important;
-        box-sizing: border-box !important;
+    table { 
+        /* La formula: 100% della larghezza disponibile + (2 * 12px di padding del body) */
+        width: calc(100% + 24px); 
+        
+        /* Spostiamo l'elemento verso l'esterno per annullare il padding del body */
+        margin-left: -12px; 
+        margin-right: -12px;
+        box-sizing: border-box;
     }
     
-    /* 🚨 3. RIPRISTINA IL PADDING INTERNO SUI LATI (12px) */
+    /* 🚨 3. RIPRISTINA PADDING INTERNO SUI LATI (12px) */
+    /* Questo assicura che il contenuto interno non si attacchi al bordo dello schermo */
     [role="tabpanel"] {
-        padding: 20px 12px !important;
+        padding: 20px 12px;
     }
     .controls-container {
-        padding: 15px 12px !important;
+        padding: 15px 12px;
         
         flex-direction:column;
         align-items:stretch;
@@ -119,7 +124,6 @@ hr { border:0; border-top:1px solid #e0e7eb; margin:30px 0; }
     .controls-container button{width:100%;margin-right:0;} 
     th,td{font-size:0.75rem;padding:8px 10px;} 
 }
-
 /* Pulsanti */
 button { cursor:pointer; background:#4f46e5; color:#fff; border:none; padding:10px 18px; border-radius:8px; margin:5px 5px 5px 0; transition:all 0.2s ease-in-out; font-weight:600; white-space:nowrap; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
 button:hover { background:#4338ca; transform:translateY(-1px); box-shadow:0 4px 8px rgba(0,0,0,0.15); }
@@ -153,7 +157,7 @@ tr:hover { background-color:#eff6ff; }
 </style>
 </head>
 <body>
-<h1>📦 Gestione Magazzino Completo 1.8 fix largh</h1>
+<h1>📦 Gestione Magazzino Completo 1.9 fix largh</h1>
 
 <!-- Tabs -->
 <div class="tab-container">
@@ -1073,4 +1077,5 @@ document.getElementById('use-qr').addEventListener('click', async () => {
 </script>
 </body>
 </html>
+
 
