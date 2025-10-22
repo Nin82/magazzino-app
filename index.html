@@ -308,7 +308,7 @@ const caricoQty = document.getElementById('carico-qty');
 const scaricoBarcode = document.getElementById('scarico-barcode');
 const scaricoQty = document.getElementById('scarico-qty');
 const notificationElement = document.getElementById('notification');
-	
+let ignoreCaricoBarcodeListener = false;	
 
 // ================== AUTOCOMPLETE ARTICOLO SU CARICO ==================
 
@@ -741,17 +741,32 @@ document.getElementById('clear-filter').addEventListener('click', ()=>{
 });
 
 // ================== FORM ==================
-caricoBarcode.addEventListener('input', async ()=>{
-    const barcode = caricoBarcode.value;
-    if(!barcode) {
+caricoBarcode.addEventListener('input', async () => {
+    // Ignora il listener se il barcode è stato inserito dallo scanner
+    if (ignoreCaricoBarcodeListener) return;
+
+    const barcode = caricoBarcode.value.trim();
+
+    if (!barcode) {
+        caricoArticle.value = '';
         document.getElementById('carico-giacenza-display').textContent = '';
         return;
     }
-    const { data:existing } = await supabase.from('magazzino').select('article').eq('barcode',barcode).maybeSingle();
-    if(existing) caricoArticle.value = existing.article;
-    
-    // ➡️ AGGIORNA LA GIACENZA
-    getAndDisplayStock(barcode, 'carico-giacenza-display', 'carico');
+
+    const { data: existing } = await supabase
+        .from('magazzino')
+        .select('article, quantity')
+        .eq('barcode', barcode)
+        .maybeSingle();
+
+    if (existing) {
+        caricoArticle.value = existing.article;
+        document.getElementById('carico-giacenza-display').textContent = `Giacenza Attuale: ${existing.quantity} unità`;
+    } else {
+        // Nuovo articolo → non cancellare il barcode
+        document.getElementById('carico-giacenza-display').textContent = 'Nuovo Articolo (Giacenza: 0)';
+        // caricoBarcode.value rimane invariato
+    }
 });
 
 document.getElementById('carico-form').addEventListener('submit', async e=>{
@@ -933,17 +948,22 @@ document.getElementById('use-qr').addEventListener('click', async () => {
 
     // Inserisce il codice nel campo corretto e autofocus su quantità
     if (target === 'carico') {
-        caricoBarcode.value = qrCode;
-        caricoBarcode.dispatchEvent(new Event('input')); // autocompleta articolo
-        caricoQty.focus();
-        showNotification(`Barcode inserito nel Carico: ${qrCode}`, 'success');
-    } else {
-        scaricoBarcode.value = qrCode;
-        scaricoQty.focus();
-        await refreshScaricoSelect(qrCode); // ✅ aggiorna select e aggiunge barcode se manca
-        showNotification(`Barcode inserito nello Scarico: ${qrCode}`, 'success');
-    }
+    // ⚡ Disabilita temporaneamente il listener per non cancellare il barcode
+    ignoreCaricoBarcodeListener = true;
 
+    caricoBarcode.value = qrCode;
+    caricoBarcode.dispatchEvent(new Event('input')); // autocompleta articolo e giacenza
+    caricoQty.focus();
+    showNotification(`Barcode inserito nel Carico: ${qrCode}`, 'success');
+
+    // ⚡ Riabilita il listener subito dopo
+    setTimeout(() => { ignoreCaricoBarcodeListener = false; }, 50);
+} else {
+    scaricoBarcode.value = qrCode;
+    scaricoQty.focus();
+    await refreshScaricoSelect(qrCode); // ✅ aggiorna select e aggiunge barcode se manca
+    showNotification(`Barcode inserito nello Scarico: ${qrCode}`, 'success');
+}
     // 🔹 Pulisce il box QR
     document.getElementById('qr-result').value = '';
     lastScanned = '';
