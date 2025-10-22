@@ -335,29 +335,26 @@ async function populateArticleSuggestions() {
 caricoArticle.addEventListener('input', async () => {
     const name = caricoArticle.value.trim();
     if (!name) {
-        caricoBarcode.value = '';
         document.getElementById('carico-giacenza-display').textContent = '';
         return;
     }
 
-    // Cerca l’articolo nel DB
-    const { data: existing, error } = await supabase
+    const { data: existing } = await supabase
         .from('magazzino')
         .select('barcode, quantity')
         .eq('article', name)
         .maybeSingle();
 
     if (existing) {
-        // Autocompila barcode e mostra giacenza
         caricoBarcode.value = existing.barcode;
         document.getElementById('carico-giacenza-display').textContent = 
             `Giacenza Attuale: ${existing.quantity} unità`;
     } else {
-        caricoBarcode.value = '';
+        // Non cancellare il barcode se è stato inserito dallo scanner
+        if (!ignoreCaricoBarcodeListener) caricoBarcode.value = '';
         document.getElementById('carico-giacenza-display').textContent = 'Nuovo Articolo (Giacenza: 0)';
     }
 });
-
 
 // 🔽 nuovo elemento select per lo scarico
 const scaricoArticle = document.getElementById('scarico-article');
@@ -742,11 +739,9 @@ document.getElementById('clear-filter').addEventListener('click', ()=>{
 
 // ================== FORM ==================
 caricoBarcode.addEventListener('input', async () => {
-    // Ignora il listener se il barcode è stato inserito dallo scanner
     if (ignoreCaricoBarcodeListener) return;
 
     const barcode = caricoBarcode.value.trim();
-
     if (!barcode) {
         caricoArticle.value = '';
         document.getElementById('carico-giacenza-display').textContent = '';
@@ -763,8 +758,8 @@ caricoBarcode.addEventListener('input', async () => {
         caricoArticle.value = existing.article;
         document.getElementById('carico-giacenza-display').textContent = `Giacenza Attuale: ${existing.quantity} unità`;
     } else {
-        // Nuovo articolo → non cancellare il barcode
         document.getElementById('carico-giacenza-display').textContent = 'Nuovo Articolo (Giacenza: 0)';
+        // Non cancellare barcode
         // caricoBarcode.value rimane invariato
     }
 });
@@ -957,7 +952,7 @@ document.getElementById('use-qr').addEventListener('click', async () => {
     showNotification(`Barcode inserito nel Carico: ${qrCode}`, 'success');
 
     // ⚡ Riabilita il listener subito dopo
-    setTimeout(() => { ignoreCaricoBarcodeListener = false; }, 50);
+    setTimeout(() => { ignoreCaricoBarcodeListener = false; }, 150);
 } else {
     scaricoBarcode.value = qrCode;
     scaricoQty.focus();
