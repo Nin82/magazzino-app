@@ -32,23 +32,18 @@ hr { border:0; border-top:1px solid #e0e7eb; margin:30px 0; }
 /* Tabs */
 .tab-container { 
     margin-bottom: 24px; 
-    position: -webkit-sticky;
-/* supporto Safari */
+    position: -webkit-sticky; /* supporto Safari */
     position: sticky;
-    top: 0;
-/* distanza dal top della finestra */
-    z-index: 1000;
-/* sopra gli altri contenuti */
-    background-color: #fff;
-/* evita trasparenze */
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-/* leggera separazione visiva */
+    top: 0; /* distanza dal top della finestra */
+    z-index: 1000; /* sopra gli altri contenuti */
+    background-color: #fff; /* evita trasparenze */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* leggera separazione visiva */
     
-    /* 🚨 MODIFICHE CHIAVE PER ESPANSIONE PC (body padding: 24px) */
+    /* 🚨 ESPANSIONE CHIAVE PC (body padding: 24px) */
     width: calc(100% + 48px); /* Allarga di 2 * 24px */
     margin-left: -24px; /* Sposta a sinistra */
     margin-right: -24px; /* Sposta a destra */
-    box-sizing: border-box;
+    box-sizing: border-box; /* Cruciale per la formula calc */
 }
 
 [role="tabpanel"] { 
@@ -59,11 +54,11 @@ hr { border:0; border-top:1px solid #e0e7eb; margin:30px 0; }
     position: relative; 
     top: -1px; 
     
-    /* 🚨 MODIFICHE CHIAVE PER ESPANSIONE PC (body padding: 24px) */
+    /* 🚨 ESPANSIONE CHIAVE PC (body padding: 24px) */
     width: calc(100% + 48px);
     margin-left: -24px;
     margin-right: -24px;
-    box-sizing: border-box;
+    box-sizing: border-box; /* Cruciale per la formula calc */
     /* RIPRISTINA IL PADDING INTERNO SUI LATI */
     padding: 20px 24px; 
 }
@@ -79,39 +74,41 @@ hr { border:0; border-top:1px solid #e0e7eb; margin:30px 0; }
     flex-wrap:wrap; 
     align-items:center;
     
-    /* 🚨 MODIFICHE CHIAVE PER ESPANSIONE PC (body padding: 24px) */
+    /* 🚨 ESPANSIONE CHIAVE PC (body padding: 24px) */
     width: calc(100% + 48px);
     margin-left: -24px;
     margin-right: -24px;
-    box-sizing: border-box;
+    box-sizing: border-box; 
     /* RIPRISTINA IL PADDING INTERNO SUI LATI */
     padding: 15px 24px;
 }
 
 @media(max-width:768px){ 
+    /* ⚠️ Assicurati che body{padding:12px;} sia il primo stile qui */
     body{padding:12px;} 
+    
     #carico-form,#scarico-form{flex-direction:column;align-items:stretch;gap:15px;} 
     #carico-form div,#scarico-form div{min-width:100%;} 
     input,select{max-width:100%;margin-right:0;} 
 
-    /* 🚨 NUOVE REGOLE DI ESPANSIONE CHIAVE PER MOBILE (body padding: 12px) */
+    /* 🚨 CORREZIONE CHIAVE MOBILE (body padding: 12px) */
     .tab-container,
     [role="tabpanel"],
     .controls-container {
-        width: calc(100% + 24px); /* 100% + 2*12px */
+        width: calc(100% + 24px); /* 100% + 2*12px = 24px */
         margin-left: -12px;
         margin-right: -12px;
         box-sizing: border-box;
     }
     
-    /* 🚨 RIPRISTINA IL PADDING INTERNO SUI LATI (12px) */
+    /* 🚨 RIPRISTINA PADDING INTERNO SUI LATI (12px) */
     [role="tabpanel"] {
         padding: 20px 12px;
     }
     .controls-container {
         padding: 15px 12px;
         
-        /* 🚨 Regole originali mantenute */
+        /* Regole originali mantenute per la flessibilità */
         flex-direction:column;
         align-items:stretch;
     }
@@ -154,7 +151,7 @@ tr:hover { background-color:#eff6ff; }
 </style>
 </head>
 <body>
-<h1>📦 Gestione Magazzino Completo 1.4 fix largh</h1>
+<h1>📦 Gestione Magazzino Completo 1.5 fix largh</h1>
 
 <!-- Tabs -->
 <div class="tab-container">
