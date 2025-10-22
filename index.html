@@ -30,69 +30,85 @@ h1 { color: #1e3a8a; font-weight: 800; margin-bottom: 24px; }
 h2,h3 { color: #374151; border-bottom:2px solid #e5e7eb; padding-bottom:8px; margin-top:30px; }
 hr { border:0; border-top:1px solid #e0e7eb; margin:30px 0; }
 /* Tabs */
-.tab-container { 
-    margin-bottom: 24px; 
-    position: -webkit-sticky; /* supporto Safari */
-    position: sticky;
-    top: 0; /* distanza dal top della finestra */
-    z-index: 1000; /* sopra gli altri contenuti */
-    background-color: #fff; /* evita trasparenze */
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* leggera separazione visiva */
+/* ================= BARRA DELLE TAB (INTESTAZIONE) ================= */
+.tab-container { 
+    margin-bottom: 24px; 
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background-color: #fff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    
+    /* 🚨 MODIFICHE PER ESPANSIONE A SCHERMO LARGO (body padding: 24px) */
+    width: calc(100% + 48px); /* 100% + (2 * 24px) */
+    margin-left: -24px; /* Annulla il padding sinistro del body */
+    margin-right: -24px; /* Annulla il padding destro del body */
+    box-sizing: border-box;
 }
 
-.tab-container button { 
-    background: #fff; 
-    color: #6b7280; 
-    font-weight: 600; 
-    border: 1px solid #e5e7eb; 
-    border-bottom: none; 
-    padding: 10px 20px; 
-    border-radius: 8px 8px 0 0; 
-    margin-right: -1px; 
-    transition: all 0.2s; 
-    outline: none; 
+.tab-container button { 
+    background: #fff; 
+    color: #6b7280; 
+    font-weight: 600; 
+    border: 1px solid #e5e7eb; 
+    border-bottom: none; 
+    padding: 10px 20px; 
+    border-radius: 8px 8px 0 0; 
+    margin-right: -1px; 
+    transition: all 0.2s; 
+    outline: none; 
 }
 
-.tab-container button:hover { 
-    background: #f3f4f6; 
-    color: #1f2937; 
+.tab-container button:hover { 
+    background: #f3f4f6; 
+    color: #1f2937; 
 }
 
-.tab-container button.active { 
-    background: #fff; 
-    color: #1e3a8a; 
-    border-color: #1e3a8a; 
-    border-bottom: 2px solid #fff; 
-    position: relative; 
-    z-index: 10; 
+.tab-container button.active { 
+    background: #fff; 
+    color: #1e3a8a; 
+    border-color: #1e3a8a; 
+    border-bottom: 2px solid #fff; 
+    position: relative; 
+    z-index: 10; 
 }
 
-/* 🔧 Rende i contenitori delle tab larghi come lo storico anche su mobile */
-[role="tabpanel"] {
-  background: #fff;
-  padding: 20px;
-  border: 1px solid #e5e7eb;
-  border-radius: 0; /* togli bordi arrotondati che restringono visivamente */
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-  position: relative;
-  top: -1px;
+/* ================= CONTENUTO DELLE TAB (RIQUADRO GIALLO) ================= */
+[role="tabpanel"] { 
+    background: #fff; 
+    padding: 20px 24px; /* Ho ripristinato qui il padding orizzontale di 24px */ 
+    border: 1px solid #e5e7eb; 
+    border-radius: 0 8px 8px 8px; 
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); 
+    position: relative; 
+    top: -1px; 
 
-  /* 🔹 Riempie tutta la larghezza dello schermo */
-  width: calc(100% + 24px); /* compensa il padding body 12px per lato */
-  margin-left: -12px;
-  margin-right: -12px;
-  box-sizing: border-box;
+    /* 🚨 MODIFICHE PER ESPANSIONE A SCHERMO LARGO (body padding: 24px) */
+    width: calc(100% + 48px); /* 100% + (2 * 24px) */
+    margin-left: -24px; /* Annulla il padding sinistro del body */
+    margin-right: -24px; /* Annulla il padding destro del body */
+    box-sizing: border-box;
 }
 
-/* Versione desktop: rimette i bordi carini */
-@media (min-width: 769px) {
-  [role="tabpanel"] {
-    border-radius: 0 8px 8px 8px;
-    width: 100%;
-    margin-left: 0;
-    margin-right: 0;
-  }
+/* ================= ADATTAMENTO PER CELLULARE ================= */
+@media(max-width:768px){ 
+    /* ... altri stili esistenti ... */
+
+    /* 🚨 MODIFICHE PER ESPANSIONE SU CELLULARE (body padding: 12px) */
+    .tab-container,
+    [role="tabpanel"] {
+        width: calc(100% + 24px); /* 100% + (2 * 12px) */
+        margin-left: -12px;
+        margin-right: -12px;
+    }
+    
+    /* 🚨 Rimuove il padding ripristinando quello di 12px per mobile */
+    [role="tabpanel"] {
+        padding: 20px 12px;
+    }
 }
+
 /* Pulsanti */
 button { cursor:pointer; background:#4f46e5; color:#fff; border:none; padding:10px 18px; border-radius:8px; margin:5px 5px 5px 0; transition:all 0.2s ease-in-out; font-weight:600; white-space:nowrap; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
 button:hover { background:#4338ca; transform:translateY(-1px); box-shadow:0 4px 8px rgba(0,0,0,0.15); }
@@ -126,7 +142,7 @@ tr:hover { background-color:#eff6ff; }
 </style>
 </head>
 <body>
-<h1>📦 Gestione Magazzino Completo 1.4.2 fix larghezza tab</h1>
+<h1>📦 Gestione Magazzino Completo 1.5 fix larghezze</h1>
 
 <!-- Tabs -->
 <div class="tab-container">
@@ -1028,5 +1044,3 @@ document.getElementById('use-qr').addEventListener('click', async () => {
 <script type="module" src="main.js"></script>
 </body>
 </html>
-
-
