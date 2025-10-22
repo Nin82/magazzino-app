@@ -98,15 +98,17 @@ tr:hover { background-color:#eff6ff; }
     </div>
 
     <div>
-      <label for="carico-article">Articolo:</label>
-      <input 
-        id="carico-article" 
-        name="carico-article" 
-        placeholder="Nome Articolo" 
-        required 
-        autocomplete="off"
-      >
-    </div>
+  <label for="carico-article">Articolo:</label>
+  <input 
+    id="carico-article" 
+    name="carico-article" 
+    placeholder="Nome Articolo" 
+    required 
+    autocomplete="off"
+    list="article-suggestions"
+  >
+  <datalist id="article-suggestions"></datalist>
+</div>
 
     <div>
       <label for="carico-qty">Quantità:</label>
@@ -307,7 +309,7 @@ const caricoQty = document.getElementById('carico-qty');
 const scaricoBarcode = document.getElementById('scarico-barcode');
 const scaricoQty = document.getElementById('scarico-qty');
 const notificationElement = document.getElementById('notification');
-onst caricoArticle = document.getElementById('carico-article');
+const caricoArticle = document.getElementById('carico-article');
 
 
 // ================== AUTOCOMPLETE ARTICOLO SU CARICO ==================
