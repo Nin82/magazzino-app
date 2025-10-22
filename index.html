@@ -67,18 +67,17 @@ hr { border:0; border-top:1px solid #e0e7eb; margin:30px 0; }
     z-index: 10; 
 }
 
-[role="tabpanel"] { 
-    background: #fff; 
-    padding: 20px; 
-    border: 1px solid #e5e7eb; 
-    border-radius: 0 8px 8px 8px; 
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); 
-    position: relative; 
-    top: -1px; 
-  /* 🔹 Estensione a tutta larghezza come lo storico */
-  width: calc(100% + 24px);
-  margin-left: -12px;
-  margin-right: -12px;
+[role="tabpanel"] {
+  background: #fff;
+  padding: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+  position: relative;
+  top: -1px;
+
+  /* 🔹 Larghezza uniforme con il riquadro dello storico */
+  width: 100%;
   box-sizing: border-box;
 }
 /* Pulsanti */
@@ -114,7 +113,7 @@ tr:hover { background-color:#eff6ff; }
 </style>
 </head>
 <body>
-<h1>📦 Gestione Magazzino Completo 1.4 fix larghezza tab</h1>
+<h1>📦 Gestione Magazzino Completo 1.4.1 fix larghezza tab</h1>
 
 <!-- Tabs -->
 <div class="tab-container">
@@ -1016,3 +1015,4 @@ document.getElementById('use-qr').addEventListener('click', async () => {
 <script type="module" src="main.js"></script>
 </body>
 </html>
+
