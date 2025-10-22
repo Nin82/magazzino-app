@@ -313,33 +313,32 @@ const scaricoArticle = document.getElementById('scarico-article');
 
 // Autocompila l’articolo quando inserisci o scanni un barcode
 scaricoBarcode.addEventListener('input', async () => {
-  const code = scaricoBarcode.value.trim();
-  if (!code) {
-    scaricoArticle.value = '';
-    return;
-  }
+    const code = scaricoBarcode.value.trim();
+    if (!code) {
+        document.getElementById('scarico-giacenza-display').textContent = '';
+        // ➡️ FIX: Resetta anche la select se l'input è vuoto
+        scaricoArticle.value = '';
+        return;
+    }
+   
+    // 1. Tenta di trovare il barcode in magazzino
+    const { data: existing, error } = await supabase
+        .from('magazzino')
+        .select('article')
+        .eq('barcode', code)
+        .maybeSingle();
 
-  const { data: existing, error } = await supabase
-    .from('magazzino')
-    .select('article')
-    .eq('barcode', code)
-    .maybeSingle();
+    if (existing) {
+        // ➡️ FIX: Se esiste, imposta il valore della select al barcode
+        // La select usa il barcode come valore, quindi questo funziona
+        scaricoArticle.value = code;
+    } else {
+        scaricoArticle.value = ''; 
+    }
 
-  if (error) {
-    console.warn('Errore lookup articolo:', error);
-    scaricoArticle.value = '';
-    return;
-  }
-
-  if (existing) {
-    const option = [...scaricoArticle.options].find(o => o.value === code);
-    if (option) scaricoArticle.value = option.value;
-    else scaricoArticle.value = ''; // barcode non presente nella select
-  } else {
-    scaricoArticle.value = ''; // barcode non trovato
-  }
+    // 2. Aggiorna la giacenza
+    getAndDisplayStock(code, 'scarico-giacenza-display', 'scarico');
 });
-
 
 // Autocompila barcode quando si seleziona un articolo dalla select Scarico
 scaricoArticle.addEventListener('change', async () => {
