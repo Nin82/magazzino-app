@@ -81,31 +81,36 @@ hr { border:0; border-top:1px solid #e0e7eb; margin:30px 0; }
     padding: 15px 24px;
 }
 @media(max-width:768px){ 
-    /* Manteniamo il padding del body a 12px, come da codice originale */
-    body{padding:12px;} 
+    /* 🚨 1. AZZERA IL PADDING LATERALE DEL BODY SU MOBILE */
+    /* Manteniamo 12px per sopra/sotto, ma azzeriamo i lati per dare tutta la larghezza ai contenitori. */
+    body{
+        padding: 12px 0 !important; 
+        margin: 0 !important;
+    } 
     
     #carico-form,#scarico-form{flex-direction:column;align-items:stretch;gap:15px;} 
     #carico-form div,#scarico-form div{min-width:100%;} 
     input,select{max-width:100%;margin-right:0;} 
 
-    /* 🚨 CORREZIONE CHIAVE MOBILE: FORZATA CON !IMPORTANT */
+    /* 🚨 2. CORREZIONE CHIAVE: FORZIAMO LA LARGHEZZA AL 100% DEL VIEWPORT */
+    /* Non c'è più bisogno di calc() o margini negativi. */
     .tab-container,
     [role="tabpanel"],
-    .controls-container {
-        width: calc(100% + 24px) !important; /* 100% + 2*12px = 24px */
-        margin-left: -12px !important; /* Sposta a sinistra annullando il padding */
-        margin-right: -12px !important; /* Sposta a destra annullando il padding */
+    .controls-container,
+    table { /* Applichiamo 100vw anche alla tabella, per consistenza */
+        width: 100vw !important; /* Copre il 100% della larghezza dello schermo (Viewport) */
+        margin-left: 0 !important; 
+        margin-right: 0 !important;
         box-sizing: border-box !important;
     }
     
-    /* 🚨 RIPRISTINA PADDING INTERNO SUI LATI (12px) */
+    /* 🚨 3. RIPRISTINA IL PADDING INTERNO SUI LATI (12px) */
     [role="tabpanel"] {
         padding: 20px 12px !important;
     }
     .controls-container {
         padding: 15px 12px !important;
         
-        /* Regole originali mantenute per la flessibilità */
         flex-direction:column;
         align-items:stretch;
     }
@@ -148,7 +153,7 @@ tr:hover { background-color:#eff6ff; }
 </style>
 </head>
 <body>
-<h1>📦 Gestione Magazzino Completo 1.7 fix largh</h1>
+<h1>📦 Gestione Magazzino Completo 1.8 fix largh</h1>
 
 <!-- Tabs -->
 <div class="tab-container">
@@ -1068,3 +1073,4 @@ document.getElementById('use-qr').addEventListener('click', async () => {
 </script>
 </body>
 </html>
+
