@@ -148,7 +148,7 @@ tr:hover { background-color:#eff6ff; }
 </style>
 </head>
 <body>
-<h1>📦 Gestione Magazzino Completo 1.6 fix largh</h1>
+<h1>📦 Gestione Magazzino Completo 1.7 fix largh</h1>
 
 <!-- Tabs -->
 <div class="tab-container">
@@ -1048,5 +1048,23 @@ document.getElementById('use-qr').addEventListener('click', async () => {
 
 </script>
 <script type="module" src="main.js"></script>
+<script>
+  // Codice per forzare l'orientamento in orizzontale
+  function lockOrientationToLandscape() {
+    // Verifica se l'API di blocco orientamento è supportata
+    if (screen.orientation && screen.orientation.lock) {
+      // Tenta di bloccare l'orientamento su 'landscape' (copre sia primary che secondary)
+      screen.orientation.lock('landscape').catch(function(error) {
+        console.warn('Impossibile bloccare l\'orientamento (landscape):', error);
+      });
+    } else if (window.screen.orientation && window.screen.orientation.lock) {
+      // Fallback per API precedente
+      window.screen.orientation.lock('landscape');
+    }
+  }
+
+  // Chiama la funzione quando la pagina è completamente caricata
+  window.addEventListener('load', lockOrientationToLandscape);
+</script>
 </body>
 </html>
