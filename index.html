@@ -119,6 +119,49 @@ hr { border:0; border-top:1px solid #e0e7eb; margin:30px 0; }
     .controls-container button{width:100%;margin-right:0;} 
     th,td{font-size:0.75rem;padding:8px 10px;} 
 }
+
+/* =================== SCROLL TAB E TABELLE =================== */
+body {
+    height: 100vh;       /* altezza finestra */
+    overflow: hidden;     /* blocca scroll globale */
+    display: flex;
+    flex-direction: column;
+}
+
+[role="tabpanel"] {
+    flex: 1;             /* occupa tutto lo spazio disponibile */
+    overflow-y: auto;    /* scroll verticale solo qui */
+    padding: 20px;
+}
+
+#stock-summary-container,
+#full-log-container {
+    max-height: 400px;   /* altezza massima scrollabile */
+    overflow-y: auto;    /* scroll verticale solo qui */
+    border-radius: 8px;
+}
+
+#stock-summary-container table,
+#full-log-container table {
+    width: max-content;
+    min-width: 100%;
+}
+
+#chart-giacenze,
+#chart-andamento {
+    max-height: 350px;
+    overflow-y: auto;
+    overflow-x: auto;    /* scroll orizzontale se grafico largo */
+    background: #fff;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+}
+
+#chart-giacenze svg,
+#chart-andamento svg {
+    width: 1000px;       /* regola in base al contenuto */
+}
 /* Pulsanti */
 button { cursor:pointer; background:#4f46e5; color:#fff; border:none; padding:10px 18px; border-radius:8px; margin:5px 5px 5px 0; transition:all 0.2s ease-in-out; font-weight:600; white-space:nowrap; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
 button:hover { background:#4338ca; transform:translateY(-1px); box-shadow:0 4px 8px rgba(0,0,0,0.15); }
@@ -152,7 +195,7 @@ tr:hover { background-color:#eff6ff; }
 </style>
 </head>
 <body>
-<h1>📦 Gestione Magazzino Completo 1.4 fix tab scor</h1>
+<h1>📦 Gestione Magazzino Completo 1.5 fix tab scor</h1>
 
 <!-- Tabs -->
 <div class="tab-container">
