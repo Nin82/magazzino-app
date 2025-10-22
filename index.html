@@ -84,16 +84,17 @@ tr:hover { background-color:#eff6ff; }
 <div id="tab-carico" role="tabpanel">
   <h2>Registra un Nuovo Ingresso</h2>
   <form id="carico-form">
-    <div>
-      <label for="carico-barcode">Barcode:</label>
+    
+     <div>
       <input 
-        id="carico-barcode" 
-        name="carico-barcode" 
-        placeholder="Codice Barcode" 
-        required 
-        autocomplete="off" 
-        inputmode="text"
-      >
+  	 id="carico-article" 
+ 	 name="carico-article" 
+ 	 placeholder="Nome Articolo" 
+ 	 required 
+	  autocomplete="off"
+ 	 list="article-suggestions"
+	
+	<datalist id="article-suggestions"></datalist>
     </div>
 
     <div>
@@ -306,6 +307,56 @@ const caricoQty = document.getElementById('carico-qty');
 const scaricoBarcode = document.getElementById('scarico-barcode');
 const scaricoQty = document.getElementById('scarico-qty');
 const notificationElement = document.getElementById('notification');
+onst caricoArticle = document.getElementById('carico-article');
+
+
+// ================== AUTOCOMPLETE ARTICOLO SU CARICO ==================
+
+// Popola i suggerimenti del datalist in base al magazzino
+async function populateArticleSuggestions() {
+    const { data, error } = await supabase.from('magazzino').select('article');
+    if (error) {
+        console.error('Errore caricamento articoli:', error);
+        return;
+    }
+
+    const datalist = document.getElementById('article-suggestions');
+    datalist.innerHTML = ''; // svuota
+
+    data.sort((a,b) => a.article.localeCompare(b.article))
+        .forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.article;
+            datalist.appendChild(option);
+        });
+}
+
+// Quando l’utente digita o seleziona un articolo
+caricoArticle.addEventListener('input', async () => {
+    const name = caricoArticle.value.trim();
+    if (!name) {
+        caricoBarcode.value = '';
+        document.getElementById('carico-giacenza-display').textContent = '';
+        return;
+    }
+
+    // Cerca l’articolo nel DB
+    const { data: existing, error } = await supabase
+        .from('magazzino')
+        .select('barcode, quantity')
+        .eq('article', name)
+        .maybeSingle();
+
+    if (existing) {
+        // Autocompila barcode e mostra giacenza
+        caricoBarcode.value = existing.barcode;
+        document.getElementById('carico-giacenza-display').textContent = 
+            `Giacenza Attuale: ${existing.quantity} unità`;
+    } else {
+        caricoBarcode.value = '';
+        document.getElementById('carico-giacenza-display').textContent = 'Nuovo Articolo (Giacenza: 0)';
+    }
+});
 
 
 // 🔽 nuovo elemento select per lo scarico
@@ -729,6 +780,7 @@ document.getElementById('scarico-form').addEventListener('submit', async e=>{
 window.addEventListener('DOMContentLoaded', async () => {
     await refreshAll();
     await populateScaricoArticles();
+    await populateArticleSuggestions();	
 });
 
 // ====================== QR SCANNER ROBUSTO ======================
