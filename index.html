@@ -20,7 +20,6 @@
   }
 </script>
 <!-- Libreria QR Code -->
-<script src="https://unpkg.com/html5-qrcode" defer></script>
 <!-- =============================================== -->
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <style>
@@ -84,6 +83,17 @@ tr:hover { background-color:#eff6ff; }
 <div id="tab-carico" role="tabpanel">
   <h2>Registra un Nuovo Ingresso</h2>
   <form id="carico-form">
+
+	<div>
+  <label for="carico-barcode">Barcode:</label>
+  <input 
+    id="carico-barcode" 
+    name="carico-barcode" 
+    placeholder="Codice Barcode"
+    required 
+    autocomplete="off"
+  >
+</div>
 
     <div>
       <label for="carico-article">Articolo:</label>
@@ -298,8 +308,7 @@ const caricoQty = document.getElementById('carico-qty');
 const scaricoBarcode = document.getElementById('scarico-barcode');
 const scaricoQty = document.getElementById('scarico-qty');
 const notificationElement = document.getElementById('notification');
-const caricoArticle = document.getElementById('carico-article');
-
+	
 
 // ================== AUTOCOMPLETE ARTICOLO SU CARICO ==================
 
@@ -782,7 +791,7 @@ window.scanCooldown = false;
 window.isScanning = false;
 
 async function startQRScanner() {
-    if(window.isScanning) return; // previene doppi start
+    if (window.isScanning) return; // previene doppi start
     window.isScanning = true;
 
     const video = document.getElementById('qr-video');
@@ -791,65 +800,71 @@ async function startQRScanner() {
 
     try {
         if ('BarcodeDetector' in window) {
+            // ✅ Usa API nativa se supportata
             window.videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
             video.srcObject = window.videoStream;
 
             const detector = new BarcodeDetector({ formats: ['qr_code', 'code_128', 'ean_13', 'ean_8'] });
 
             const scanLoop = async () => {
-                if(!window.videoStream) return;
-
+                if (!window.videoStream) return;
                 try {
                     const barcodes = await detector.detect(video);
-                    if(barcodes.length > 0 && barcodes[0].rawValue !== window.lastScanned && !window.scanCooldown){
+                    if (barcodes.length > 0 && barcodes[0].rawValue !== window.lastScanned && !window.scanCooldown) {
                         window.lastScanned = barcodes[0].rawValue;
                         resultInput.value = window.lastScanned;
                         showNotification(`📷 Codice rilevato: ${window.lastScanned}`, 'success');
                         playBeep(150, 600, 0.5);
-
                         window.scanCooldown = true;
-                        setTimeout(()=> window.scanCooldown=false, 1000);
+                        setTimeout(() => (window.scanCooldown = false), 1000);
                     }
-                } catch(err){ console.warn(err); }
-
+                } catch (err) {
+                    console.warn(err);
+                }
                 requestAnimationFrame(scanLoop);
             };
 
             requestAnimationFrame(scanLoop);
-
         } else {
-            if(!window.html5QrInstance) window.html5QrInstance = new Html5Qrcode("qr-video");
+            // 🧩 Se BarcodeDetector non esiste → import dinamico di html5-qrcode
+            if (!window.html5QrInstance) {
+                console.log('📦 Caricamento libreria html5-qrcode...');
+                const module = await import('https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js');
+                const { Html5Qrcode } = module;
+                window.html5QrInstance = new Html5Qrcode("qr-video");
+            }
 
             await window.html5QrInstance.start(
                 { facingMode: "environment" },
-                { fps: 10, qrbox: Math.min(window.innerWidth*0.8, 300) },
+                { fps: 10, qrbox: Math.min(window.innerWidth * 0.8, 300) },
                 qrCodeMessage => {
-                    if(qrCodeMessage !== window.lastScanned && !window.scanCooldown){
+                    if (qrCodeMessage !== window.lastScanned && !window.scanCooldown) {
                         window.lastScanned = qrCodeMessage;
                         resultInput.value = window.lastScanned;
                         showNotification(`📷 Codice rilevato: ${window.lastScanned}`, 'success');
                         playBeep(150, 600, 0.5);
                         window.scanCooldown = true;
-                        setTimeout(()=> window.scanCooldown=false, 1000);
+                        setTimeout(() => (window.scanCooldown = false), 1000);
                     }
                 },
-                errorMessage => { /* ignora errori */ }
+                errorMessage => {
+                    // ignora errori
+                }
             );
         }
 
-        if(statusLabel){
+        if (statusLabel) {
             statusLabel.textContent = '📸 Scanner attivo';
             statusLabel.style.color = '#16a34a';
         }
-
-    } catch(err){
+    } catch (err) {
         console.error('Errore fotocamera:', err);
         alert('Impossibile accedere alla fotocamera. Controlla permessi e browser.');
         window.isScanning = false;
     }
 }
 
-function stopQRScanner(){
+function stopQRScanner() {
     const statusLabel = document.getElementById('qr-status');
     const resultInput = document.getElementById('qr-result');
 
@@ -857,28 +872,28 @@ function stopQRScanner(){
     window.scanCooldown = false;
     window.isScanning = false;
 
-    if(resultInput) resultInput.value = '';
+    if (resultInput) resultInput.value = '';
 
-    if(window.videoStream){
+    if (window.videoStream) {
         window.videoStream.getTracks().forEach(track => track.stop());
         window.videoStream = null;
     }
 
-    if(window.html5QrInstance){
-        window.html5QrInstance.stop()
-            .then(()=>{
+    if (window.html5QrInstance) {
+        window.html5QrInstance
+            .stop()
+            .then(() => {
                 window.html5QrInstance.clear();
                 window.html5QrInstance = null;
             })
             .catch(err => console.warn('Errore stop QR:', err));
     }
 
-    if(statusLabel){
+    if (statusLabel) {
         statusLabel.textContent = '⛔ Scanner disattivato';
         statusLabel.style.color = '#dc2626';
     }
 }
-
 
 // ====================== SWITCH TABS CON START/STOP QR ======================
 document.querySelectorAll('.tab-container button').forEach(btn => {
@@ -935,5 +950,6 @@ document.getElementById('use-qr').addEventListener('click', async () => {
 });
 
 </script>
+<script type="module" src="main.js"></script>
 </body>
 </html>
