@@ -82,47 +82,47 @@ tr:hover { background-color:#eff6ff; }
 
 <!-- CARICO -->
 <div id="tab-carico" role="tabpanel">
-  <h2>Registra un Nuovo Ingresso</h2>
-  <form id="carico-form">
-    <div>
-      <label for="carico-barcode">Barcode:</label>
-      <input 
-        id="carico-barcode" 
-        name="carico-barcode" 
-        placeholder="Codice Barcode" 
-        required 
-        autocomplete="off" 
-        inputmode="text"
-      >
-    </div>
+  <h2>Registra un Nuovo Ingresso</h2>
+  <form id="carico-form">
+    <div>
+      <label for="carico-barcode">Barcode:</label>
+      <input 
+        id="carico-barcode" 
+        name="carico-barcode" 
+        placeholder="Codice Barcode" 
+        required 
+        autocomplete="off" 
+        inputmode="text"
+      >
+    </div>
 
-    <div>
-      <label for="carico-article">Articolo:</label>
-      <input 
-        id="carico-article" 
-        name="carico-article" 
-        placeholder="Nome Articolo" 
-        required 
-        autocomplete="off"
-        list="article-list"       >
-            <datalist id="article-list"></datalist> 
-    </div>
+    <div>
+      <label for="carico-article">Articolo:</label>
+      <input 
+        id="carico-article" 
+        name="carico-article" 
+        placeholder="Nome Articolo" 
+        required 
+        autocomplete="off"
+      >
+    </div>
 
-    <div>
-      <label for="carico-qty">Quantità:</label>
-      <input 
-        type="number" 
-        id="carico-qty" 
-        name="carico-qty"
-        required 
-        min="1" 
-        value="1"
-      >
-    </div>
+    <div>
+      <label for="carico-qty">Quantità:</label>
+      <input 
+        type="number" 
+        id="carico-qty" 
+        name="carico-qty"
+        required 
+        min="1" 
+        value="1"
+      >
+    </div>
 	<div id="carico-giacenza-display" style="font-weight:700; color:#4f46e5; margin-top:10px; min-width:180px;"></div>
-    <button type="submit" class="btn-action">✅ Registra Carico</button>
-  </form>
+    <button type="submit" class="btn-action">✅ Registra Carico</button>
+  </form>
 </div>
+
 
 <!-- SCARICO -->
 <div id="tab-scarico" role="tabpanel" class="hidden">
@@ -276,35 +276,6 @@ const supabaseUrl = 'https://eevwzkcesmfofpecuxwv.supabase.co'
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnd6a2Nlc21mb2ZwZWN1eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2ODkxOTAsImV4cCI6MjA3NjI2NTE5MH0.j7TQnwbw-gW2S6QBjyp4wsQJrXUVYmg3wwVWVPRe1b4'
 const supabase = createClient(supabaseUrl, supabaseKey)
 
-
-
-/** 🆕 Funzione: Popola la Datalist (#article-list) con gli articoli unici esistenti */
-async function populateArticlesDatalist() {
-    const { data, error } = await supabase.from('magazzino').select('article');
-    const datalist = document.getElementById('article-list');
-
-    if (error) {
-        console.error('Errore caricamento articoli per datalist:', error);
-        return;
-    }
-
-    datalist.innerHTML = '';
-
-    if (data && data.length > 0) {
-        // Estrae i nomi degli articoli unici per i suggerimenti
-        const uniqueArticles = [...new Set(data.map(item => item.article))].sort();
-
-        uniqueArticles.forEach(article => {
-            const opt = document.createElement('option');
-            opt.value = article;
-            datalist.appendChild(opt);
-        });
-    }
-}
-
-
-
-
 // ================== SUPABASE REALTIME ==================
 
 // Realtime su log_operazioni
@@ -330,13 +301,14 @@ const magazzinoChannel = supabase.channel('realtime-magazzino')
 
 // ================== ELEMENTI ==================
 const caricoBarcode = document.getElementById('carico-barcode');
-const caricoArticle = document.getElementById('carico-article'); // Riferimento al nuovo input Articolo (con datalist)
+const caricoArticle = document.getElementById('carico-article');
 const caricoQty = document.getElementById('carico-qty');
 const scaricoBarcode = document.getElementById('scarico-barcode');
 const scaricoQty = document.getElementById('scarico-qty');
 const notificationElement = document.getElementById('notification');
 
-// 🔽 elemento select per lo scarico
+
+// 🔽 nuovo elemento select per lo scarico
 const scaricoArticle = document.getElementById('scarico-article');
 
 // Autocompila l’articolo quando inserisci o scanni un barcode
@@ -460,7 +432,7 @@ async function refreshScaricoSelect(currentBarcode = '') {
 }
 
 
-
+// ================== FUNZIONI SUPPORT (Nuova) ==================
 
 async function getAndDisplayStock(barcode, displayElementId, mode) {
     const displayElement = document.getElementById(displayElementId);
@@ -917,25 +889,6 @@ document.getElementById('use-qr').addEventListener('click', async () => {
     // 🔹 Pulisce il box QR
     document.getElementById('qr-result').value = '';
     lastScanned = '';
-});
-
-
-
-document.addEventListener('DOMContentLoaded', async () => {
-    // ... (Mantieni i tuoi listener per i filtri del Log qui, se non sono già registrati)
-
-    // 🚀 CHIAMATE CRITICHE: Avvia il caricamento iniziale dei dati
-    try {
-        await refreshAll();
-        // Popola la Datalist per il Carico (Nuova funzione)
-        await populateArticlesDatalist(); 
-        // Popola la Select per lo Scarico (La tua funzione esistente o quella fornita sopra)
-        await populateScaricoArticles(); 
-
-        console.info('✅ App inizializzata correttamente');
-    } catch (err) {
-        console.error('Errore inizializzazione app:', err);
-    }
 });
 
 </script>
