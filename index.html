@@ -84,31 +84,19 @@ tr:hover { background-color:#eff6ff; }
 <div id="tab-carico" role="tabpanel">
   <h2>Registra un Nuovo Ingresso</h2>
   <form id="carico-form">
-    
-     <div>
-      <input 
-  	 id="carico-article" 
- 	 name="carico-article" 
- 	 placeholder="Nome Articolo" 
- 	 required 
-	  autocomplete="off"
- 	 list="article-suggestions"
-	
-	<datalist id="article-suggestions"></datalist>
-    </div>
 
     <div>
-  <label for="carico-article">Articolo:</label>
-  <input 
-    id="carico-article" 
-    name="carico-article" 
-    placeholder="Nome Articolo" 
-    required 
-    autocomplete="off"
-    list="article-suggestions"
-  >
-  <datalist id="article-suggestions"></datalist>
-</div>
+      <label for="carico-article">Articolo:</label>
+      <input 
+        id="carico-article" 
+        name="carico-article" 
+        placeholder="Nome Articolo" 
+        required 
+        autocomplete="off"
+        list="article-suggestions"
+      >
+      <datalist id="article-suggestions"></datalist>
+    </div>
 
     <div>
       <label for="carico-qty">Quantità:</label>
@@ -121,11 +109,12 @@ tr:hover { background-color:#eff6ff; }
         value="1"
       >
     </div>
-	<div id="carico-giacenza-display" style="font-weight:700; color:#4f46e5; margin-top:10px; min-width:180px;"></div>
+
+    <div id="carico-giacenza-display" style="font-weight:700; color:#4f46e5; margin-top:10px; min-width:180px;"></div>
+
     <button type="submit" class="btn-action">✅ Registra Carico</button>
   </form>
 </div>
-
 
 <!-- SCARICO -->
 <div id="tab-scarico" role="tabpanel" class="hidden">
