@@ -184,7 +184,7 @@ tr:hover { background-color:#eff6ff; }
 </style>
 </head>
 <body>
-<h1>📦 Gestione Magazzino 2.2.2 fix fcus top</h1>
+<h1>📦 Gestione Magazzino 2.2.3 fix fcus top</h1>
 <div id="top-anchor" tabindex="-1"></div>
 <!-- Tabs -->
 <div class="tab-container">
@@ -1158,31 +1158,30 @@ function stopQRScanner() {
 // ====================== SWITCH TABS CON START/STOP QR ======================
 document.querySelectorAll('.tab-container button').forEach(btn => {
     btn.addEventListener('click', async () => {
-        const targetId = btn.dataset.target;
-
-        // ✅ Gestione classe active
+        // 1️⃣ Aggiorna tab attive
         document.querySelectorAll('.tab-container button').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
 
-        // ✅ Mostra/nascondi tab
         document.querySelectorAll('[role="tabpanel"]').forEach(tab => tab.classList.add('hidden'));
-        document.getElementById(targetId).classList.remove('hidden');
+        const targetTab = document.getElementById(btn.dataset.target);
+        if (targetTab) targetTab.classList.remove('hidden');
 
-        // ✅ Scroll dolce in cima e focus sull'ancora
+        // 2️⃣ Scroll dolce e focus in cima
         const topAnchor = document.getElementById('top-anchor');
         if (topAnchor) {
             topAnchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            topAnchor.focus();
+            topAnchor.focus({ preventScroll: true }); // evita scatti improvvisi
         }
 
-        // ✅ Gestione QR scanner
-        if (targetId === 'tab-qr') {
+        // 3️⃣ Gestione QR scanner: start/stop automatico
+        if (btn.dataset.target === 'tab-qr') {
             await startQRScanner();
         } else {
             stopQRScanner();
         }
     });
 });
+
 // ====================== PULSANTE "USA BARCODE" OTTIMIZZATO ======================
 document.getElementById('use-qr').addEventListener('click', async () => {
     const qrCode = document.getElementById('qr-result').value;
