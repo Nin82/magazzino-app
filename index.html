@@ -132,9 +132,10 @@ tr:hover { background-color:#eff6ff; }
     -webkit-overflow-scrolling: touch; 
 }
 /* Forza una larghezza minima sulla tabella per assicurare che lo scroll si attivi e pulisce stili duplicati */
-#full-log {
+#full-log, 
+#stock-summary { 
     min-width: 600px; /* Larghezza sufficiente per tutte le colonne */
-    margin-top: 0; /* Rimuove margine superiore duplicato */
+    margin-top: 0; /* Rimuove margine duplicato */
     box-shadow: none; /* Rimuove ombra duplicata */
     border-radius: 0;
 }
@@ -183,7 +184,7 @@ tr:hover { background-color:#eff6ff; }
 </style>
 </head>
 <body>
-<h1>📦 Gestione Magazzino Completo 1.8 fix spegni cam</h1>
+<h1>📦 Gestione Magazzino Completo 1.9 fix scroll giac</h1>
 
 <!-- Tabs -->
 <div class="tab-container">
@@ -287,17 +288,18 @@ tr:hover { background-color:#eff6ff; }
 
 <!-- INVENTARIO -->
 <div id="tab-stock-summary" role="tabpanel" class="hidden">
-  <h2>Inventario Attuale</h2>
-  <div style="margin-bottom: 15px; margin-top: 15px;">
-    <button onclick="downloadSummaryCSV()" class="btn-secondary">⬇️ Scarica Riepilogo CSV</button>
+  <h2>Inventario Attuale</h2>
+  <div style="margin-bottom: 15px; margin-top: 15px;">
+    <button onclick="downloadSummaryCSV()" class="btn-secondary">⬇️ Scarica Riepilogo CSV</button>
+  </div>
+  
+    <div class="table-responsive-wrapper">
+    <table id="stock-summary">
+      <thead><tr><th>Articolo</th><th>Barcode</th><th>Giacenza Totale</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
   </div>
-  <div id="stock-summary-container">
-    <table id="stock-summary">
-      <thead><tr><th>Articolo</th><th>Barcode</th><th>Giacenza Totale</th></tr></thead>
-      <tbody></tbody>
-    </table>
-  </div>
-</div>
 
 <!-- DASHBOARD -->
 <div id="tab-dashboard" role="tabpanel" class="hidden">
