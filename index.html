@@ -184,7 +184,7 @@ tr:hover { background-color:#eff6ff; }
 </style>
 </head>
 <body>
-<h1>📦 Gestione Magazzino Completo 2.0 fix CANC 50</h1>
+<h1>📦 Gestione Magazzino 2.1 fix canc label giac</h1>
 
 <!-- Tabs -->
 <div class="tab-container">
@@ -619,6 +619,12 @@ async function addCarico(barcode, article, qty){
     await trimLog(50);
     showNotification(`Carico registrato: ${qty}x ${article}`,'success');
 await getAndDisplayStock(barcode, 'carico-giacenza-display', 'carico');
+
+ // Sparisce dopo 5 secondi
+    setTimeout(() => {
+        const giacenzaDisplay = document.getElementById('carico-giacenza-display');
+        if (giacenzaDisplay) giacenzaDisplay.textContent = '';
+    }, 5000);
 }
 async function addScarico(barcode, qty){
     const { data:existing } = await supabase.from('magazzino').select('*').eq('barcode',barcode).single();
@@ -628,6 +634,13 @@ async function addScarico(barcode, qty){
     await supabase.from('log_operazioni').insert([{type:'Scarico',barcode,article:existing.article,quantity:qty}]);
     await trimLog(50);
     showNotification(`Scarico registrato: ${qty}x ${existing.article}`,'success');
+
+ // Sparisce dopo 5 secondi
+    setTimeout(() => {
+        const giacenzaDisplay = document.getElementById('scarico-giacenza-display');
+        if (giacenzaDisplay) giacenzaDisplay.textContent = '';
+    }, 5000);
+
 await getAndDisplayStock(barcode, 'scarico-giacenza-display', 'scarico');
 }
 
