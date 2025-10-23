@@ -183,15 +183,16 @@ tr:hover { background-color:#eff6ff; }
 </style>
 </head>
 <body>
-<h1>📦 Gestione Magazzino Completo 1.7 fix agg.giac</h1>
+<h1>📦 Gestione Magazzino Completo 1.8 fix spegni cam</h1>
 
 <!-- Tabs -->
 <div class="tab-container">
   <button role="tab" aria-controls="tab-carico" data-target="tab-carico" class="active">➕ Carico</button>
   <button role="tab" aria-controls="tab-scarico" data-target="tab-scarico">➖ Scarico</button>
+  <button role="tab" aria-controls="tab-qr" data-target="tab-qr">📷 QR Scanner</button>
   <button role="tab" aria-controls="tab-stock-summary" data-target="tab-stock-summary">📜 Riepilogo Giacenze</button>
   <button role="tab" aria-controls="tab-dashboard" data-target="tab-dashboard">📊 Dashboard</button>
-  <button role="tab" aria-controls="tab-qr" data-target="tab-qr">📷 QR Scanner</button>
+
 </div>
 
 <!-- CARICO -->
@@ -1098,6 +1099,8 @@ document.getElementById('use-qr').addEventListener('click', async () => {
     document.getElementById('qr-result').value = '';
     lastScanned = '';
 });
+
+document.getElementById('stop-qr').addEventListener('click', stopQRScanner);
 
 </script>
 <script type="module" src="main.js"></script>
