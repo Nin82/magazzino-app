@@ -184,7 +184,7 @@ tr:hover { background-color:#eff6ff; }
 </style>
 </head>
 <body>
-<h1>📦 Gestione Magazzino 2.1 fix canc label giac</h1>
+<h1>📦 Gestione Magazzino 2.2 fix elimina giac</h1>
 
 <!-- Tabs -->
 <div class="tab-container">
@@ -295,7 +295,7 @@ tr:hover { background-color:#eff6ff; }
   
     <div class="table-responsive-wrapper">
     <table id="stock-summary">
-      <thead><tr><th>Articolo</th><th>Barcode</th><th>Giacenza Totale</th></tr></thead>
+      <thead><tr><th>Articolo</th><th>Barcode</th><th>Giacenza Totale</th><th>Azioni</th></tr></thead>
       <tbody></tbody>
     </table>
   </div>
@@ -680,13 +680,17 @@ async function renderStockSummary(){
     const tbody = document.querySelector('#stock-summary tbody');
     const data = await getStockSummary();
     tbody.innerHTML='';
-    if(data.length===0){tbody.innerHTML='<tr><td colspan="3" style="text-align:center;padding:20px">Nessun articolo in giacenza.</td></tr>'; return;}
+    // Aggiorna colspan a 4 per includere la colonna Azioni
+    if(data.length===0){tbody.innerHTML='<tr><td colspan="4" style="text-align:center;padding:20px">Nessun articolo in giacenza.</td></tr>'; return;} 
+    
     data.sort((a,b)=>b.quantity-a.quantity).forEach(item=>{
         const qtyClass = item.quantity<10?'qty-low':'';
         const row = tbody.insertRow();
-        row.innerHTML=`<td>${item.article}</td><td>${item.barcode}</td><td class="qty-cell"><span class="${qtyClass}">${item.quantity}</span></td>`;
+        // 🚨 AGGIUNTA CHIAVE: La quarta cella con il pulsante "Elimina"
+        row.innerHTML=`<td>${item.article}</td><td>${item.barcode}</td><td class="qty-cell"><span class="${qtyClass}">${item.quantity}</span></td><td><button onclick="deleteStockRecord('${item.barcode}')" class="btn-danger btn-small">Elimina</button></td>`;
     });
 }
+
 async function renderTables(){
     const typeFilter = document.getElementById('filter-type').value;
     const articoloFilter = document.getElementById('filter-articolo').value.toLowerCase();
@@ -709,35 +713,74 @@ async function renderTables(){
 }
 
 
-async function deleteRecord(id){
-    if(!confirm("Confermi l'eliminazione?")) return;
+async function deleteRecord(id) {
+    if (!confirm("Confermi l'eliminazione? Verrà ripristinata la giacenza.")) return;
 
-    const { data } = await supabase.from('log_operazioni').select('*').eq('id',id).maybeSingle();
-    if(!data){ 
-        showNotification("Record non trovato",'error'); 
-        return; 
+    try {
+        // 1. Recupera il record di log
+        const { data: logItem, error: logError } = await supabase.from('log_operazioni').select('*').eq('id', id).maybeSingle();
+        if (logError) throw logError;
+        if (!logItem) {
+            showNotification("Record di log non trovato", 'error');
+            return;
+        }
+
+        // 2. Recupera la giacenza attuale
+        const { data: existing, error: stockError } = await supabase
+            .from('magazzino')
+            .select('article, quantity')
+            .eq('barcode', logItem.barcode)
+            .maybeSingle();
+
+        if (stockError) throw stockError;
+
+        let newQty = 0;
+        let existingQty = (existing ? existing.quantity : 0);
+        let operationText = '';
+
+        // 3. Calcola la nuova giacenza
+        if (logItem.type === 'CARICO') { // Nota: il tuo log usa 'Carico' o 'Scarico'
+            // Se annullo un CARICO, DIMINUISCO la quantità
+            newQty = existingQty - logItem.quantity;
+            operationText = 'CARICO annullato';
+            // Preveniamo giacenze negative (solo per Carico, dato che lo Scarico le crea/corregge)
+            newQty = Math.max(newQty, 0); 
+        } else { // SCARICO
+            // Se annullo uno SCARICO, AUMENTO la quantità
+            newQty = existingQty + logItem.quantity;
+            operationText = 'SCARICO annullato';
+        }
+
+        // 4. Aggiorna o Inserisci il record di magazzino (upsert)
+        // La logica upsert assicura che:
+        // a) se il record esiste, venga aggiornato.
+        // b) se è stato cancellato (existing è null), venga ricreato se newQty > 0.
+        const { error: upsertError } = await supabase
+            .from('magazzino')
+            .upsert({ barcode: logItem.barcode, article: logItem.article, quantity: newQty });
+
+        if (upsertError) throw upsertError;
+
+        // 5. Elimina il record dallo storico
+        const { error: deleteError } = await supabase
+            .from('log_operazioni')
+            .delete()
+            .eq('id', id);
+
+        if (deleteError) throw deleteError;
+        
+        showNotification(`✅ Movimento annullato (${operationText}).`, 'success');
+
+    } catch (e) {
+        showNotification(`❌ Errore durante l'annullamento: ${e.message}`, 'error');
+        // Importante: L'app non si blocca grazie al try/catch
     }
 
-    // Aggiorna il magazzino senza cancellare articoli a zero
-    const { data:existing } = await supabase.from('magazzino').select('*').eq('barcode',data.barcode).maybeSingle();
-
-    if(data.type==='Carico'){
-        // Se annullo un carico, diminuisco la quantità
-        const newQty = (existing ? existing.quantity : 0) - data.quantity;
-        await supabase.from('magazzino').upsert({ barcode: data.barcode, article: data.article, quantity: Math.max(newQty,0) });
-    } else {
-        // Se annullo uno scarico, aumento la quantità
-        const newQty = (existing ? existing.quantity : 0) + data.quantity;
-        await supabase.from('magazzino').upsert({ barcode: data.barcode, article: data.article, quantity: newQty });
-    }
-
-    // Elimina il record dallo storico
-    await supabase.from('log_operazioni').delete().eq('id',id);
-
-    renderTables();
-    renderStockSummary();
-    showNotification("Record annullato",'success');
-
+    // 6. Aggiorna l'interfaccia (fuori dal try/catch)
+    await renderTables();
+    await renderStockSummary();
+    await renderCharts();
+    await renderAndamentoGiornaliero();
 }
 
 async function resetDatabase(){
@@ -846,7 +889,32 @@ async function renderAndamentoGiornaliero() {
         .attr("d", line);
 }
 
+/* ================= NUOVA FUNZIONE: ELIMINAZIONE GIACENZA ================= */
+// Funzione per eliminare un articolo dal Magazzino (tabella 'magazzino')
+async function deleteStockRecord(barcode) {
+    if (!confirm('Sei sicuro di voler eliminare questo articolo dal Magazzino? Questa operazione non è reversibile e lascerà i movimenti storici orfani!')) {
+        return;
+    }
 
+    // 1. Eliminazione dal magazzino
+    const { error: deleteError } = await supabase
+        .from('magazzino')
+        .delete()
+        .eq('barcode', barcode);
+
+    if (deleteError) {
+        showNotification(`❌ Errore nell'eliminazione: ${deleteError.message}`, 'error');
+        return;
+    }
+
+    showNotification(`🗑️ Articolo con Barcode ${barcode} eliminato correttamente dal Magazzino.`, 'success');
+
+    // 2. Aggiorna l'interfaccia
+    // La funzione è stata resa globale (non è definita nel blocco INIT)
+    await renderStockSummary();
+    await renderCharts();
+    await renderAndamentoGiornaliero();
+}
 
 
 // ================== INIT ==================
@@ -1152,4 +1220,3 @@ document.getElementById('stop-qr').addEventListener('click', stopQRScanner);
 <script type="module" src="main.js"></script>
 </body>
 </html>
-
