@@ -183,7 +183,7 @@ tr:hover { background-color:#eff6ff; }
 </style>
 </head>
 <body>
-<h1>📦 Gestione Magazzino Completo 1.6 fix blocco barcode</h1>
+<h1>📦 Gestione Magazzino Completo 1.7 fix agg.giac</h1>
 
 <!-- Tabs -->
 <div class="tab-container">
@@ -614,6 +614,7 @@ async function addCarico(barcode, article, qty){
     }
     await supabase.from('log_operazioni').insert([{type:'Carico',barcode,article,quantity:qty}]);
     showNotification(`Carico registrato: ${qty}x ${article}`,'success');
+await getAndDisplayStock(barcode, 'carico-giacenza-display', 'carico');
 }
 async function addScarico(barcode, qty){
     const { data:existing } = await supabase.from('magazzino').select('*').eq('barcode',barcode).single();
@@ -622,6 +623,7 @@ async function addScarico(barcode, qty){
     await supabase.from('magazzino').update({quantity:newQty}).eq('barcode', barcode);
     await supabase.from('log_operazioni').insert([{type:'Scarico',barcode,article:existing.article,quantity:qty}]);
     showNotification(`Scarico registrato: ${qty}x ${existing.article}`,'success');
+await getAndDisplayStock(barcode, 'scarico-giacenza-display', 'scarico');
 }
 async function getStockSummary(){ const { data } = await supabase.from('magazzino').select('*'); return data || []; }
 async function getLog(filterType='Tutti',filterArticle=''){ 
