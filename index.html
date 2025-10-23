@@ -184,8 +184,8 @@ tr:hover { background-color:#eff6ff; }
 </style>
 </head>
 <body>
-<h1>📦 Gestione Magazzino 2.2.1 fix elimina giac</h1>
-
+<h1>📦 Gestione Magazzino 2.2.2 fix fcus top</h1>
+<div id="top-anchor" tabindex="-1"></div>
 <!-- Tabs -->
 <div class="tab-container">
   <button role="tab" aria-controls="tab-carico" data-target="tab-carico" class="active">➕ Carico</button>
@@ -909,6 +909,30 @@ async function deleteStockRecord(barcode) {
     await renderAndamentoGiornaliero();
 }
 
+/* ================= NUOVA FUNZIONE: GESTIONE FOCUS ================= */
+// Imposta il focus sul campo di input principale della tab attiva
+function setInitialFocus(tabId) {
+    let elementToFocus = null;
+
+    if (tabId === 'tab-carico') {
+        // Carico: focus sul campo Barcode
+        elementToFocus = document.getElementById('carico-barcode');
+    } else if (tabId === 'tab-scarico') {
+        // Scarico: focus sulla select dell'Articolo
+        elementToFocus = document.getElementById('scarico-article');
+    } else if (tabId === 'tab-log') {
+        // Storico: focus sulla barra di ricerca
+        elementToFocus = document.getElementById('log-search');
+    } else {
+        // Altre tab (Riepilogo): nessun focus specifico
+        return; 
+    }
+    
+    // Assegna il focus all'elemento trovato
+    if (elementToFocus) {
+        elementToFocus.focus();
+    }
+}
 
 // ================== INIT ==================
 window.downloadLogCSV = downloadLogCSV;
@@ -1139,7 +1163,14 @@ document.querySelectorAll('.tab-container button').forEach(btn => {
 
         document.querySelectorAll('[role="tabpanel"]').forEach(tab => tab.classList.add('hidden'));
         document.getElementById(btn.dataset.target).classList.remove('hidden');
-
+	
+	// Scroll / Focus top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        const topAnchor = document.getElementById('top-anchor');
+        if (topAnchor) {
+            topAnchor.focus();
+        }
+					
         // 🔹 Gestione QR scanner: start/stop automatico
         if (btn.dataset.target === 'tab-qr') {
             await startQRScanner();
