@@ -1158,28 +1158,31 @@ function stopQRScanner() {
 // ====================== SWITCH TABS CON START/STOP QR ======================
 document.querySelectorAll('.tab-container button').forEach(btn => {
     btn.addEventListener('click', async () => {
+        const targetId = btn.dataset.target;
+
+        // ✅ Gestione classe active
         document.querySelectorAll('.tab-container button').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
 
+        // ✅ Mostra/nascondi tab
         document.querySelectorAll('[role="tabpanel"]').forEach(tab => tab.classList.add('hidden'));
-        document.getElementById(btn.dataset.target).classList.remove('hidden');
-	
-	// Scroll / Focus top
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        document.getElementById(targetId).classList.remove('hidden');
+
+        // ✅ Scroll dolce in cima e focus sull'ancora
         const topAnchor = document.getElementById('top-anchor');
         if (topAnchor) {
+            topAnchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
             topAnchor.focus();
         }
-					
-        // 🔹 Gestione QR scanner: start/stop automatico
-        if (btn.dataset.target === 'tab-qr') {
+
+        // ✅ Gestione QR scanner
+        if (targetId === 'tab-qr') {
             await startQRScanner();
         } else {
             stopQRScanner();
         }
     });
 });
-
 // ====================== PULSANTE "USA BARCODE" OTTIMIZZATO ======================
 document.getElementById('use-qr').addEventListener('click', async () => {
     const qrCode = document.getElementById('qr-result').value;
