@@ -184,7 +184,7 @@ tr:hover { background-color:#eff6ff; }
 </style>
 </head>
 <body>
-<h1>📦 Gestione Magazzino 2.2 fix table giac</h1>
+<h1>📦 Gestione Magazzino 2.1 fix canc label giac</h1>
 
 <!-- Tabs -->
 <div class="tab-container">
@@ -294,19 +294,12 @@ tr:hover { background-color:#eff6ff; }
   </div>
   
     <div class="table-responsive-wrapper">
-  <table id="stock-summary">
-    <thead>
-      <tr>
-        <th>Articolo</th>
-        <th>Barcode</th>
-        <th>Giacenza Totale</th>
-        <th>Azioni</th> <!-- ✅ nuova colonna -->
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-</div>
-</div>
+    <table id="stock-summary">
+      <thead><tr><th>Articolo</th><th>Barcode</th><th>Giacenza Totale</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  </div>
 
 <!-- DASHBOARD -->
 <div id="tab-dashboard" role="tabpanel" class="hidden">
@@ -682,49 +675,18 @@ async function getLog(filterType='Tutti',filterArticle=''){
     if(filterType!=='Tutti') query=query.eq('type',filterType); 
     if(filterArticle) query=query.ilike('article',`%${filterArticle}%`);
     const { data } = await query; return data || []; 
-
-
-async function renderStockSummary() {
+}
+async function renderStockSummary(){
     const tbody = document.querySelector('#stock-summary tbody');
     const data = await getStockSummary();
-    tbody.innerHTML = '';
-
-    if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px">Nessun articolo in giacenza.</td></tr>';
-        return;
-    }
-
-    data.sort((a, b) => b.quantity - a.quantity).forEach(item => {
-        const qtyClass = item.quantity < 10 ? 'qty-low' : '';
+    tbody.innerHTML='';
+    if(data.length===0){tbody.innerHTML='<tr><td colspan="3" style="text-align:center;padding:20px">Nessun articolo in giacenza.</td></tr>'; return;}
+    data.sort((a,b)=>b.quantity-a.quantity).forEach(item=>{
+        const qtyClass = item.quantity<10?'qty-low':'';
         const row = tbody.insertRow();
-
-        row.innerHTML = `
-            <td>${item.article}</td>
-            <td>${item.barcode}</td>
-            <td class="qty-cell"><span class="${qtyClass}">${item.quantity}</span></td>
-            <td><button class="btn-delete" onclick="deleteStockItem('${item.barcode}', '${item.article}')">❌ Rimuovi</button></td>
-        `;
+        row.innerHTML=`<td>${item.article}</td><td>${item.barcode}</td><td class="qty-cell"><span class="${qtyClass}">${item.quantity}</span></td>`;
     });
 }
-
-
-async function deleteStockItem(barcode, article) {
-    if(!confirm(`Confermi la rimozione dell'articolo "${article}" dal magazzino?`)) return;
-
-    const { data: existing } = await supabase.from('magazzino').select('*').eq('barcode', barcode).maybeSingle();
-
-    if(!existing){
-        showNotification(`Articolo "${article}" già rimosso dal magazzino.`, 'error');
-        await renderStockSummary();
-        return;
-    }
-
-    await supabase.from('magazzino').delete().eq('barcode', barcode);
-
-    await renderStockSummary();
-    showNotification(`Articolo "${article}" rimosso dal magazzino.`, 'success');
-}
-
 async function renderTables(){
     const typeFilter = document.getElementById('filter-type').value;
     const articoloFilter = document.getElementById('filter-articolo').value.toLowerCase();
@@ -1190,3 +1152,4 @@ document.getElementById('stop-qr').addEventListener('click', stopQRScanner);
 <script type="module" src="main.js"></script>
 </body>
 </html>
+
