@@ -184,7 +184,7 @@ tr:hover { background-color:#eff6ff; }
 </style>
 </head>
 <body>
-<h1>📦 Gestione Magazzino Completo 1.9 fix scroll giac</h1>
+<h1>📦 Gestione Magazzino Completo 2.0 fix CANC 50</h1>
 
 <!-- Tabs -->
 <div class="tab-container">
@@ -616,6 +616,7 @@ async function addCarico(barcode, article, qty){
         await supabase.from('magazzino').insert([{barcode,article,quantity:qty}]);
     }
     await supabase.from('log_operazioni').insert([{type:'Carico',barcode,article,quantity:qty}]);
+    await trimLog(50);
     showNotification(`Carico registrato: ${qty}x ${article}`,'success');
 await getAndDisplayStock(barcode, 'carico-giacenza-display', 'carico');
 }
@@ -625,9 +626,36 @@ async function addScarico(barcode, qty){
     const newQty = existing.quantity - qty;
     await supabase.from('magazzino').update({quantity:newQty}).eq('barcode', barcode);
     await supabase.from('log_operazioni').insert([{type:'Scarico',barcode,article:existing.article,quantity:qty}]);
+    await trimLog(50);
     showNotification(`Scarico registrato: ${qty}x ${existing.article}`,'success');
 await getAndDisplayStock(barcode, 'scarico-giacenza-display', 'scarico');
 }
+
+// ================== FUNZIONI SUPPORTO ELIMINA 50 ==================
+async function trimLog(maxRecords = 50) {
+    // Conta quanti record ci sono
+    const { count } = await supabase
+        .from('log_operazioni')
+        .select('id', { count: 'exact' });
+
+    if (count > maxRecords) {
+        // Recupera gli ID più vecchi da eliminare
+        const { data: oldRecords } = await supabase
+            .from('log_operazioni')
+            .select('id')
+            .order('date', { ascending: true }) // dal più vecchio
+            .limit(count - maxRecords);
+
+        const idsToDelete = oldRecords.map(r => r.id);
+
+        if (idsToDelete.length > 0) {
+            await supabase.from('log_operazioni').delete().in('id', idsToDelete);
+        }
+    }
+}
+
+
+
 async function getStockSummary(){ const { data } = await supabase.from('magazzino').select('*'); return data || []; }
 async function getLog(filterType='Tutti',filterArticle=''){ 
     let query = supabase.from('log_operazioni').select('*').order('date',{ascending:false}); 
@@ -804,6 +832,9 @@ async function renderAndamentoGiornaliero() {
         .attr("stroke-width",2)
         .attr("d", line);
 }
+
+
+
 
 // ================== INIT ==================
 window.downloadLogCSV = downloadLogCSV;
