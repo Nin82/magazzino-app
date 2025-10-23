@@ -183,7 +183,7 @@ tr:hover { background-color:#eff6ff; }
 </style>
 </head>
 <body>
-<h1>📦 Gestione Magazzino Completo 1.5 fix cards</h1>
+<h1>📦 Gestione Magazzino Completo 1.6 fix blocco barcode</h1>
 
 <!-- Tabs -->
 <div class="tab-container">
@@ -454,8 +454,12 @@ async function populateArticleSuggestions() {
 caricoArticle.addEventListener('input', async () => {
     const name = caricoArticle.value.trim();
     const giacenzaDisplay = document.getElementById('carico-giacenza-display');
+    
+    // 🚨 RESET INIZIALE: Rimuovi readonly e svuota Barcode se l'utente sta modificando
+    caricoBarcode.removeAttribute('readonly');
     if (!name) {
         giacenzaDisplay.textContent = '';
+        caricoBarcode.value = '';
         return;
     }
 
@@ -465,16 +469,24 @@ caricoArticle.addEventListener('input', async () => {
         .eq('article', name)
         .maybeSingle();
 
-    if (existing) {
+    if (existing) 
+    {
         // Se esiste, aggiorna barcode solo se campo vuoto
-        if (!caricoBarcode.value) caricoBarcode.value = existing.barcode;
+        if (!caricoBarcode.value || caricoBarcode.value === existing.barcode) {
+            caricoBarcode.value = existing.barcode;
+            // 🚨 AGGIUNTA CHIAVE: Blocca il campo Barcode in sola lettura
+            caricoBarcode.setAttribute('readonly', true);
+        }
         giacenzaDisplay.textContent = `Giacenza Attuale: ${existing.quantity} unità`;
     } else {
         // Nuovo articolo
-        if (!caricoBarcode.value) caricoBarcode.value = ''; // non sovrascrivere se già inserito QR
+        // 🚨 AGGIUNTA: Rimuove readonly per permettere l'inserimento manuale del barcode
+        caricoBarcode.removeAttribute('readonly'); 
+        if (!caricoBarcode.value) caricoBarcode.value = ''; 
         giacenzaDisplay.textContent = 'Nuovo Articolo (Giacenza: 0)';
     }
 });
+
 // 🔽 nuovo elemento select per lo scarico
 const scaricoArticle = document.getElementById('scarico-article');
 
