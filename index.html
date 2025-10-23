@@ -184,7 +184,7 @@ tr:hover { background-color:#eff6ff; }
 </style>
 </head>
 <body>
-<h1>📦 Gestione Magazzino 2.2 fix elimina giac</h1>
+<h1>📦 Gestione Magazzino 2.2.1 fix elimina giac</h1>
 
 <!-- Tabs -->
 <div class="tab-container">
@@ -713,70 +713,63 @@ async function renderTables(){
 }
 
 
-async function deleteRecord(id) {
-    if (!confirm("Confermi l'eliminazione? Verrà ripristinata la giacenza.")) return;
+async function deleteRecord(id){
+    if(!confirm("Confermi l'eliminazione? Verrà ripristinata la giacenza.")) return;
 
     try {
         // 1. Recupera il record di log
-        const { data: logItem, error: logError } = await supabase.from('log_operazioni').select('*').eq('id', id).maybeSingle();
-        if (logError) throw logError;
-        if (!logItem) {
-            showNotification("Record di log non trovato", 'error');
-            return;
+        const { data: logItem, error: logFetchError } = await supabase.from('log_operazioni').select('*').eq('id',id).maybeSingle();
+        if(logFetchError) throw logFetchError;
+        if(!logItem){  
+            showNotification("Record di log non trovato",'error');  
+            return;  
         }
 
         // 2. Recupera la giacenza attuale
-        const { data: existing, error: stockError } = await supabase
+        // Senza la clausola .select('*') il codice è più pulito
+        const { data:existing, error: existingError } = await supabase
             .from('magazzino')
             .select('article, quantity')
             .eq('barcode', logItem.barcode)
             .maybeSingle();
 
-        if (stockError) throw stockError;
+        if (existingError) throw existingError;
 
         let newQty = 0;
-        let existingQty = (existing ? existing.quantity : 0);
-        let operationText = '';
-
-        // 3. Calcola la nuova giacenza
-        if (logItem.type === 'CARICO') { // Nota: il tuo log usa 'Carico' o 'Scarico'
-            // Se annullo un CARICO, DIMINUISCO la quantità
+        // Se non esiste, la giacenza attuale è 0
+        const existingQty = (existing ? existing.quantity : 0);
+        
+        // 3. Calcola la nuova giacenza e usa l'upsert con onConflict
+        if(logItem.type==='CARICO'){
+            // Se annullo un CARICO, diminuisco la quantità
             newQty = existingQty - logItem.quantity;
-            operationText = 'CARICO annullato';
-            // Preveniamo giacenze negative (solo per Carico, dato che lo Scarico le crea/corregge)
-            newQty = Math.max(newQty, 0); 
+            newQty = Math.max(newQty, 0); // Non andiamo sotto zero
         } else { // SCARICO
-            // Se annullo uno SCARICO, AUMENTO la quantità
+            // Se annullo uno SCARICO, aumento la quantità
             newQty = existingQty + logItem.quantity;
-            operationText = 'SCARICO annullato';
         }
 
-        // 4. Aggiorna o Inserisci il record di magazzino (upsert)
-        // La logica upsert assicura che:
-        // a) se il record esiste, venga aggiornato.
-        // b) se è stato cancellato (existing è null), venga ricreato se newQty > 0.
+        // 🚨 MODIFICA CHIAVE: Uso di .onConflict('barcode') per forzare l'UPDATE
         const { error: upsertError } = await supabase
             .from('magazzino')
-            .upsert({ barcode: logItem.barcode, article: logItem.article, quantity: newQty });
-
+            .upsert(
+                { barcode: logItem.barcode, article: logItem.article, quantity: newQty }, 
+                { onConflict: 'barcode' } // RISOLVE L'ERRORE DI CHIAVE DUPLICATA
+            );
+        
         if (upsertError) throw upsertError;
 
-        // 5. Elimina il record dallo storico
-        const { error: deleteError } = await supabase
-            .from('log_operazioni')
-            .delete()
-            .eq('id', id);
-
+        // 4. Elimina il record dallo storico
+        const { error: deleteError } = await supabase.from('log_operazioni').delete().eq('id',id);
         if (deleteError) throw deleteError;
         
-        showNotification(`✅ Movimento annullato (${operationText}).`, 'success');
+        showNotification(`✅ Movimento annullato. Giàcenza ripristinata a ${newQty}.`, 'success');
 
     } catch (e) {
         showNotification(`❌ Errore durante l'annullamento: ${e.message}`, 'error');
-        // Importante: L'app non si blocca grazie al try/catch
     }
 
-    // 6. Aggiorna l'interfaccia (fuori dal try/catch)
+    // 5. Aggiorna l'interfaccia
     await renderTables();
     await renderStockSummary();
     await renderCharts();
@@ -922,6 +915,7 @@ window.downloadLogCSV = downloadLogCSV;
 window.downloadSummaryCSV = downloadSummaryCSV;
 window.deleteRecord = deleteRecord;
 window.resetDatabase = resetDatabase;
+window.deleteStockRecord = deleteStockRecord;
 
 async function refreshAll(){
     await renderStockSummary();
