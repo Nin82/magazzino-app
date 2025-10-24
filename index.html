@@ -578,12 +578,16 @@ document.getElementById('back-login-from-reset').addEventListener('click', () =>
 // === RESET PASSWORD ===
 document.getElementById('reset-form').addEventListener('submit', async (e) => {
   e.preventDefault();
+
   const email = document.getElementById('reset-email').value.trim();
   if (!email) return showNotification('Inserisci la tua email', 'error');
 
+  // ✅ URL di reindirizzamento corretto (GitHub Pages)
   const RESET_REDIRECT_URL = 'https://nin82.github.io/magazzino-app/reset.html';
 
-    emailRedirectTo: 'https://nin82.github.io/magazzino-app/reset.html',
+  // ✅ Usa emailRedirectTo (NON redirectTo)
+  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+    emailRedirectTo: RESET_REDIRECT_URL,
   });
 
   if (error) {
