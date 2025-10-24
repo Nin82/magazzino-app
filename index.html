@@ -499,8 +499,7 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
     const tenant_id = crypto.randomUUID();
     
     // 🛑 AGGIUNGI L'URL DI REINDIRIZZAMENTO CORRETTO QUI 🛑
-    const REDIRECT_URL = 'https://nin82.github.io/magazzino-app/'; 
-
+   
     // Crea utente su Supabase Auth
     const { data, error } = await supabase.auth.signUp({
         email,
@@ -508,7 +507,7 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
         options: {
             data: { tenant_id },
             // FORZA IL REINDIRIZZAMENTO SULLA CARTELLA CORRETTA:
-            redirectTo: REDIRECT_URL 
+            emailRedirectTo: 'https://nin82.github.io/magazzino-app/', 
         }
     });
 
