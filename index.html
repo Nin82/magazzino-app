@@ -198,6 +198,11 @@ tr:hover { background-color:#eff6ff; }
     <input type="password" id="password" required placeholder="••••••••">
 
     <button type="submit" class="btn-action" style="width:100%;margin-top:10px;">Login</button>
+
+    <!-- 🔹 Link reset password -->
+    <p style="margin-top:10px;text-align:center;">
+      <button id="show-reset" class="btn-secondary" type="button">Password dimenticata?</button>
+    </p>
   </form>
 
   <p style="margin-top:10px;">Non hai un account?
@@ -218,9 +223,16 @@ tr:hover { background-color:#eff6ff; }
     <button type="submit" class="btn-action" style="width:100%;margin-top:10px;">Crea Magazzino</button>
     <button id="back-login" class="btn-secondary" type="button" style="width:100%;margin-top:10px;">Torna al Login</button>
   </form>
+
+  <!-- 🔹 RESET PASSWORD -->
+  <form id="reset-form" class="hidden">
+    <label>Email:</label>
+    <input type="email" id="reset-email" required placeholder="email@esempio.com">
+
+    <button type="submit" class="btn-action" style="width:100%;margin-top:10px;">Invia link di reset</button>
+    <button id="back-login-from-reset" class="btn-secondary" type="button" style="width:100%;margin-top:10px;">Torna al Login</button>
+  </form>
 </div>
-
-
 
 
 
@@ -479,64 +491,135 @@ function showAuth() {
 }
 
 
+<!-- ====================== AUTENTICAZIONE MULTI-MAGAZZINO ====================== -->
+<div id="auth-container" style="max-width:400px;margin:50px auto;background:white;padding:20px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.1)">
+  <h2>🔐 Accesso al Magazzino</h2>
+
+  <!-- LOGIN -->
+  <form id="login-form">
+    <label>Email:</label>
+    <input type="email" id="email" required placeholder="email@esempio.com">
+
+    <label>Password:</label>
+    <input type="password" id="password" required placeholder="••••••••">
+
+    <button type="submit" class="btn-action" style="width:100%;margin-top:10px;">Login</button>
+
+    <p style="margin-top:10px;text-align:center;">
+      <button id="show-reset" class="btn-secondary" type="button">Password dimenticata?</button>
+    </p>
+  </form>
+
+  <p style="margin-top:10px;">Non hai un account?
+    <button id="show-register" class="btn-secondary" type="button">Registrati</button>
+  </p>
+
+  <!-- REGISTRAZIONE -->
+  <form id="register-form" class="hidden">
+    <label>Email:</label>
+    <input type="email" id="reg-email" required placeholder="email@esempio.com">
+
+    <label>Password:</label>
+    <input type="password" id="reg-password" required placeholder="••••••••">
+
+    <label>Nome Magazzino:</label>
+    <input type="text" id="warehouse-name" required placeholder="Es. Magazzino Roma">
+
+    <button type="submit" class="btn-action" style="width:100%;margin-top:10px;">Crea Magazzino</button>
+    <button id="back-login" class="btn-secondary" type="button" style="width:100%;margin-top:10px;">Torna al Login</button>
+  </form>
+
+  <!-- RESET PASSWORD -->
+  <form id="reset-form" class="hidden">
+    <label>Email:</label>
+    <input type="email" id="reset-email" required placeholder="email@esempio.com">
+
+    <button type="submit" class="btn-action" style="width:100%;margin-top:10px;">Invia link di reset</button>
+    <button id="back-login-from-reset" class="btn-secondary" type="button" style="width:100%;margin-top:10px;">Torna al Login</button>
+  </form>
+</div>
+
+<script>
 // === LOGIN ===
 document.getElementById('login-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return showNotification('Errore login: ' + error.message, 'error');
-  // Non chiamiamo showApp() qui. Sarà chiamato da onAuthStateChange.
+  e.preventDefault();
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) return showNotification('Errore login: ' + error.message, 'error');
+  // Non chiamiamo showApp() qui. Sarà chiamato da onAuthStateChange.
 });
 
 // === REGISTRAZIONE ===
 document.getElementById('register-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('reg-email').value;
-    const password = document.getElementById('reg-password').value;
-    const warehouse = document.getElementById('warehouse-name').value;
+  e.preventDefault();
+  const email = document.getElementById('reg-email').value;
+  const password = document.getElementById('reg-password').value;
+  const warehouse = document.getElementById('warehouse-name').value;
+  const tenant_id = crypto.randomUUID();
 
-    const tenant_id = crypto.randomUUID();
-    
-    // 🛑 AGGIUNGI L'URL DI REINDIRIZZAMENTO CORRETTO QUI 🛑
-   
-    // Crea utente su Supabase Auth
-    const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-            data: { tenant_id },
-            // FORZA IL REINDIRIZZAMENTO SULLA CARTELLA CORRETTA:
-            emailRedirectTo: 'https://nin82.github.io/magazzino-app/', 
-        }
-    });
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { tenant_id },
+      emailRedirectTo: 'https://nin82.github.io/magazzino-app/',
+    },
+  });
 
-    if (error) return showNotification('Errore registrazione: ' + error.message, 'error');
+  if (error) return showNotification('Errore registrazione: ' + error.message, 'error');
 
-    // Crea il record in utenti_magazzino
-    const user = data.user;
-    if (user) {
-        await supabase.from('utenti_magazzino').insert([
-            { user_id: user.id, tenant_id }
-        ]);
+  const user = data.user;
+  if (user) {
+    await supabase.from('utenti_magazzino').insert([{ user_id: user.id, tenant_id }]);
+    await supabase.from('tenants').insert([{ id: tenant_id, name: warehouse }]);
+  }
 
-        // (Facoltativo) salva nome magazzino nella tabella tenants se la usi
-        await supabase.from('tenants').insert([{ id: tenant_id, name: warehouse }]);
-    }
-
-    showNotification('✅ Registrazione completata! Verifica la tua email.', 'success');
-    document.getElementById('register-form').classList.add('hidden');
-    document.getElementById('login-form').classList.remove('hidden');
+  showNotification('✅ Registrazione completata! Verifica la tua email.', 'success');
+  document.getElementById('register-form').classList.add('hidden');
+  document.getElementById('login-form').classList.remove('hidden');
 });
 
-// === TOGGLE tra login e registrazione ===
+// === TOGGLE tra login, registrazione e reset ===
 document.getElementById('show-register').addEventListener('click', () => {
-  document.getElementById('login-form').classList.add('hidden');
-  document.getElementById('register-form').classList.remove('hidden');
+  document.getElementById('login-form').classList.add('hidden');
+  document.getElementById('register-form').classList.remove('hidden');
 });
 document.getElementById('back-login').addEventListener('click', () => {
-  document.getElementById('register-form').classList.add('hidden');
-  document.getElementById('login-form').classList.remove('hidden');
+  document.getElementById('register-form').classList.add('hidden');
+  document.getElementById('login-form').classList.remove('hidden');
+});
+
+// 🔹 Mostra il form di reset password
+document.getElementById('show-reset').addEventListener('click', () => {
+  document.getElementById('login-form').classList.add('hidden');
+  document.getElementById('reset-form').classList.remove('hidden');
+});
+
+// 🔹 Torna al login dal reset
+document.getElementById('back-login-from-reset').addEventListener('click', () => {
+  document.getElementById('reset-form').classList.add('hidden');
+  document.getElementById('login-form').classList.remove('hidden');
+});
+
+// === RESET PASSWORD ===
+document.getElementById('reset-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('reset-email').value.trim();
+  if (!email) return showNotification('Inserisci la tua email', 'error');
+
+  const RESET_REDIRECT_URL = 'https://nin82.github.io/magazzino-app/reset.html';
+  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: RESET_REDIRECT_URL,
+  });
+
+  if (error) {
+    showNotification('Errore invio reset: ' + error.message, 'error');
+  } else {
+    showNotification('📧 Email inviata! Controlla la tua casella di posta.', 'success');
+    document.getElementById('reset-form').classList.add('hidden');
+    document.getElementById('login-form').classList.remove('hidden');
+  }
 });
 
 // === LOGOUT ===
@@ -548,16 +631,35 @@ logoutBtn.id = 'logout-btn';
 document.querySelector('h1')?.appendChild(logoutBtn);
 
 logoutBtn.addEventListener('click', async () => {
-  await supabase.auth.signOut();
-  location.reload();
+  await supabase.auth.signOut();
+  location.reload();
 });
 
 // === Mostra app dopo login ===
 async function showApp() {
-  authContainer.style.display = 'none';
-  appSections.forEach(el => el.style.display = '');
-  await refreshAll();
+  authContainer.style.display = 'none';
+  appSections.forEach((el) => (el.style.display = ''));
+  await refreshAll();
 }
+
+// === GESTIONE SESSIONE (login/logout/conferma email) ===
+supabase.auth.onAuthStateChange((event, session) => {
+  if (session) {
+    showApp();
+  } else {
+    showAuth();
+  }
+
+  if (window.location.hash) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+});
+
+function showAuth() {
+  if (authContainer) authContainer.style.display = 'block';
+  appSections.forEach((el) => (el.style.display = 'none'));
+}
+</script>
 
 
 
