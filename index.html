@@ -181,27 +181,6 @@ tr:hover { background-color:#eff6ff; }
     th,td{font-size:0.75rem;padding:8px 10px;} 
 }
 
-/* card per login
-#auth-container input {
-  width: 100%;
-  margin-bottom: 12px;
-  padding: 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 1rem;
-}
-
-#auth-container h2 {
-  text-align: center;
-  color: #1e3a8a;
-  margin-bottom: 20px;
-}
-
-#auth-container button {
-  width: 100%;
-}
-
-
 </style>
 </head>
 <body>
@@ -241,7 +220,13 @@ tr:hover { background-color:#eff6ff; }
   </form>
 </div>
 
-<h1>📦 Gestione Magazzino 2.2.3 fix fcus top</h1>
+
+
+
+
+
+
+<h1>📦 Gestione Magazzino 2.2.2 fix fcus top</h1>
 <div id="top-anchor" tabindex="-1"></div>
 <!-- Tabs -->
 <div class="tab-container">
@@ -456,7 +441,6 @@ function playBeep(duration = 100, frequency = 440, volume = 0.5) {
 const supabaseUrl = 'https://eevwzkcesmfofpecuxwv.supabase.co'
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnd6a2Nlc21mb2ZwZWN1eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2ODkxOTAsImV4cCI6MjA3NjI2NTE5MH0.j7TQnwbw-gW2S6QBjyp4wsQJrXUVYmg3wwVWVPRe1b4'
 const supabase = createClient(supabaseUrl, supabaseKey)
-
 
 // ====================== AUTENTICAZIONE MULTI-MAGAZZINO ======================
 const authContainer = document.createElement('div');
@@ -1337,22 +1321,20 @@ function stopQRScanner() {
 // ====================== SWITCH TABS CON START/STOP QR ======================
 document.querySelectorAll('.tab-container button').forEach(btn => {
     btn.addEventListener('click', async () => {
-        // 1️⃣ Aggiorna tab attive
         document.querySelectorAll('.tab-container button').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
 
         document.querySelectorAll('[role="tabpanel"]').forEach(tab => tab.classList.add('hidden'));
-        const targetTab = document.getElementById(btn.dataset.target);
-        if (targetTab) targetTab.classList.remove('hidden');
-
-        // 2️⃣ Scroll dolce e focus in cima
+        document.getElementById(btn.dataset.target).classList.remove('hidden');
+	
+	// Scroll / Focus top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         const topAnchor = document.getElementById('top-anchor');
         if (topAnchor) {
-            topAnchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            topAnchor.focus({ preventScroll: true }); // evita scatti improvvisi
+            topAnchor.focus();
         }
-
-        // 3️⃣ Gestione QR scanner: start/stop automatico
+					
+        // 🔹 Gestione QR scanner: start/stop automatico
         if (btn.dataset.target === 'tab-qr') {
             await startQRScanner();
         } else {
