@@ -425,7 +425,6 @@ function playBeep(duration = 100, frequency = 440, volume = 0.5) {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const oscillator = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
-
     // Colleghiamo l'oscillatore al gainNode e poi all'uscita audio
     oscillator.connect(gainNode);
     gainNode.connect(audioCtx.destination);
@@ -441,72 +440,98 @@ function playBeep(duration = 100, frequency = 440, volume = 0.5) {
 const supabaseUrl = 'https://eevwzkcesmfofpecuxwv.supabase.co'
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnd6a2Nlc21mb2ZwZWN1eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2ODkxOTAsImV4cCI6MjA3NjI2NTE5MH0.j7TQnwbw-gW2S6QBjyp4wsQJrXUVYmg3wwVWVPRe1b4'
 const supabase = createClient(supabaseUrl, supabaseKey)
-
-// ====================== AUTENTICAZIONE MULTI-MAGAZZINO ======================
+const authContainer = document.getElementById('auth-container');
 const appSections = document.querySelectorAll(
-  '.tab-container, [role="tabpanel"], h1, hr, .controls-container, #full-log-container'
+'.tab-container, [role="tabpanel"], h1, hr, .controls-container, #full-log-container'
 );
+
+
+// Nasconde l'app all'avvio (mostra solo il form di login)
 appSections.forEach(el => el.style.display = 'none');
 
-// Controlla sessione
-(async () => {
-  const { data } = await supabase.auth.getSession();
-  if (data.session) showApp();
-})();
+// =============================================
+// 🔹 GESTIONE DELLA SESSIONE (CORRETTO)
+// =============================================
+
+// Listener principale che reagisce a login, logout e link di conferma email.
+supabase.auth.onAuthStateChange((event, session) => {
+    // console.log('Auth Event:', event, 'Session:', session); // Utile per il debug
+    
+    if (session) {
+        // L'utente è autenticato (o la conferma via email è riuscita)
+        showApp();
+    } else {
+        // L'utente è disconnesso o non ha la sessione
+        showAuth();
+    }
+    
+    // Pulisce l'URL dai parametri di token/hash dopo che Supabase li ha processati.
+    // Questo è cruciale in un ambiente PWA/SPA come GitHub Pages.
+    if (window.location.hash) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+});
+
+// === Funzione per mostrare l'AUTH container ===
+function showAuth() {
+    if (authContainer) authContainer.style.display = 'block';
+    appSections.forEach(el => el.style.display = 'none');
+}
+
 
 // === LOGIN ===
 document.getElementById('login-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return showNotification('Errore login: ' + error.message, 'error');
-  showApp();
+  e.preventDefault();
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) return showNotification('Errore login: ' + error.message, 'error');
+  // Non chiamiamo showApp() qui. Sarà chiamato da onAuthStateChange.
 });
 
 // === REGISTRAZIONE ===
 document.getElementById('register-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const email = document.getElementById('reg-email').value;
-  const password = document.getElementById('reg-password').value;
-  const warehouse = document.getElementById('warehouse-name').value;
+  e.preventDefault();
+  const email = document.getElementById('reg-email').value;
+  const password = document.getElementById('reg-password').value;
+  const warehouse = document.getElementById('warehouse-name').value;
 
-  const tenant_id = crypto.randomUUID();
+  const tenant_id = crypto.randomUUID();
 
-  // Crea utente su Supabase Auth
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: { tenant_id }
-    }
-  });
-  if (error) return showNotification('Errore registrazione: ' + error.message, 'error');
+  // Crea utente su Supabase Auth
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { tenant_id }
+    }
+  });
+  if (error) return showNotification('Errore registrazione: ' + error.message, 'error');
 
-  // Crea il record in utenti_magazzino
-  const user = data.user;
-  if (user) {
-    await supabase.from('utenti_magazzino').insert([
-      { user_id: user.id, tenant_id }
-    ]);
+  // Crea il record in utenti_magazzino
+  const user = data.user;
+  if (user) {
+    await supabase.from('utenti_magazzino').insert([
+      { user_id: user.id, tenant_id }
+    ]);
 
-    // (Facoltativo) salva nome magazzino nella tabella tenants se la usi
-    await supabase.from('tenants').insert([{ id: tenant_id, name: warehouse }]);
-  }
+    // (Facoltativo) salva nome magazzino nella tabella tenants se la usi
+    await supabase.from('tenants').insert([{ id: tenant_id, name: warehouse }]);
+  }
 
-  showNotification('✅ Registrazione completata! Verifica la tua email.', 'success');
-  document.getElementById('register-form').classList.add('hidden');
-  document.getElementById('login-form').classList.remove('hidden');
+  showNotification('✅ Registrazione completata! Verifica la tua email.', 'success');
+  document.getElementById('register-form').classList.add('hidden');
+  document.getElementById('login-form').classList.remove('hidden');
 });
 
 // === TOGGLE tra login e registrazione ===
 document.getElementById('show-register').addEventListener('click', () => {
-  document.getElementById('login-form').classList.add('hidden');
-  document.getElementById('register-form').classList.remove('hidden');
+  document.getElementById('login-form').classList.add('hidden');
+  document.getElementById('register-form').classList.remove('hidden');
 });
 document.getElementById('back-login').addEventListener('click', () => {
-  document.getElementById('register-form').classList.add('hidden');
-  document.getElementById('login-form').classList.remove('hidden');
+  document.getElementById('register-form').classList.add('hidden');
+  document.getElementById('login-form').classList.remove('hidden');
 });
 
 // === LOGOUT ===
@@ -518,15 +543,15 @@ logoutBtn.id = 'logout-btn';
 document.querySelector('h1')?.appendChild(logoutBtn);
 
 logoutBtn.addEventListener('click', async () => {
-  await supabase.auth.signOut();
-  location.reload();
+  await supabase.auth.signOut();
+  location.reload();
 });
 
 // === Mostra app dopo login ===
 async function showApp() {
-  authContainer.style.display = 'none';
-  appSections.forEach(el => el.style.display = '');
-  await refreshAll();
+  authContainer.style.display = 'none';
+  appSections.forEach(el => el.style.display = '');
+  await refreshAll();
 }
 
 
