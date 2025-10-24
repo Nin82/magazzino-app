@@ -443,38 +443,6 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 // ====================== AUTENTICAZIONE MULTI-MAGAZZINO ======================
-const authContainer = document.createElement('div');
-authContainer.id = 'auth-container';
-authContainer.innerHTML = `
-  <div style="max-width:400px;margin:50px auto;background:white;padding:20px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.1)">
-    <h2>🔐 Accesso al Magazzino</h2>
-    <form id="login-form">
-      <label>Email:</label>
-      <input type="email" id="email" required placeholder="email@esempio.com">
-      <label>Password:</label>
-      <input type="password" id="password" required placeholder="••••••••">
-      <button type="submit" class="btn-action" style="width:100%;margin-top:10px;">Login</button>
-    </form>
-
-    <p style="margin-top:10px;">Non hai un account?
-      <button id="show-register" class="btn-secondary" type="button">Registrati</button>
-    </p>
-
-    <form id="register-form" class="hidden">
-      <label>Email:</label>
-      <input type="email" id="reg-email" required placeholder="email@esempio.com">
-      <label>Password:</label>
-      <input type="password" id="reg-password" required placeholder="••••••••">
-      <label>Nome Magazzino:</label>
-      <input type="text" id="warehouse-name" required placeholder="Es. Magazzino Roma">
-      <button type="submit" class="btn-action" style="width:100%;margin-top:10px;">Crea Magazzino</button>
-      <button id="back-login" class="btn-secondary" type="button" style="width:100%;margin-top:10px;">Torna al Login</button>
-    </form>
-  </div>
-`;
-document.body.prepend(authContainer);
-
-// Nasconde il resto dell'app finché non si è loggati
 const appSections = document.querySelectorAll(
   '.tab-container, [role="tabpanel"], h1, hr, .controls-container, #full-log-container'
 );
