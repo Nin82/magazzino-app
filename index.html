@@ -583,8 +583,7 @@ document.getElementById('reset-form').addEventListener('submit', async (e) => {
 
   const RESET_REDIRECT_URL = 'https://nin82.github.io/magazzino-app/reset.html';
 
-  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: RESET_REDIRECT_URL
+    emailRedirectTo: 'https://nin82.github.io/magazzino-app/reset.html',
   });
 
   if (error) {
