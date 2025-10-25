@@ -187,7 +187,7 @@ tr:hover { background-color:#eff6ff; }
 
 <!-- ====================== AUTENTICAZIONE MULTI-MAGAZZINO ====================== -->
 <div id="auth-container" style="max-width:400px;margin:50px auto;background:white;padding:20px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.1)">
-<h2>🔐 Accesso al Magazzino1</h2>
+<h2>🔐 Accesso al Magazzino2</h2>
   
   <form id="login-form">
     <label>Email:</label>
@@ -513,39 +513,50 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
   showApp();
 });
 
-// === REGISTRAZIONE ===
+// === GESTIONE REGISTRAZIONE UTENTE e CREAZIONE MAGAZZINO ===
 document.getElementById('register-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const email = document.getElementById('reg-email').value;
-  const password = document.getElementById('reg-password').value;
-  const warehouse = document.getElementById('warehouse-name').value;
+    e.preventDefault();
+    const email = document.getElementById('register-email').value.trim();
+    const password = document.getElementById('register-password').value.trim();
+    // ASSUMI che tu abbia un campo con id='register-warehouse-name' nel form HTML
+    const warehouse = document.getElementById('register-warehouse-name').value.trim(); 
+    const msgEl = document.getElementById('register-msg');
+    
+    // Generazione di un ID magazzino univoco
+    const tenant_id = 'wh-' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5); 
 
-  const tenant_id = crypto.randomUUID();
+    msgEl.textContent = '⏳ Registrazione in corso...';
+    
+    // 💡 1. SALVATAGGIO TEMPORANEO DEI DATI
+    // Salviamo le informazioni nella memoria locale per recuperarle dopo la conferma email.
+    localStorage.setItem('pending_tenant_data', JSON.stringify({
+        tenant_id: tenant_id,
+        warehouse_name: warehouse
+    }));
 
-// Crea utente su Supabase Auth
-const { data, error } = await supabase.auth.signUp({
-  email,
-  password,
-  options: {
-    data: { tenant_id },
-    emailRedirectTo: 'https://nin82.github.io/magazzino-app/', // ✅ più robusto per Supabase
-  }
-});  if (error) return showNotification('Errore registrazione: ' + error.message, 'error');
+    // 2. Crea utente su Supabase Auth
+    const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+            // L'URL a cui l'utente tornerà dopo aver cliccato sul link di conferma.
+            emailRedirectTo: 'https://nin82.github.io/magazzino-app/', 
+        }
+    }); 
+    
+    // 3. Gestione Risposta Auth
+    if (error) {
+        // Se c'è un errore Auth, pulisci i dati e notifica
+        localStorage.removeItem('pending_tenant_data'); 
+        return showNotification('❌ Errore registrazione: ' + error.message, 'error');
+    }
+    
+    // 4. L'utente è stato creato ma NON è confermato. Dobbiamo aspettare il click sull'email.
+    showNotification(`✅ Registrazione completata! Verifica la tua email (${email}).`, 'success');
 
-  // Crea il record in utenti_magazzino
-  const user = data.user;
-  if (user) {
-    await supabase.from('utenti_magazzino').insert([
-      { user_id: user.id, tenant_id }
-    ]);
-
-    // (Facoltativo) salva nome magazzino nella tabella tenants se la usi
-    await supabase.from('tenants').insert([{ id: tenant_id, name: warehouse }]);
-  }
-
-  showNotification('✅ Registrazione completata! Verifica la tua email.', 'success');
-  document.getElementById('register-form').classList.add('hidden');
-  document.getElementById('login-form').classList.remove('hidden');
+    // 5. Passa al form di login
+    document.getElementById('register-form').classList.add('hidden');
+    document.getElementById('login-form').classList.remove('hidden');
 });
 
 // === TOGGLE tra login e registrazione ===
@@ -629,28 +640,6 @@ document.getElementById('reset-password-form').addEventListener('submit', async 
   document.getElementById('login-form').classList.remove('hidden');
 });
 
-// ================== SUPABASE REALTIME ==================
-
-// Realtime su log_operazioni
-const logChannel = supabase.channel('realtime-log_operazioni')
-  .on('postgres_changes', { event: '*', schema: 'public', table: 'log_operazioni' }, payload => {
-    console.log('Realtime log_operazioni:', payload);
-    renderTables();
-    renderStockSummary();
-    renderCharts();
-    renderAndamentoGiornaliero();
-  })
-  .subscribe();
-
-// Realtime su magazzino
-const magazzinoChannel = supabase.channel('realtime-magazzino')
-  .on('postgres_changes', { event: '*', schema: 'public', table: 'magazzino' }, payload => {
-    console.log('Realtime magazzino:', payload);
-    renderStockSummary();
-    renderCharts();
-    renderAndamentoGiornaliero();
-  })
-  .subscribe();
 
 // ================== ELEMENTI ==================
 const caricoBarcode = document.getElementById('carico-barcode');
