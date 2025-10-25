@@ -187,7 +187,7 @@ tr:hover { background-color:#eff6ff; }
 
 <!-- ====================== AUTENTICAZIONE MULTI-MAGAZZINO ====================== -->
 <div id="auth-container" style="max-width:400px;margin:50px auto;background:white;padding:20px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.1)">
-<h2>🔐 Accesso al Magazzino1</h2>
+<h2>🔐 Accesso al Magazzino</h2>
   
   <form id="login-form">
     <label>Email:</label>
@@ -475,14 +475,15 @@ const isRecovery = window.location.hash.includes('type=recovery');
 
 const logoutBtn = document.createElement('button');
 logoutBtn.textContent = 'Logout';
-logoutBtn.className = 'btn-secondary'; // Assumi che "btn-secondary" sia la tua classe di stile
+logoutBtn.className = 'btn-secondary'; 
 logoutBtn.id = 'logout-btn';
-// 💡 Nascondi il bottone all'avvio, showApp() lo mostrerà.
-logoutBtn.style.display = 'none'; 
 
-// Cerca l'h1 per inserire il bottone (può essere un altro contenitore principale)
-document.querySelector('h1')?.parentNode.insertBefore(logoutBtn, document.querySelector('h1').nextSibling);
+// ✅ POSIZIONAMENTO FISSO (CSS): Mettiamo il bottone in alto a destra fuori dal flusso
+logoutBtn.style.cssText = 'position: fixed; top: 24px; right: 24px; z-index: 1000;'; 
+logoutBtn.style.display = 'none'; // Nascondi all'avvio
 
+// ✅ AGGIUNGI AL BODY (Il punto più sicuro per evitare errori di timing)
+document.body.appendChild(logoutBtn);
 
 // ====================== 1. FUNZIONI DI VISUALIZZAZIONE (DEVONO ESSERE QUI) ======================
 
@@ -656,31 +657,9 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
 });
 
 
-// === GESTIONE CAMBIO PASSWORD DOPO REINDIRIZZAMENTO EMAIL ===
-document.getElementById('update-password-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const newPassword = document.getElementById('new-password-input').value.trim();
-    const msgEl = document.getElementById('reset-msg');
-
-    if (newPassword.length < 6) {
-        msgEl.textContent = 'La password deve avere almeno 6 caratteri.';
-        return;
-    }
-
-    msgEl.textContent = '⏳ Aggiornamento in corso...';
-
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-
-    if (error) {
-        msgEl.textContent = '❌ Errore: ' + error.message;
-    } else {
-        msgEl.textContent = '✅ Password aggiornata! Accesso effettuato.';
-        // onAuthStateChange prenderà il controllo
-    }
-});
 
 // === LOGOUT ===
-ddocument.getElementById('logout-btn')?.addEventListener('click', async () => {
+document.getElementById('logout-btn')?.addEventListener('click', async () => {
     await supabase.auth.signOut();
     location.reload(); 
 });
