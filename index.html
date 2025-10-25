@@ -187,7 +187,7 @@ tr:hover { background-color:#eff6ff; }
 
 <!-- ====================== AUTENTICAZIONE MULTI-MAGAZZINO ====================== -->
 <div id="auth-container" style="max-width:400px;margin:50px auto;background:white;padding:20px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.1)">
-<h2>🔐 Accesso al Magazzino3</h2>
+<h2>🔐 Accesso al Magazzino4</h2>
   
   <form id="login-form">
     <label>Email:</label>
@@ -460,27 +460,87 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 // ====================== AUTENTICAZIONE MULTI-MAGAZZINO ======================
 const authContainer = document.getElementById('auth-container');
 const appSections = document.querySelectorAll(
-  '.tab-container, [role="tabpanel"], h1, hr, .controls-container, #full-log-container'
+    '.tab-container, [role="tabpanel"], h1, hr, .controls-container, #full-log-container'
 );
+// Nascondi l'app all'avvio
 appSections.forEach(el => el.style.display = 'none');
 
 // Controlla se la pagina è stata caricata con i parametri di recupero
 const isRecovery = window.location.hash.includes('type=recovery');
 
+// === Nasconde app e mostra login ===
+function hideApp() {
+    // 1. Nasconde tutte le sezioni dell'app
+    appSections.forEach(el => el.style.display = 'none');
+    
+    // 2. Mostra il container del login (authContainer)
+    authContainer.style.display = 'block'; 
+    
+    // 3. Resetta l'ID del magazzino (sicurezza)
+    currentTenantId = null;
+    
+    // 4. Ripristina il titolo (opzionale)
+    if (document.querySelector('h1')) {
+        document.querySelector('h1').innerHTML = '📦 Gestione Magazzino Completo';
+    }
+}
+
+// === Mostra app dopo login e imposta il Magazzino (Multi-Tenant) ===
+async function showApp() {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (user) {
+        // 1. Recupera il tenant_id associato all'utente loggato
+        const { data: tenantData, error: tenantError } = await supabase
+            .from('utenti_magazzino')
+            .select('tenant_id')
+            .eq('user_id', user.id)
+            .maybeSingle(); 
+
+        if (tenantError || !tenantData || !tenantData.tenant_id) {
+            console.error('❌ Errore critico: ID magazzino non trovato. Forse la registrazione non è stata completata.');
+            // Se non trova l'ID, non mostra l'app per sicurezza.
+            return;
+        }
+
+        // 2. Imposta la variabile globale CRITICA
+        currentTenantId = tenantData.tenant_id;
+        
+        // 3. Aggiorna UI
+        authContainer.style.display = 'none';
+        appSections.forEach(el => el.style.display = '');
+
+        // 4. Recupera il nome del Magazzino per il titolo (opzionale)
+        const { data: whData } = await supabase
+            .from('tenants')
+            .select('name')
+            .eq('id', currentTenantId)
+            .maybeSingle();
+
+        const titleElement = document.querySelector('h1');
+        if (titleElement) {
+            const whName = whData ? whData.name : 'Magazzino';
+            titleElement.innerHTML = `📦 Gestione Magazzino - ${whName}`;
+        }
+    }
+    
+    // 5. Aggiorna tutti i dati (solo dopo aver impostato currentTenantId)
+    await refreshAll();
+}
+
+
 supabase.auth.onAuthStateChange(async (event, session) => {
     
     // 💡 1. Gestione del Recupero Password (Priorità Assoluta)
     if (isRecovery || event === 'PASSWORD_RECOVERY') {
-        // Nascondi tutti i form di login/registrazione/reset email
+        // Nascondi tutti i form e mostra solo l'aggiornamento
         document.getElementById('login-form').classList.add('hidden');
         document.getElementById('register-form').classList.add('hidden');
         document.getElementById('reset-password-form').classList.add('hidden');
         
-        // Mostra il form per inserire la nuova password
         document.getElementById('update-password-form').classList.remove('hidden');
         document.getElementById('reset-msg').textContent = 'Sei in modalità di recupero. Inserisci la tua nuova password.';
         
-        // Assicurati che l'interfaccia dell'app sia nascosta e quella di auth sia visibile
         authContainer.style.display = 'block';
         appSections.forEach(el => el.style.display = 'none');
         
@@ -488,46 +548,49 @@ supabase.auth.onAuthStateChange(async (event, session) => {
     }
 
     // 💡 2. Gestione della Sessione Normale (Solo se NON è in Recovery)
-if (session) {
-    // 🚨 LOGICA CRITICA: CREAZIONE MAGAZZINO DOPO CONFERMA EMAIL
-    const pendingData = localStorage.getItem('pending_tenant_data');
-    if (pendingData) {
-        // I dati temporanei esistono: l'utente sta completando la registrazione (è tornato dalla mail)
-        const { tenant_id, warehouse_name } = JSON.parse(pendingData);
-        
-        // 1. Inserisci il record in utenti_magazzino e tenants
-        await supabase.from('utenti_magazzino').insert([
-            { user_id: session.user.id, tenant_id: tenant_id }
-        ]);
+    if (session) {
+        // 🚨 LOGICA CRITICA: CREAZIONE MAGAZZINO DOPO CONFERMA EMAIL
+        const pendingData = localStorage.getItem('pending_tenant_data');
+        if (pendingData) {
+            const { tenant_id, warehouse_name } = JSON.parse(pendingData);
+            
+            // 1. Inserisci il record in utenti_magazzino e tenants
+            await supabase.from('utenti_magazzino').insert([
+                { user_id: session.user.id, tenant_id: tenant_id }
+            ]);
 
-        await supabase.from('tenants').insert([{ id: tenant_id, name: warehouse_name }]);
+            await supabase.from('tenants').insert([{ id: tenant_id, name: warehouse_name }]);
+            
+            // 2. Pulisci la memoria locale e notifica
+            localStorage.removeItem('pending_tenant_data');
+            showNotification(`✅ Magazzino "${warehouse_name}" creato con successo!`, 'info');
+        }
+
+        // Procede con l'apertura dell'app
+        showApp();
+    } else {
+        // Nessuna sessione attiva (DISCONNESSIONE)
         
-        // 2. Pulisci la memoria locale e notifica
-        localStorage.removeItem('pending_tenant_data');
-        showNotification(`✅ Magazzino "${warehouse_name}" creato con successo!`, 'info');
+        hideApp(); // Nasconde l'app e mostra il contenitore di autenticazione.
+
+        // Assicurati che il form di login sia visibile per default
+        document.getElementById('login-form').classList.remove('hidden');
+        
+        // Nascondi tutti gli altri form di autenticazione
+        document.getElementById('reset-password-form').classList.add('hidden');
+        document.getElementById('update-password-form').classList.add('hidden');
+        document.getElementById('register-form').classList.add('hidden'); 
     }
-
-    // Procede con l'apertura dell'app (che ora imposta currentTenantId)
-    showApp();
-} else {
-    // ... (resto del codice: Nessuna sessione attiva)
-    authContainer.style.display = 'block';
-    // Assicurati che il form di login sia visibile per default (se non si è in recovery)
-    document.getElementById('login-form').classList.remove('hidden');
-    // Nascondi il form di aggiornamento password
-    document.getElementById('update-password-form').classList.add('hidden');
-    // Nascondi il form di registrazione per mostrare il login di default
-    document.getElementById('register-form').classList.add('hidden');
-}
+});
 
 // === LOGIN ===
 document.getElementById('login-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return showNotification('Errore login: ' + error.message, 'error');
-  // La chiamata a showApp() è stata rimossa, sarà onAuthStateChange a gestire la sessione.
+    e.preventDefault();
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return showNotification('Errore login: ' + error.message, 'error');
+    // La chiamata a showApp() è gestita da onAuthStateChange.
 });
 
 // === GESTIONE REGISTRAZIONE UTENTE e CREAZIONE MAGAZZINO ===
@@ -545,7 +608,6 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
     msgEl.textContent = '⏳ Registrazione in corso...';
     
     // 💡 1. SALVATAGGIO TEMPORANEO DEI DATI
-    // Salviamo le informazioni nella memoria locale per recuperarle dopo la conferma email.
     localStorage.setItem('pending_tenant_data', JSON.stringify({
         tenant_id: tenant_id,
         warehouse_name: warehouse
@@ -568,7 +630,7 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
         return showNotification('❌ Errore registrazione: ' + error.message, 'error');
     }
     
-    // 4. L'utente è stato creato ma NON è confermato. Dobbiamo aspettare il click sull'email.
+    // 4. L'utente è stato creato ma NON è confermato.
     showNotification(`✅ Registrazione completata! Verifica la tua email (${email}).`, 'success');
 
     // 5. Passa al form di login
@@ -576,72 +638,82 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
     document.getElementById('login-form').classList.remove('hidden');
 });
 
+// === GESTIONE CAMBIO PASSWORD DOPO REINDIRIZZAMENTO EMAIL ===
+document.getElementById('update-password-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const newPassword = document.getElementById('new-password-input').value.trim();
+    const msgEl = document.getElementById('reset-msg');
+
+    if (newPassword.length < 6) {
+        msgEl.textContent = 'La password deve avere almeno 6 caratteri.';
+        return;
+    }
+
+    msgEl.textContent = '⏳ Aggiornamento in corso...';
+
+    // Aggiorna la password dell'utente corrente 
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+    if (error) {
+        msgEl.textContent = '❌ Errore: ' + error.message;
+    } else {
+        msgEl.textContent = '✅ Password aggiornata! Accesso effettuato.';
+        // showApp è chiamata qui per aggiornare subito lo stato.
+        showApp(); 
+    }
+});
+
 // === TOGGLE tra login e registrazione ===
 document.getElementById('show-register').addEventListener('click', () => {
-  document.getElementById('login-form').classList.add('hidden');
-  document.getElementById('register-form').classList.remove('hidden');
+    document.getElementById('login-form').classList.add('hidden');
+    document.getElementById('register-form').classList.remove('hidden');
 });
 document.getElementById('back-login').addEventListener('click', () => {
-  document.getElementById('register-form').classList.add('hidden');
-  document.getElementById('login-form').classList.remove('hidden');
+    document.getElementById('register-form').classList.add('hidden');
+    document.getElementById('login-form').classList.remove('hidden');
+});
+
+// === MOSTRA / NASCONDI FORM RESET ===
+document.getElementById('forgot-password-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('login-form').classList.add('hidden');
+    document.getElementById('register-form').classList.add('hidden');
+    document.getElementById('reset-password-form').classList.remove('hidden');
+});
+
+document.getElementById('back-login-from-reset').addEventListener('click', () => {
+    document.getElementById('reset-password-form').classList.add('hidden');
+    document.getElementById('login-form').classList.remove('hidden');
+});
+
+// === RESET PASSWORD CON SUPABASE ===
+document.getElementById('reset-password-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('reset-email').value;
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: 'https://nin82.github.io/magazzino-app/' 
+    });
+
+    if (error) {
+        showNotification('Errore: ' + error.message, 'error');
+        return;
+    }
+
+    showNotification('✅ Link di reset inviato. Controlla la tua email!', 'success');
+    // Torna al login dopo l'invio
+    document.getElementById('reset-password-form').classList.add('hidden');
+    document.getElementById('login-form').classList.remove('hidden');
 });
 
 // === LOGOUT ===
-const logoutBtn = document.createElement('button');
-logoutBtn.textContent = 'Logout';
-logoutBtn.className = 'btn-secondary';
-logoutBtn.style.cssText = 'float:right;margin-top:-50px;';
-logoutBtn.id = 'logout-btn';
-document.querySelector('h1')?.appendChild(logoutBtn);
-
-logoutBtn.addEventListener('click', async () => {
-  await supabase.auth.signOut();
-  location.reload();
+// Nota: Devi assicurarti che questo bottone sia nel tuo HTML o venga aggiunto da qualche parte!
+document.getElementById('logout-btn')?.addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    // Non serve location.reload() se hideApp funziona, ma è più sicuro per pulire lo stato.
+    location.reload(); 
 });
 
-// === Mostra app dopo login e imposta il Magazzino (Multi-Tenant) ===
-async function showApp() {
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (user) {
-        // 1. Recupera il tenant_id associato all'utente loggato
-        const { data: tenantData, error: tenantError } = await supabase
-            .from('utenti_magazzino')
-            .select('tenant_id')
-            .eq('user_id', user.id)
-            .maybeSingle(); 
-
-        if (tenantError || !tenantData || !tenantData.tenant_id) {
-            console.error('❌ Errore critico: ID magazzino non trovato. Assicurati che il record esista in utenti_magazzino.');
-            // Se non trova l'ID, non mostra l'app per sicurezza.
-            return;
-        }
-
-        // 2. Imposta la variabile globale CRITICA
-        currentTenantId = tenantData.tenant_id;
-        
-        // 3. Aggiorna UI
-        authContainer.style.display = 'none';
-        appSections.forEach(el => el.style.display = '');
-
-        // 4. Recupera il nome del Magazzino per il titolo (opzionale)
-        const { data: whData } = await supabase
-            .from('tenants')
-            .select('name')
-            .eq('id', currentTenantId)
-            .maybeSingle();
-
-        const titleElement = document.querySelector('h1');
-        if (titleElement) {
-            const whName = whData ? whData.name : 'Magazzino';
-            // Assumi che il bottone di logout sia aggiunto altrove, come nel tuo codice.
-            titleElement.innerHTML = `📦 Gestione Magazzino - ${whName}`;
-        }
-    }
-    
-    // 5. Aggiorna tutti i dati (solo dopo aver impostato currentTenantId)
-    await refreshAll();
-}
 
 // === MOSTRA / NASCONDI FORM RESET ===
 document.getElementById('forgot-password-link').addEventListener('click', (e) => {
