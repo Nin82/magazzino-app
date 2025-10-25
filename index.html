@@ -187,7 +187,7 @@ tr:hover { background-color:#eff6ff; }
 
 <!-- ====================== AUTENTICAZIONE MULTI-MAGAZZINO ====================== -->
 <div id="auth-container" style="max-width:400px;margin:50px auto;background:white;padding:20px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.1)">
-<h2>🔐 Accesso al Magazzino0</h2>
+<h2>🔐 Accesso al Magazzino1</h2>
   
   <form id="login-form">
     <label>Email:</label>
@@ -716,47 +716,59 @@ document.getElementById('reset-password-form').addEventListener('submit', async 
 });
 
 // === GESTIONE CAMBIO PASSWORD DOPO REINDIRIZZAMENTO EMAIL (update-password-form) ===
-document.getElementById('update-password-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
+window.addEventListener('DOMContentLoaded', () => {
+    const updateForm = document.getElementById('update-password-form');
+    const newPasswordInput = document.getElementById('new-password-input');
+    const confirmPasswordInput = document.getElementById('confirm-new-password-input'); // aggiunto
 
-    const newPassword = document.getElementById('update-password').value.trim();
-    const confirmPassword = document.getElementById('confirm-update-password').value.trim();
-
-    if (!newPassword || !confirmPassword) {
-        showNotification('Inserisci entrambe le password', 'error');
+    if (!updateForm || !newPasswordInput || !confirmPasswordInput) {
+        console.warn('⚠️ Form o campi update-password non trovati nel DOM.');
         return;
     }
 
-    if (newPassword !== confirmPassword) {
-        showNotification('Le password non corrispondono', 'error');
-        return;
-    }
+    updateForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
 
-    try {
-        // Chiamata Supabase per aggiornare la password dopo reset
-        const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+        const newPassword = newPasswordInput.value.trim();
+        const confirmPassword = confirmPasswordInput.value.trim();
 
-        if (error) {
-            showNotification('Errore durante il cambio password: ' + error.message, 'error');
+        if (!newPassword || !confirmPassword) {
+            showNotification('Inserisci entrambe le password', 'error');
             return;
         }
 
-        showNotification('✅ Password aggiornata correttamente!', 'success');
+        if (newPassword !== confirmPassword) {
+            showNotification('Le password non corrispondono', 'error');
+            return;
+        }
 
-        // Dopo il successo, torna al login
-        document.getElementById('update-password-form').classList.add('hidden');
-        document.getElementById('login-form').classList.remove('hidden');
+        if (newPassword.length < 6) {
+            showNotification('La password deve essere di almeno 6 caratteri', 'error');
+            return;
+        }
 
-        // Pulisce i campi
-        document.getElementById('update-password').value = '';
-        document.getElementById('confirm-update-password').value = '';
+        try {
+            const { data, error } = await supabase.auth.updateUser({ password: newPassword });
 
-    } catch (err) {
-        showNotification('Errore imprevisto: ' + err.message, 'error');
-    }
+            if (error) {
+                showNotification('Errore durante il cambio password: ' + error.message, 'error');
+                return;
+            }
+
+            showNotification('✅ Password aggiornata correttamente!', 'success');
+
+            updateForm.classList.add('hidden');
+            document.getElementById('login-form').classList.remove('hidden');
+
+            newPasswordInput.value = '';
+            confirmPasswordInput.value = '';
+        } catch (err) {
+            showNotification('Errore imprevisto: ' + err.message, 'error');
+        }
+    });
 });
 
-// ... (Incolla qui tutti gli altri listeners: toggle login/register, reset password, etc.)
+
 // ================== ELEMENTI ==================
 const caricoBarcode = document.getElementById('carico-barcode');
 const caricoArticle = document.getElementById('carico-article');
