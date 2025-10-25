@@ -587,7 +587,7 @@ document.getElementById('reset-form').addEventListener('submit', async (e) => {
 
   // ✅ Usa emailRedirectTo (NON redirectTo)
   const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-    emailRedirectTo: RESET_REDIRECT_URL,
+   emailRedirectTo: 'https://nin82.github.io/magazzino-app/reset.html',
   });
 
   if (error) {
@@ -1467,3 +1467,4 @@ document.getElementById('stop-qr').addEventListener('click', stopQRScanner);
 <script type="module" src="main.js"></script>
 </body>
 </html>
+
