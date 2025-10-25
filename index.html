@@ -187,7 +187,7 @@ tr:hover { background-color:#eff6ff; }
 
 <!-- ====================== AUTENTICAZIONE MULTI-MAGAZZINO ====================== -->
 <div id="auth-container" style="max-width:400px;margin:50px auto;background:white;padding:20px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.1)">
-<h2>🔐 Accesso al Magazzino5</h2>
+<h2>🔐 Accesso al Magazzino6</h2>
   
   <form id="login-form">
     <label>Email:</label>
@@ -465,12 +465,12 @@ const authContainer = document.getElementById('auth-container');
 const appSections = document.querySelectorAll(
     '.tab-container, [role="tabpanel"], h1, hr, .controls-container, #full-log-container'
 );
-appSections.forEach(el => el.style.display = 'none');
+// ✅ FORZATURA VISUALIZZAZIONE INIZIALE:
+appSections.forEach(el => el.style.display = 'none'); // Nasconde l'app
+authContainer.style.display = 'block'; // Mostra il form di login
 
 // Controlla se la pagina è stata caricata con i parametri di recupero
 const isRecovery = window.location.hash.includes('type=recovery');
-
-
 
 
 // ====================== AUTENTICAZIONE MULTI-MAGAZZINO ======================
@@ -617,7 +617,7 @@ function hideApp() {
     appSections.forEach(el => el.style.display = 'none');
     
     // 2. Mostra il container del login (authContainer)
-    authContainer.style.display = 'block'; 
+    authContainer.style.display = 'block'; // ✅ DEVE ESSERE 'block'
     
     // 3. Resetta l'ID del magazzino (sicurezza)
     currentTenantId = null; 
