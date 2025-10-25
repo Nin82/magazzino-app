@@ -187,9 +187,8 @@ tr:hover { background-color:#eff6ff; }
 
 <!-- ====================== AUTENTICAZIONE MULTI-MAGAZZINO ====================== -->
 <div id="auth-container" style="max-width:400px;margin:50px auto;background:white;padding:20px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.1)">
-  <h2>🔐 Accesso al Magazzino</h2>
-
-  <!-- LOGIN -->
+<h2>🔐 Accesso al Magazzino</h2>
+  
   <form id="login-form">
     <label>Email:</label>
     <input type="email" id="email" required placeholder="email@esempio.com">
@@ -197,14 +196,13 @@ tr:hover { background-color:#eff6ff; }
     <label>Password:</label>
     <input type="password" id="password" required placeholder="••••••••">
 
-    <button type="submit" class="btn-action" style="width:100%;margin-top:10px;">Login</button>
+    <button type="submit" class="btn-action">Login</button>
   </form>
 
-  <p style="margin-top:10px;">Non hai un account?
+  <p style="margin-top:10px;">Non hai un account? 
     <button id="show-register" class="btn-secondary" type="button">Registrati</button>
   </p>
 
-  <!-- REGISTRAZIONE -->
   <form id="register-form" class="hidden">
     <label>Email:</label>
     <input type="email" id="reg-email" required placeholder="email@esempio.com">
@@ -215,18 +213,13 @@ tr:hover { background-color:#eff6ff; }
     <label>Nome Magazzino:</label>
     <input type="text" id="warehouse-name" required placeholder="Es. Magazzino Roma">
 
-    <button type="submit" class="btn-action" style="width:100%;margin-top:10px;">Crea Magazzino</button>
-    <button id="back-login" class="btn-secondary" type="button" style="width:100%;margin-top:10px;">Torna al Login</button>
+    <button type="submit" class="btn-action">Crea Account</button>
+    <button id="back-login" class="btn-secondary" type="button">Torna al Login</button>
   </form>
 </div>
 
-
-
-
-
-
-
 <h1>📦 Gestione Magazzino 2.2.2 fix fcus top</h1>
+<button id="logout-btn" class="btn-secondary" style="float:right;margin-top:-50px;">Logout</button>
 <div id="top-anchor" tabindex="-1"></div>
 <!-- Tabs -->
 <div class="tab-container">
