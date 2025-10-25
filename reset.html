@@ -21,10 +21,7 @@
       border-radius: 12px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.1);
     }
-    h2 {
-      color: #4f46e5;
-      margin-bottom: 20px;
-    }
+    h2 { color: #4f46e5; margin-bottom: 20px; }
     input {
       display: block;
       width: calc(100% - 20px);
@@ -52,12 +49,12 @@
 <body>
   <div class="container">
     <h2>🔒 Reimposta la tua Password</h2>
-    
+
     <form id="new-pass-form" class="hidden">
       <input type="password" id="new-password" placeholder="Nuova password (min 6 caratteri)" required />
       <button type="submit">Aggiorna Password</button>
     </form>
-    
+
     <p id="msg">Verifica del link in corso...</p>
   </div>
 
@@ -72,24 +69,24 @@
     const formEl = document.getElementById('new-pass-form');
     const newPassEl = document.getElementById('new-password');
 
-    // === 1️⃣ LETTURA TOKEN & LOGIN TEMPORANEO ===
+    // === 1️⃣ VERIFICA DEL LINK E SESSIONE TEMPORANEA ===
     async function init() {
       msgEl.textContent = 'Verifica del link in corso...';
 
-      // 1. Legge i parametri dall’URL (token e type)
-      const params = new URLSearchParams(window.location.search);
-      const token = params.get('token');
-      const type = params.get('type');
+      // Recupera token dal frammento URL (hash)
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const access_token = hashParams.get('access_token');
+      const type = hashParams.get('type');
 
-      if (!token || type !== 'recovery') {
+      if (!access_token || type !== 'recovery') {
         msgEl.textContent = '❌ Link non valido o scaduto. Richiedi un nuovo reset.';
         return;
       }
 
-      // 2. Verifica e crea una sessione temporanea
-      const { data, error } = await supabase.auth.verifyOtp({
-        token,
-        type: 'recovery',
+      // Imposta la sessione temporanea
+      const { data, error } = await supabase.auth.setSession({
+        access_token,
+        refresh_token: hashParams.get('refresh_token'),
       });
 
       if (error || !data?.session) {
@@ -98,7 +95,6 @@
         return;
       }
 
-      // 3. Se ok, mostra il form
       msgEl.textContent = '✅ Link verificato! Inserisci la tua nuova password.';
       formEl.classList.remove('hidden');
       newPassEl.focus();
@@ -127,7 +123,6 @@
       }
     });
 
-    // === AVVIO ===
     init();
   </script>
 </body>
