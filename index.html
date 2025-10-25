@@ -187,7 +187,7 @@ tr:hover { background-color:#eff6ff; }
 
 <!-- ====================== AUTENTICAZIONE MULTI-MAGAZZINO ====================== -->
 <div id="auth-container" style="max-width:400px;margin:50px auto;background:white;padding:20px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.1)">
-<h2>🔐 Accesso al Magazzino3</h2>
+<h2>🔐 Accesso al Magazzino</h2>
   
   <form id="login-form">
     <label>Email:</label>
@@ -199,9 +199,6 @@ tr:hover { background-color:#eff6ff; }
     <button type="submit" class="btn-action">Login</button>
   </form>
 
-  <p style="margin-top:10px;">Non hai un account? 
-    <button id="show-register" class="btn-secondary" type="button">Registrati</button>
-  </p>
 
   <form id="register-form" class="hidden">
     <label>Email:</label>
@@ -469,19 +466,21 @@ appSections.forEach(el => el.style.display = 'none');
 
 // Controlla e gestisci gli stati di autenticazione
 supabase.auth.onAuthStateChange(async (event, session) => {
-    // Gestione normale: se loggato, mostra l'app
+    // 💡 1. INTERCETTAZIONE DELLA MODALITÀ DI RECUPERO
+    if (event === 'PASSWORD_RECOVERY') {
+        // L'utente è atterrato sulla pagina dal link di reset password
+        document.getElementById('login-form').classList.add('hidden');
+        document.getElementById('register-form').classList.add('hidden');
+        document.getElementById('reset-password-form').classList.add('hidden');
+        document.getElementById('update-password-form').classList.remove('hidden');
+        document.getElementById('reset-msg').textContent = 'Sei in modalità di recupero. Inserisci la tua nuova password.';
+        authContainer.style.display = 'block'; // Assicurati che il contenitore sia visibile
+        return; // Fermiamo l'esecuzione per mostrare il form di update
+    }
+
+    // 💡 2. GESTIONE DELLA SESSIONE NORMALE
     if (session) {
-        // Se è in modalità recovery, gestiscila (vedi sotto)
-        if (event === 'SIGNED_IN' && session.session.user.identities[0].recovery_token) {
-            document.getElementById('login-form').classList.add('hidden');
-            document.getElementById('register-form').classList.add('hidden');
-            document.getElementById('reset-password-form').classList.add('hidden');
-            document.getElementById('update-password-form').classList.remove('hidden');
-            document.getElementById('reset-msg').textContent = 'Sei in modalità di recupero. Inserisci la tua nuova password.';
-            return;
-        }
-        
-        // Modalità normale dopo login o signup confermato
+        // Se loggato (inclusi dopo un update password riuscito)
         showApp();
     } else {
         // Non loggato, mostra l'autenticazione
