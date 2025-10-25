@@ -436,6 +436,7 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 // ====================== AUTENTICAZIONE MULTI-MAGAZZINO ======================
+const authContainer = document.getElementById('auth-container');
 const appSections = document.querySelectorAll(
   '.tab-container, [role="tabpanel"], h1, hr, .controls-container, #full-log-container'
 );
