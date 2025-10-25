@@ -185,88 +185,51 @@ tr:hover { background-color:#eff6ff; }
 </head>
 <body>
 
-<!-- CONTAINER GENERALE DI AUTENTICAZIONE -->
-<div id="auth-container">
+<!-- ====================== AUTENTICAZIONE MULTI-MAGAZZINO ====================== -->
+<div id="auth-container" style="max-width:400px;margin:50px auto;background:white;padding:20px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.1)">
+  <h2>🔐 Accesso al Magazzino</h2>
 
-  <!-- ===== LOGIN ===== -->
+  <!-- LOGIN -->
   <form id="login-form">
-    <h2>Login</h2>
-    <label for="email">Email:</label>
-    <input type="email" id="email" required>
+    <label>Email:</label>
+    <input type="email" id="email" required placeholder="email@esempio.com">
 
-    <label for="password">Password:</label>
-    <input type="password" id="password" required>
+    <label>Password:</label>
+    <input type="password" id="password" required placeholder="••••••••">
 
-    <button type="submit">Accedi</button>
-
-    <p>
-      Non hai un account? 
-      <button type="button" id="show-register">Registrati</button>
-    </p>
+    <button type="submit" class="btn-action" style="width:100%;margin-top:10px;">Login</button>
   </form>
 
-  <!-- ===== REGISTRAZIONE ===== -->
+  <p style="margin-top:10px;">Non hai un account?
+    <button id="show-register" class="btn-secondary" type="button">Registrati</button>
+  </p>
+
+  <!-- REGISTRAZIONE -->
   <form id="register-form" class="hidden">
-    <h2>Registrazione</h2>
-    <label for="reg-email">Email:</label>
-    <input type="email" id="reg-email" required>
+    <label>Email:</label>
+    <input type="email" id="reg-email" required placeholder="email@esempio.com">
 
-    <label for="reg-password">Password:</label>
-    <input type="password" id="reg-password" required>
+    <label>Password:</label>
+    <input type="password" id="reg-password" required placeholder="••••••••">
 
-    <label for="warehouse-name">Nome Magazzino:</label>
-    <input type="text" id="warehouse-name" required>
+    <label>Nome Magazzino:</label>
+    <input type="text" id="warehouse-name" required placeholder="Es. Magazzino Roma">
 
-    <button type="submit">Registrati</button>
-
-    <p>
-      Hai già un account? 
-      <button type="button" id="back-login">Torna al login</button>
-    </p>
+    <button type="submit" class="btn-action" style="width:100%;margin-top:10px;">Crea Magazzino</button>
+    <button id="back-login" class="btn-secondary" type="button" style="width:100%;margin-top:10px;">Torna al Login</button>
   </form>
-
 </div>
 
-<!-- CONTAINER DELL’APP (NASCONDO TUTTO INIZIALMENTE) -->
-<div class="tab-container" style="display:none;">
-  <button data-target="tab-carico">Carico</button>
-  <button data-target="tab-scarico">Scarico</button>
-  <button data-target="tab-log">Storico</button>
-  <button data-target="tab-qr">QR Scanner</button>
-</div>
-
-<div role="tabpanel" id="tab-carico" class="hidden">
-  <h3>Carico Articoli</h3>
-  <!-- Qui i campi barcode, articolo, quantità -->
-</div>
-
-<div role="tabpanel" id="tab-scarico" class="hidden">
-  <h3>Scarico Articoli</h3>
-  <!-- Qui i campi barcode, articolo, quantità -->
-</div>
-
-<div role="tabpanel" id="tab-log" class="hidden">
-  <h3>Storico Movimenti</h3>
-  <!-- Qui la tabella log -->
-</div>
-
-<div role="tabpanel" id="tab-qr" class="hidden">
-  <h3>Scanner QR</h3>
-  <video id="qr-video" width="300" height="300"></video>
-  <input type="text" id="qr-result" readonly>
-  <button id="use-qr">Usa Barcode</button>
-  <button id="stop-qr">Ferma Scanner</button>
-</div>
-
-<!-- ELEMENTO NOTIFICHE -->
-<div id="notification" style="display:none;padding:10px;color:white;"></div>
 
 
 
-**<h1 class="hidden">**📦 Gestione Magazzino 2.2.2 fix fcus top</h1>
+
+
+
+<h1>📦 Gestione Magazzino 2.2.2 fix fcus top</h1>
 <div id="top-anchor" tabindex="-1"></div>
 <!-- Tabs -->
-**<div class="tab-container hidden">**
+<div class="tab-container">
   <button role="tab" aria-controls="tab-carico" data-target="tab-carico" class="active">➕ Carico</button>
   <button role="tab" aria-controls="tab-scarico" data-target="tab-scarico">➖ Scarico</button>
   <button role="tab" aria-controls="tab-qr" data-target="tab-qr">📷 QR Scanner</button>
@@ -367,17 +330,17 @@ tr:hover { background-color:#eff6ff; }
 
 <!-- INVENTARIO -->
 <div id="tab-stock-summary" role="tabpanel" class="hidden">
-  <h2>Inventario Attuale</h2>
-  <div style="margin-bottom: 15px; margin-top: 15px;">
-    <button onclick="downloadSummaryCSV()" class="btn-secondary">⬇️ Scarica Riepilogo CSV</button>
-  </div>
-  
-    <div class="table-responsive-wrapper">
-    <table id="stock-summary">
-      <thead><tr><th>Articolo</th><th>Barcode</th><th>Giacenza Totale</th><th>Azioni</th></tr></thead>
-      <tbody></tbody>
-    </table>
-  </div>
+  <h2>Inventario Attuale</h2>
+  <div style="margin-bottom: 15px; margin-top: 15px;">
+    <button onclick="downloadSummaryCSV()" class="btn-secondary">⬇️ Scarica Riepilogo CSV</button>
+  </div>
+  
+    <div class="table-responsive-wrapper">
+    <table id="stock-summary">
+      <thead><tr><th>Articolo</th><th>Barcode</th><th>Giacenza Totale</th><th>Azioni</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
   </div>
 
 <!-- DASHBOARD -->
@@ -426,7 +389,7 @@ tr:hover { background-color:#eff6ff; }
 <div id="notification" style="color:#fff;background:#4f46e5;padding:12px;margin-bottom:20px;border-radius:8px;display:none;"></div>
 <hr>
 <h2>Storico Ultime 50 Operazioni</h2>
-**<div class="controls-container hidden">**
+<div class="controls-container">
   <label for="filter-type">Tipo Operazione:</label>
   <select id="filter-type">
     <option value="Tutti">Tutti</option>
@@ -442,7 +405,7 @@ tr:hover { background-color:#eff6ff; }
   <button onclick="resetDatabase()" class="btn-reset">⚠️ Resetta Database (Cancella Tutto)</button> 
 </div>
 
-**<div id="full-log-container" class="hidden">**
+<div id="full-log-container">
   <div class="card-historico">
     <div class="table-responsive-wrapper">
       <table id="full-log">
@@ -462,6 +425,7 @@ function playBeep(duration = 100, frequency = 440, volume = 0.5) {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const oscillator = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
+
     // Colleghiamo l'oscillatore al gainNode e poi all'uscita audio
     oscillator.connect(gainNode);
     gainNode.connect(audioCtx.destination);
@@ -477,87 +441,56 @@ function playBeep(duration = 100, frequency = 440, volume = 0.5) {
 const supabaseUrl = 'https://eevwzkcesmfofpecuxwv.supabase.co'
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnd6a2Nlc21mb2ZwZWN1eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2ODkxOTAsImV4cCI6MjA3NjI2NTE5MH0.j7TQnwbw-gW2S6QBjyp4wsQJrXUVYmg3wwVWVPRe1b4'
 const supabase = createClient(supabaseUrl, supabaseKey)
-const authContainer = document.getElementById('auth-container');
+
+// ====================== AUTENTICAZIONE MULTI-MAGAZZINO ======================
 const appSections = document.querySelectorAll(
   '.tab-container, [role="tabpanel"], h1, hr, .controls-container, #full-log-container'
 );
-
-
-
-// ================== GESTIONE DELLA SESSIONE ==================
-
-
-// Nasconde l'app all'avvio
 appSections.forEach(el => el.style.display = 'none');
 
-// Funzione per mostrare il form di login/registrazione
-function showAuth() {
-  if (authContainer) authContainer.style.display = 'block';
-  appSections.forEach(el => el.style.display = 'none');
-}
+// Controlla sessione
+(async () => {
+  const { data } = await supabase.auth.getSession();
+  if (data.session) showApp();
+})();
 
-// Funzione per mostrare l'app dopo login
-async function showApp() {
-  if (!authContainer) return;
-  authContainer.style.display = 'none';
-  appSections.forEach(el => el.style.display = ''); // mostra tutte le sezioni
-  await refreshAll(); // aggiorna tabelle e grafici
-}
-
-// Monitora lo stato di autenticazione
-supabase.auth.onAuthStateChange((event, session) => {
-  console.log('Auth Event:', event, session);
-
-  if (session) {
-    showApp();
-  } else {
-    showAuth();
-  }
-
-  // Pulisce URL da token e parametri
-  if (window.location.hash || window.location.search) {
-    window.history.replaceState({}, document.title, window.location.pathname);
-  }
-});
-
-// ================== LOGIN ==================
+// === LOGIN ===
 document.getElementById('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const email = document.getElementById('email').value.trim();
-  const password = document.getElementById('password').value.trim();
-
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
-  if (error) {
-    showNotification('❌ Errore login: ' + error.message, 'error');
-  } else {
-    showNotification('✅ Accesso riuscito!', 'success');
-    // showApp() sarà chiamato da onAuthStateChange
-  }
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) return showNotification('Errore login: ' + error.message, 'error');
+  showApp();
 });
 
-// ================== REGISTRAZIONE ==================
+// === REGISTRAZIONE ===
 document.getElementById('register-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const email = document.getElementById('reg-email').value.trim();
-  const password = document.getElementById('reg-password').value.trim();
-  const warehouse = document.getElementById('warehouse-name').value.trim();
+  const email = document.getElementById('reg-email').value;
+  const password = document.getElementById('reg-password').value;
+  const warehouse = document.getElementById('warehouse-name').value;
+
   const tenant_id = crypto.randomUUID();
 
+  // Crea utente su Supabase Auth
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { tenant_id },
-      emailRedirectTo: window.location.href
+      data: { tenant_id }
     }
   });
+  if (error) return showNotification('Errore registrazione: ' + error.message, 'error');
 
-  if (error) return showNotification('❌ Errore registrazione: ' + error.message, 'error');
-
+  // Crea il record in utenti_magazzino
   const user = data.user;
   if (user) {
-    await supabase.from('utenti_magazzino').insert([{ user_id: user.id, tenant_id }]);
+    await supabase.from('utenti_magazzino').insert([
+      { user_id: user.id, tenant_id }
+    ]);
+
+    // (Facoltativo) salva nome magazzino nella tabella tenants se la usi
     await supabase.from('tenants').insert([{ id: tenant_id, name: warehouse }]);
   }
 
@@ -566,7 +499,7 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
   document.getElementById('login-form').classList.remove('hidden');
 });
 
-// ================== TOGGLE LOGIN / REGISTRAZIONE ==================
+// === TOGGLE tra login e registrazione ===
 document.getElementById('show-register').addEventListener('click', () => {
   document.getElementById('login-form').classList.add('hidden');
   document.getElementById('register-form').classList.remove('hidden');
@@ -574,52 +507,9 @@ document.getElementById('show-register').addEventListener('click', () => {
 document.getElementById('back-login').addEventListener('click', () => {
   document.getElementById('register-form').classList.add('hidden');
   document.getElementById('login-form').classList.remove('hidden');
-// ===========================================
-// 🔹 TOGGLE LOGIN / RESET PASSWORD
-// ===========================================
-document.getElementById('show-reset').addEventListener('click', () => {
-  document.getElementById('login-form').classList.add('hidden');
-  document.getElementById('reset-form').classList.remove('hidden');
-});
-document.getElementById('back-login-from-reset').addEventListener('click', () => {
-  document.getElementById('reset-form').classList.add('hidden');
-  document.getElementById('login-form').classList.remove('hidden');
 });
 
-// ===========================================
-// 🔹 RESET PASSWORD (INVIO EMAIL)
-document.getElementById('reset-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const email = document.getElementById('reset-email').value.trim();
-
-  if (!email) {
-    showNotification('❌ Inserisci la tua email', 'error');
-    return;
-  }
-
-  showNotification('⏳ Invio email di reset in corso...', 'info');
-
-  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-    emailRedirectTo: 'https://nin82.github.io/magazzino-app/reset.html',
-  });
-
-  if (error) {
-    console.error('Errore reset:', error);
-    showNotification('❌ Errore invio reset: ' + error.message, 'error');
-  } else {
-    console.log('Reset email inviata:', data);
-    showNotification('📧 Email inviata! Controlla la tua posta.', 'success');
-    document.getElementById('reset-form').reset();
-    setTimeout(() => {
-      document.getElementById('reset-form').classList.add('hidden');
-      document.getElementById('login-form').classList.remove('hidden');
-    }, 2500);
-  }
-});
-
-// ===========================================
-// 🔹 LOGOUT
-// ===========================================
+// === LOGOUT ===
 const logoutBtn = document.createElement('button');
 logoutBtn.textContent = 'Logout';
 logoutBtn.className = 'btn-secondary';
@@ -632,14 +522,15 @@ logoutBtn.addEventListener('click', async () => {
   location.reload();
 });
 
-// ===========================================
-// 🔹 MOSTRA APP DOPO LOGIN
-// ===========================================
+// === Mostra app dopo login ===
 async function showApp() {
   authContainer.style.display = 'none';
   appSections.forEach(el => el.style.display = '');
   await refreshAll();
 }
+
+
+
 // ================== SUPABASE REALTIME ==================
 
 // Realtime su log_operazioni
@@ -735,31 +626,31 @@ const scaricoArticle = document.getElementById('scarico-article');
 
 // Autocompila l’articolo quando inserisci o scanni un barcode
 scaricoBarcode.addEventListener('input', async () => {
-    const code = scaricoBarcode.value.trim();
-    if (!code) {
-        document.getElementById('scarico-giacenza-display').textContent = '';
+    const code = scaricoBarcode.value.trim();
+    if (!code) {
+        document.getElementById('scarico-giacenza-display').textContent = '';
         // ➡️ FIX: Resetta anche la select se l'input è vuoto
         scaricoArticle.value = '';
-        return;
-    }
-   
-    // 1. Tenta di trovare il barcode in magazzino
-    const { data: existing, error } = await supabase
-        .from('magazzino')
-        .select('article')
-        .eq('barcode', code)
-        .maybeSingle();
+        return;
+    }
+   
+    // 1. Tenta di trovare il barcode in magazzino
+    const { data: existing, error } = await supabase
+        .from('magazzino')
+        .select('article')
+        .eq('barcode', code)
+        .maybeSingle();
 
-    if (existing) {
+    if (existing) {
         // ➡️ FIX: Se esiste, imposta il valore della select al barcode
         // La select usa il barcode come valore, quindi questo funziona
-        scaricoArticle.value = code;
-    } else {
-        scaricoArticle.value = ''; 
-    }
+        scaricoArticle.value = code;
+    } else {
+        scaricoArticle.value = ''; 
+    }
 
-    // 2. Aggiorna la giacenza
-    getAndDisplayStock(code, 'scarico-giacenza-display', 'scarico');
+    // 2. Aggiorna la giacenza
+    getAndDisplayStock(code, 'scarico-giacenza-display', 'scarico');
 });
 
 // Autocompila barcode quando si seleziona un articolo dalla select Scarico
@@ -1193,9 +1084,9 @@ async function refreshAll(){
 document.getElementById('filter-type').addEventListener('change', renderTables); // Applica filtro tipo su cambio
 document.getElementById('filter-articolo').addEventListener('input', renderTables); // Applica filtro articolo su ogni digitazione
 document.getElementById('clear-filter').addEventListener('click', ()=>{
-    document.getElementById('filter-type').value='Tutti';
-    document.getElementById('filter-articolo').value='';
-    renderTables();
+    document.getElementById('filter-type').value='Tutti';
+    document.getElementById('filter-articolo').value='';
+    renderTables();
 
 });
 
