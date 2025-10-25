@@ -474,13 +474,13 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
   const tenant_id = crypto.randomUUID();
 
   // Crea utente su Supabase Auth
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: { tenant_id }
-    }
-  });
+ const { data, error } = await supabase.auth.signUp({
+  email: regEmail.value,
+  password: regPassword.value
+}, {
+  redirectTo: 'https://nin82.github.io/magazzino-app/'  // dove vuoi portare l'utente dopo conferma
+});
+
   if (error) return showNotification('Errore registrazione: ' + error.message, 'error');
 
   // Crea il record in utenti_magazzino
