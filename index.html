@@ -187,7 +187,7 @@ tr:hover { background-color:#eff6ff; }
 
 <!-- ====================== AUTENTICAZIONE MULTI-MAGAZZINO ====================== -->
 <div id="auth-container" style="max-width:400px;margin:50px auto;background:white;padding:20px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.1)">
-  <h2>🔐 Accesso al Magazzino 2</h2>
+  <h2>🔐 Accesso al Magazzino 3</h2>
 
   <!-- LOGIN -->
   <form id="login-form">
@@ -578,16 +578,11 @@ document.getElementById('back-login-from-reset').addEventListener('click', () =>
 // === RESET PASSWORD ===
 document.getElementById('reset-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-
   const email = document.getElementById('reset-email').value.trim();
   if (!email) return showNotification('Inserisci la tua email', 'error');
 
-  // ✅ URL di reindirizzamento corretto (GitHub Pages)
-  const RESET_REDIRECT_URL = 'https://nin82.github.io/magazzino-app/reset.html';
-
-  // ✅ Usa emailRedirectTo (NON redirectTo)
   const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-   emailRedirectTo: 'https://nin82.github.io/magazzino-app/reset.html',
+    emailRedirectTo: 'https://nin82.github.io/magazzino-app/reset.html',
   });
 
   if (error) {
@@ -1467,5 +1462,3 @@ document.getElementById('stop-qr').addEventListener('click', stopQRScanner);
 <script type="module" src="main.js"></script>
 </body>
 </html>
-
-
