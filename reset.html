@@ -6,122 +6,129 @@
   <title>Reimposta Password</title>
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <style>
-    body { 
-      font-family: 'Inter', sans-serif; 
-      background: #f4f4f4; 
-      text-align: center; 
-      padding: 40px 20px; 
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f4f4f4;
+      text-align: center;
+      padding: 40px 20px;
       color: #1f2937;
     }
     .container {
-      background: white; 
-      max-width: 400px; 
-      margin: 50px auto; 
-      padding: 30px; 
-      border-radius: 12px; 
+      background: white;
+      max-width: 400px;
+      margin: 50px auto;
+      padding: 30px;
+      border-radius: 12px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.1);
     }
-    h2 { color: #4f46e5; margin-bottom: 20px; }
-    input { 
-      display: block; 
-      width: calc(100% - 20px); 
-      margin: 15px 0; 
-      padding: 10px; 
-      border: 1px solid #d1d5db; 
+    h2 {
+      color: #4f46e5;
+      margin-bottom: 20px;
+    }
+    input {
+      display: block;
+      width: calc(100% - 20px);
+      margin: 15px auto;
+      padding: 10px;
+      border: 1px solid #d1d5db;
       border-radius: 6px;
     }
-    button { 
-      display: block; 
-      width: 100%; 
-      padding: 10px; 
-      background: #4f46e5; 
-      color: white; 
-      border: none; 
-      border-radius: 6px; 
+    button {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      background: #4f46e5;
+      color: white;
+      border: none;
+      border-radius: 6px;
       cursor: pointer;
       transition: background 0.3s;
     }
     button:hover { background: #4338ca; }
-    .hidden { display: none; }
     #msg { margin-top: 20px; font-weight: 600; }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
   <div class="container">
     <h2>🔒 Reimposta la tua Password</h2>
-
+    
     <form id="new-pass-form" class="hidden">
       <input type="password" id="new-password" placeholder="Nuova password (min 6 caratteri)" required />
       <button type="submit">Aggiorna Password</button>
     </form>
-
+    
     <p id="msg">Verifica del link in corso...</p>
   </div>
 
   <script>
+    // === CONFIGURAZIONE SUPABASE ===
     const SUPABASE_URL = 'https://eevwzkcesmfofpecuxwv.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnd6a2Nlc21mb2ZwZWN1eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2ODkxOTAsImV4cCI6MjA3NjI2NTE5MH0.j7TQnwbw-gW2S6QBjyp4wsQJrXUVYmg3wwVWVPRe1b4';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const REDIRECT_HOME = 'https://nin82.github.io/magazzino-app/';
 
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const msgEl = document.getElementById('msg');
+    const formEl = document.getElementById('new-pass-form');
+    const newPassEl = document.getElementById('new-password');
 
-    const msgElement = document.getElementById('msg');
-    const formElement = document.getElementById('new-pass-form');
-    const newPasswordInput = document.getElementById('new-password');
+    // === 1️⃣ LETTURA TOKEN & LOGIN TEMPORANEO ===
+    async function init() {
+      msgEl.textContent = 'Verifica del link in corso...';
 
-    async function initResetFlow() {
-      msgElement.textContent = 'Verifica del link in corso...';
+      // 1. Legge i parametri dall’URL (token e type)
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('token');
+      const type = params.get('type');
 
-      // Legge il token dalla query string
-      const urlParams = new URLSearchParams(window.location.search);
-      const token = urlParams.get('token');
-
-      if (!token) {
-        msgElement.textContent = 'Errore: Link non valido o scaduto.';
+      if (!token || type !== 'recovery') {
+        msgEl.textContent = '❌ Link non valido o scaduto. Richiedi un nuovo reset.';
         return;
       }
 
-      // Verifica il token con Supabase
+      // 2. Verifica e crea una sessione temporanea
       const { data, error } = await supabase.auth.verifyOtp({
-        token: token,
+        token,
         type: 'recovery',
       });
 
-      if (error) {
-        msgElement.textContent = 'Errore: ' + error.message;
+      if (error || !data?.session) {
+        console.error(error);
+        msgEl.textContent = '❌ Link non valido o già utilizzato. Richiedi un nuovo link.';
         return;
       }
 
-      // Token valido → mostra il form
-      msgElement.textContent = 'Perfetto! Inserisci la tua nuova password.';
-      formElement.classList.remove('hidden');
-      newPasswordInput.focus();
-
-      // Pulisce l'URL per sicurezza
-      window.history.replaceState({}, document.title, window.location.pathname);
+      // 3. Se ok, mostra il form
+      msgEl.textContent = '✅ Link verificato! Inserisci la tua nuova password.';
+      formEl.classList.remove('hidden');
+      newPassEl.focus();
     }
 
-    formElement.addEventListener('submit', async (e) => {
+    // === 2️⃣ AGGIORNAMENTO PASSWORD ===
+    formEl.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const newPassword = newPasswordInput.value;
+      const newPassword = newPassEl.value.trim();
 
       if (newPassword.length < 6) {
-        msgElement.textContent = 'La password deve avere almeno 6 caratteri.';
+        msgEl.textContent = 'La password deve avere almeno 6 caratteri.';
         return;
       }
+
+      msgEl.textContent = '⏳ Aggiornamento in corso...';
 
       const { error } = await supabase.auth.updateUser({ password: newPassword });
 
       if (error) {
-        msgElement.textContent = 'Errore aggiornamento: ' + error.message;
+        msgEl.textContent = '❌ Errore: ' + error.message;
       } else {
-        msgElement.textContent = '✅ Password aggiornata! Reindirizzamento in corso...';
-        formElement.classList.add('hidden');
+        msgEl.textContent = '✅ Password aggiornata! Reindirizzamento in corso...';
+        formEl.classList.add('hidden');
         setTimeout(() => window.location.href = REDIRECT_HOME, 3000);
       }
     });
 
-    initResetFlow();
+    // === AVVIO ===
+    init();
   </script>
 </body>
 </html>
