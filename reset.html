@@ -1,140 +1,100 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reimposta Password</title>
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <style>
-    /* Stile Aggiornato per una grafica più pulita */
-    .hidden { display: none; }
-    body { 
-        font-family: 'Inter', sans-serif; 
-        background: #f4f4f4; 
-        text-align: center; 
-        padding: 40px 20px; 
-        color: #1f2937;
-    }
-    .container {
-        background: white; 
-        max-width: 400px; 
-        margin: 50px auto; 
-        padding: 30px; 
-        border-radius: 12px; 
-        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-    }
-    h2 { color: #4f46e5; margin-bottom: 20px; }
-    input { 
-        display: block; 
-        width: calc(100% - 20px); 
-        margin: 15px 0; 
-        padding: 10px; 
-        border: 1px solid #d1d5db; 
-        border-radius: 6px;
-    }
-    button { 
-        display: block; 
-        width: 100%; 
-        padding: 10px; 
-        background: #4f46e5; 
-        color: white; 
-        border: none; 
-        border-radius: 6px; 
-        cursor: pointer;
-        transition: background 0.3s;
-    }
-    button:hover { background: #4338ca; }
-    #msg { margin-top: 20px; font-weight: 600; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reimposta Password</title>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<style>
+  body { font-family: 'Inter', sans-serif; background: #f4f4f4; text-align: center; padding: 40px 20px; color: #1f2937; }
+  .container { background: white; max-width: 400px; margin: 50px auto; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+  h2 { color: #4f46e5; margin-bottom: 20px; }
+  input { display: block; width: calc(100% - 20px); margin: 15px 0; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; }
+  button { display: block; width: 100%; padding: 10px; background: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer; transition: background 0.3s; }
+  button:hover { background: #4338ca; }
+  #msg { margin-top: 20px; font-weight: 600; }
+  .hidden { display: none; }
+</style>
 </head>
 <body>
-    <div class="container">
-        <h2>🔒 Reimposta la tua Password</h2>
-        
-        <form id="new-pass-form" class="hidden">
-            <input type="password" id="new-password" placeholder="Nuova password (min 6 caratteri)" required />
-            <button type="submit">Aggiorna Password</button>
-        </form>
-        
-        <p id="msg">Verifica del link in corso...</p>
-    </div>
+<div class="container">
+  <h2>🔒 Reimposta la tua Password</h2>
+  <form id="new-pass-form" class="hidden">
+    <input type="password" id="new-password" placeholder="Nuova password (min 6 caratteri)" required />
+    <button type="submit">Aggiorna Password</button>
+  </form>
+  <p id="msg">Verifica del link in corso...</p>
+</div>
 
-  <script>
-    // Le tue credenziali Supabase
-    const SUPABASE_URL = 'https://eevwzkcesmfofpecuxwv.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnd6a2Nlc21mb2ZwZWN1eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2ODkxOTAsImV4cCI6MjA3NjI2NTE5MH0.j7TQnwbw-gW2S6QBjyp4wsQJrXUVYmg3wwVWVPRe1b4';
-    const REDIRECT_HOME = 'https://nin82.github.io/magazzino-app/';
-    
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    
-    const msgElement = document.getElementById('msg');
-    const formElement = document.getElementById('new-pass-form');
-    const newPasswordInput = document.getElementById('new-password');
+<script>
+const SUPABASE_URL = 'https://eevwzkcesmfofpecuxwv.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnd6a2Nlc21mb2ZwZWN1eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2ODkxOTAsImV4cCI6MjA3NjI2NTE5MH0.j7TQnwbw-gW2S6QBjyp4wsQJrXUVYmg3wwVWVPRe1b4';
+const REDIRECT_HOME = 'https://nin82.github.io/magazzino-app/';
 
-    // =======================================================
-    // 1. Funzione di avvio (CRUCIALE per leggere i token URL)
-    // =======================================================
-    async function initResetFlow() {
-        msgElement.textContent = 'Verifica del link in corso...';
-        
-        // Forza Supabase a leggere e processare immediatamente l'hash URL
-        const { data: { session } } = await supabase.auth.getSession();
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Controlla se l'URL contiene il token (necessario per distinguere da un refresh)
-        const hasRecoveryToken = window.location.hash.includes('access_token') || window.location.hash.includes('type=recovery');
+const msgElement = document.getElementById('msg');
+const formElement = document.getElementById('new-pass-form');
+const newPasswordInput = document.getElementById('new-password');
 
-        if (session && hasRecoveryToken) {
-            // ✅ SUCCESSO: Sessione temporanea stabilita. Attiviamo il form.
-            msgElement.textContent = 'Perfetto! Inserisci la tua nuova password.';
-            formElement.classList.remove('hidden');
+async function initResetFlow() {
+  msgElement.textContent = 'Verifica del link in corso...';
 
-            // Pulisce l'URL SOLO dopo che la sessione è stata letta con successo
-            window.history.replaceState({}, document.title, window.location.pathname);
-            newPasswordInput.focus();
-            
-        } else {
-            // ❌ FALLIMENTO: Token mancante, scaduto, o pagina aperta direttamente.
-            msgElement.textContent = 'Errore: Link non valido, scaduto o già utilizzato. Richiedi un nuovo link di reset.';
-            formElement.classList.add('hidden');
-        }
-    }
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get('token');  // prende il token dal link email
 
-    // 2. Logica di Aggiornamento Password
-    formElement.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const newPassword = newPasswordInput.value;
-      
-      if (newPassword.length < 6) {
-          msgElement.textContent = 'La password deve avere almeno 6 caratteri.';
-          return;
-      }
-      
-      // Controlla la sessione UN'ULTIMA VOLTA prima della chiamata critica.
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-          msgElement.textContent = 'Errore di sessione. Il link è scaduto o è stato utilizzato. Riprova.';
-          formElement.classList.add('hidden');
-          return;
-      }
+  if (!token) {
+    msgElement.textContent = 'Errore: Link non valido o scaduto.';
+    return;
+  }
 
-      // Chiama l'aggiornamento solo se la sessione è attiva
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      
-      if (error) {
-        document.getElementById('msg').textContent = 'Errore aggiornamento: ' + error.message;
-      } else {
-        document.getElementById('msg').textContent = '✅ Password aggiornata! Sarai reindirizzato al login.';
-        formElement.classList.add('hidden');
-         // Reindirizza al login principale
-         setTimeout(() => {
-             window.location.href = REDIRECT_HOME; 
-         }, 3000);
-      }
-    });
+  // Verifica il token e crea sessione temporanea
+  const { data, error } = await supabase.auth.verifyOtp({
+    token: token,
+    type: 'recovery',
+  });
 
-    // Avvia il flusso di reset al caricamento della pagina
-    initResetFlow();
-  </script>
-</body>
-</html>
+  if (error) {
+    msgElement.textContent = 'Errore: ' + error.message;
+    return;
+  }
+
+  // Mostra il form per inserire la nuova password
+  msgElement.textContent = 'Perfetto! Inserisci la tua nuova password.';
+  formElement.classList.remove('hidden');
+  newPasswordInput.focus();
+
+  // Pulisce l'URL per sicurezza
+  window.history.replaceState({}, document.title, window.location.pathname);
+}
+
+// Gestione submit del form
+formElement.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const newPassword = newPasswordInput.value;
+
+  if (newPassword.length < 6) {
+    msgElement.textContent = 'La password deve avere almeno 6 caratteri.';
+    return;
+  }
+
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (!session) {
+    msgElement.textContent = 'Errore di sessione. Il link è scaduto o è stato utilizzato.';
+    formElement.classList.add('hidden');
+    return;
+  }
+
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+  if (error) {
+    msgElement.textContent = 'Errore aggiornamento: ' + error.message;
+  } else {
+    msgElement.textContent = '✅ Password aggiornata! Sarai reindirizzato al login.';
+    formElement.classList.add('hidden');
+    setTimeout(() => { window.location.href = REDIRECT_HOME; }, 3000);
+  }
+});
+
+initReset
