@@ -467,14 +467,14 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
   const tenant_id = crypto.randomUUID();
 
 // Crea utente su Supabase Auth
- const { data, error } = await supabase.auth.signUp({
-  email: email, // ✅ CORREZIONE: Uso la variabile 'email'
-  password: password // ✅ CORREZIONE: Uso la variabile 'password'
-}, {
-  redirectTo: 'https://nin82.github.io/magazzino-app/' 
-});
-
-  if (error) return showNotification('Errore registrazione: ' + error.message, 'error');
+const { data, error } = await supabase.auth.signUp({
+  email,
+  password,
+  options: {
+    data: { tenant_id },
+    emailRedirectTo: 'https://nin82.github.io/magazzino-app/', // ✅ più robusto per Supabase
+  }
+});  if (error) return showNotification('Errore registrazione: ' + error.message, 'error');
 
   // Crea il record in utenti_magazzino
   const user = data.user;
