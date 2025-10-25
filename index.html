@@ -185,55 +185,81 @@ tr:hover { background-color:#eff6ff; }
 </head>
 <body>
 
-<!-- ====================== AUTENTICAZIONE MULTI-MAGAZZINO ====================== -->
-<div id="auth-container" style="max-width:400px;margin:50px auto;background:white;padding:20px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.1)">
-  <h2>🔐 Accesso al Magazzino 3</h2>
+<!-- CONTAINER GENERALE DI AUTENTICAZIONE -->
+<div id="auth-container">
 
-  <!-- LOGIN -->
+  <!-- ===== LOGIN ===== -->
   <form id="login-form">
-    <label>Email:</label>
-    <input type="email" id="email" required placeholder="email@esempio.com">
+    <h2>Login</h2>
+    <label for="email">Email:</label>
+    <input type="email" id="email" required>
 
-    <label>Password:</label>
-    <input type="password" id="password" required placeholder="••••••••">
+    <label for="password">Password:</label>
+    <input type="password" id="password" required>
 
-    <button type="submit" class="btn-action" style="width:100%;margin-top:10px;">Login</button>
+    <button type="submit">Accedi</button>
 
-    <!-- 🔹 Link reset password -->
-    <p style="margin-top:10px;text-align:center;">
-      <button id="show-reset" class="btn-secondary" type="button">Password dimenticata?</button>
+    <p>
+      Non hai un account? 
+      <button type="button" id="show-register">Registrati</button>
     </p>
   </form>
 
-  <p style="margin-top:10px;">Non hai un account?
-    <button id="show-register" class="btn-secondary" type="button">Registrati</button>
-  </p>
-
-  <!-- REGISTRAZIONE -->
+  <!-- ===== REGISTRAZIONE ===== -->
   <form id="register-form" class="hidden">
-    <label>Email:</label>
-    <input type="email" id="reg-email" required placeholder="email@esempio.com">
+    <h2>Registrazione</h2>
+    <label for="reg-email">Email:</label>
+    <input type="email" id="reg-email" required>
 
-    <label>Password:</label>
-    <input type="password" id="reg-password" required placeholder="••••••••">
+    <label for="reg-password">Password:</label>
+    <input type="password" id="reg-password" required>
 
-    <label>Nome Magazzino:</label>
-    <input type="text" id="warehouse-name" required placeholder="Es. Magazzino Roma">
+    <label for="warehouse-name">Nome Magazzino:</label>
+    <input type="text" id="warehouse-name" required>
 
-    <button type="submit" class="btn-action" style="width:100%;margin-top:10px;">Crea Magazzino</button>
-    <button id="back-login" class="btn-secondary" type="button" style="width:100%;margin-top:10px;">Torna al Login</button>
+    <button type="submit">Registrati</button>
+
+    <p>
+      Hai già un account? 
+      <button type="button" id="back-login">Torna al login</button>
+    </p>
   </form>
 
- <!-- 🔹 RESET PASSWORD (versione aggiornata) -->
-<form id="reset-form" class="hidden">
-  <label for="reset-email">Email:</label>
-  <input type="email" id="reset-email" required placeholder="email@esempio.com">
+</div>
 
-  <button type="submit" class="btn-action" style="width:100%;margin-top:10px;">Invia link di reset</button>
-  <p id="msg" style="margin-top:10px;font-weight:600;"></p>
-</form>
+<!-- CONTAINER DELL’APP (NASCONDO TUTTO INIZIALMENTE) -->
+<div class="tab-container" style="display:none;">
+  <button data-target="tab-carico">Carico</button>
+  <button data-target="tab-scarico">Scarico</button>
+  <button data-target="tab-log">Storico</button>
+  <button data-target="tab-qr">QR Scanner</button>
+</div>
 
+<div role="tabpanel" id="tab-carico" class="hidden">
+  <h3>Carico Articoli</h3>
+  <!-- Qui i campi barcode, articolo, quantità -->
+</div>
 
+<div role="tabpanel" id="tab-scarico" class="hidden">
+  <h3>Scarico Articoli</h3>
+  <!-- Qui i campi barcode, articolo, quantità -->
+</div>
+
+<div role="tabpanel" id="tab-log" class="hidden">
+  <h3>Storico Movimenti</h3>
+  <!-- Qui la tabella log -->
+</div>
+
+<div role="tabpanel" id="tab-qr" class="hidden">
+  <h3>Scanner QR</h3>
+  <video id="qr-video" width="300" height="300"></video>
+  <input type="text" id="qr-result" readonly>
+  <button id="use-qr">Usa Barcode</button>
+  <button id="stop-qr">Ferma Scanner</button>
+</div>
+
+<!-- ELEMENTO NOTIFICHE -->
+<div id="notification" style="display:none;padding:10px;color:white;"></div>
 
 
 
@@ -452,17 +478,36 @@ const supabaseUrl = 'https://eevwzkcesmfofpecuxwv.supabase.co'
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnd6a2Nlc21mb2ZwZWN1eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2ODkxOTAsImV4cCI6MjA3NjI2NTE5MH0.j7TQnwbw-gW2S6QBjyp4wsQJrXUVYmg3wwVWVPRe1b4'
 const supabase = createClient(supabaseUrl, supabaseKey)
 const authContainer = document.getElementById('auth-container');
-const appSections = document.querySelectorAll(
-'.tab-container, [role="tabpanel"], h1, hr, .controls-container, #full-log-container'
 );
 
 
 // Nasconde l'app all'avvio (mostra solo il form di login)
 appSections.forEach(el => el.style.display = 'none');
 
-// ===========================================
-// 🔹 GESTIONE DELLA SESSIONE
-// ===========================================
+// ================== GESTIONE DELLA SESSIONE ==================
+const authContainer = document.getElementById('auth-container');
+const appSections = document.querySelectorAll(
+  '.tab-container, [role="tabpanel"], h1, hr, .controls-container, #full-log-container'
+);
+
+// Nasconde l'app all'avvio
+appSections.forEach(el => el.style.display = 'none');
+
+// Funzione per mostrare il form di login/registrazione
+function showAuth() {
+  if (authContainer) authContainer.style.display = 'block';
+  appSections.forEach(el => el.style.display = 'none');
+}
+
+// Funzione per mostrare l'app dopo login
+async function showApp() {
+  if (!authContainer) return;
+  authContainer.style.display = 'none';
+  appSections.forEach(el => el.style.display = ''); // mostra tutte le sezioni
+  await refreshAll(); // aggiorna tabelle e grafici
+}
+
+// Monitora lo stato di autenticazione
 supabase.auth.onAuthStateChange((event, session) => {
   console.log('Auth Event:', event, session);
 
@@ -478,23 +523,13 @@ supabase.auth.onAuthStateChange((event, session) => {
   }
 });
 
-// ===========================================
-// 🔹 FUNZIONE MOSTRA AUTH
-// ===========================================
-function showAuth() {
-  if (authContainer) authContainer.style.display = 'block';
-  appSections.forEach(el => el.style.display = 'none');
-}
-
-// ===========================================
-// 🔹 LOGIN
-// ===========================================
+// ================== LOGIN ==================
 document.getElementById('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value.trim();
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
     showNotification('❌ Errore login: ' + error.message, 'error');
@@ -504,16 +539,12 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
   }
 });
 
-// ===========================================
-// 🔹 REGISTRAZIONE
-// ===========================================
+// ================== REGISTRAZIONE ==================
 document.getElementById('register-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-
   const email = document.getElementById('reg-email').value.trim();
   const password = document.getElementById('reg-password').value.trim();
   const warehouse = document.getElementById('warehouse-name').value.trim();
-
   const tenant_id = crypto.randomUUID();
 
   const { data, error } = await supabase.auth.signUp({
@@ -521,8 +552,8 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
     password,
     options: {
       data: { tenant_id },
-      emailRedirectTo: 'https://nin82.github.io/magazzino-app/',
-    },
+      emailRedirectTo: window.location.href
+    }
   });
 
   if (error) return showNotification('❌ Errore registrazione: ' + error.message, 'error');
@@ -538,9 +569,7 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
   document.getElementById('login-form').classList.remove('hidden');
 });
 
-// ===========================================
-// 🔹 TOGGLE LOGIN / REGISTRAZIONE
-// ===========================================
+// ================== TOGGLE LOGIN / REGISTRAZIONE ==================
 document.getElementById('show-register').addEventListener('click', () => {
   document.getElementById('login-form').classList.add('hidden');
   document.getElementById('register-form').classList.remove('hidden');
@@ -548,8 +577,6 @@ document.getElementById('show-register').addEventListener('click', () => {
 document.getElementById('back-login').addEventListener('click', () => {
   document.getElementById('register-form').classList.add('hidden');
   document.getElementById('login-form').classList.remove('hidden');
-});
-
 // ===========================================
 // 🔹 TOGGLE LOGIN / RESET PASSWORD
 // ===========================================
