@@ -21,70 +21,82 @@
   <p id="msg">Verifica del link in corso...</p>
 
   <script>
+
     // La tua chiave anon è necessaria qui
     const supabase = window.supabase.createClient('https://eevwzkcesmfofpecuxwv.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnd6a2Nlc21mb2ZwZWN1eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2ODkxOTAsImV4cCI6MjA3NjI2NTE5MH0.j7TQnwbw-gW2S6QBjyp4wsQJrXUVYmg3wwVWVPRe1b4');
     
     const msgElement = document.getElementById('msg');
     const formElement = document.getElementById('new-pass-form');
 
-    // 1. Ascolta i cambiamenti di stato di Supabase
-    supabase.auth.onAuthStateChange((event, session) => {
-      
-        // L'evento 'PASSWORD_RECOVERY' è corretto, ma l'evento 'SIGNED_IN' 
-        // viene spesso sparato quando Supabase rileva il token nell'hash URL.
-      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session?.user?.aud === 'authenticated')) {
-          
-            msgElement.textContent = 'Inserisci la tua nuova password';
-            formElement.classList.remove('hidden');
-
-            // Pulisce immediatamente l'URL per evitare problemi di refresh
-            if (window.location.hash) {
-                window.history.replaceState({}, document.title, window.location.pathname);
-            }
-      } else if (event === 'SIGNED_OUT') {
-            msgElement.textContent = 'Link non valido o sessione scaduta. Richiedi un nuovo reset.';
+    // ----------------------------------------------------
+    // 1. Listener per la pulizia e lo stato (Non critico)
+    // ----------------------------------------------------
+    supabase.auth.onAuthStateChange((event) => {
+        // Pulisce l'URL solo se c'è un hash (token)
+        if (window.location.hash) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        
+        // Nel caso in cui il token sia scaduto dopo il caricamento
+        if (event === 'SIGNED_OUT') {
+            msgElement.textContent = 'Sessione di reset scaduta. Richiedi un nuovo link.';
             formElement.classList.add('hidden');
         }
-    });
-    
-    // 2. Chiamata immediata per forzare la lettura dei token al caricamento della pagina
-    // Questo è essenziale in una PWA/SPA per garantire che il token nell'URL venga processato.
+    });
+
+    // ----------------------------------------------------
+    // 2. Controllo Immediato e Logica di Visualizzazione (CRUCIALE)
+    // ----------------------------------------------------
     (async () => {
+        // Prova a recuperare la sessione immediatamente.
+        // Se il token è nell'URL, getSession() lo consumerà e creerà una sessione temporanea.
         const { data: { session } } = await supabase.auth.getSession();
-        if (session && session.access_token) {
-            // Se c'è una sessione, assumiamo che sia di recupero (l'utente è arrivato tramite il link)
-            // e affidiamo il controllo al listener onAuthStateChange.
-            // In caso contrario, il listener non verrebbe sempre chiamato al primo caricamento.
-        } else if (!window.location.hash) {
-            // Se non c'è sessione e non ci sono token nell'URL, mostriamo subito il messaggio di errore.
-            msgElement.textContent = 'Link di reset non valido o non trovato. Richiedi un nuovo reset.';
+
+        if (session) {
+            // ✅ SUCCESS: Il token è stato letto e la sessione temporanea è attiva.
+            msgElement.textContent = 'Perfetto! Inserisci la tua nuova password.';
+            formElement.classList.remove('hidden');
+
+        } else if (window.location.hash) {
+             // Questo caso si verifica raramente ma indica un problema di token scaduto
+             msgElement.textContent = 'Errore: Il link è scaduto o non valido. Richiedi un nuovo reset.';
+             formElement.classList.add('hidden');
+        } else {
+            // Nessuna sessione e nessun hash (l'utente ha aperto la pagina direttamente)
+            msgElement.textContent = 'Per resettare la password, usa il link che ti abbiamo inviato via email.';
+            formElement.classList.add('hidden');
         }
     })();
 
-    // 3. Logica di aggiornamento password
+
+    // ----------------------------------------------------
+    // 3. Logica di Aggiornamento Password
+    // ----------------------------------------------------
     formElement.addEventListener('submit', async (e) => {
       e.preventDefault();
       const newPassword = document.getElementById('new-password').value;
       
-      // Controllo minimo di sicurezza
       if (newPassword.length < 6) {
           msgElement.textContent = 'La password deve avere almeno 6 caratteri.';
           return;
       }
-      
+
+      // Questa chiamata usa la sessione temporanea che abbiamo stabilito nel punto 2.
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       
       if (error) {
-        document.getElementById('msg').textContent = 'Errore aggiornamento: ' + error.message;
+        document.getElementById('msg').textContent = 'Errore di aggiornamento: ' + error.message;
       } else {
-        document.getElementById('msg').textContent = '✅ Password aggiornata! Verrai reindirizzato al login.';
+        document.getElementById('msg').textContent = '✅ Password aggiornata con successo! Sarai reindirizzato al login.';
         formElement.classList.add('hidden');
          // Reindirizza al login principale dopo 3 secondi
          setTimeout(() => {
+             // Assicurati che l'URL sia corretto
              window.location.href = 'https://nin82.github.io/magazzino-app/'; 
          }, 3000);
       }
     });
+  
   </script>
 </body>
 </html>
