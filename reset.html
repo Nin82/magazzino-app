@@ -1,46 +1,90 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reimposta Password</title>
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <style>
-    body { font-family: sans-serif; background: #f4f4f4; text-align: center; padding: 40px; }
-    form { background: white; max-width: 400px; margin: auto; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-    input, button { display: block; width: 100%; margin-top: 10px; padding: 10px; }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reimposta Password</title>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <style>
+    .hidden { display: none; } /* Aggiungi classe hidden per gestire la visibilità */
+    body { font-family: sans-serif; background: #f4f4f4; text-align: center; padding: 40px; }
+    form { background: white; max-width: 400px; margin: auto; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    input, button { display: block; width: 100%; margin-top: 10px; padding: 10px; }
+  </style>
 </head>
 <body>
-  <h2>🔒 Reimposta la tua Password</h2>
-  <form id="new-pass-form" class="hidden">
-    <input type="password" id="new-password" placeholder="Nuova password" required />
-    <button type="submit">Aggiorna Password</button>
-  </form>
-  <p id="msg">Verifica del link in corso...</p>
+  <h2>🔒 Reimposta la tua Password</h2>
+  <form id="new-pass-form" class="hidden">
+    <input type="password" id="new-password" placeholder="Nuova password (min 6 caratteri)" required />
+    <button type="submit">Aggiorna Password</button>
+  </form>
+  <p id="msg">Verifica del link in corso...</p>
 
-  <script>
-    const supabase = window.supabase.createClient('https://eevwzkcesmfofpecuxwv.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnd6a2Nlc21mb2ZwZWN1eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2ODkxOTAsImV4cCI6MjA3NjI2NTE5MH0.j7TQnwbw-gW2S6QBjyp4wsQJrXUVYmg3wwVWVPRe1b4');
+  <script>
+    // La tua chiave anon è necessaria qui
+    const supabase = window.supabase.createClient('https://eevwzkcesmfofpecuxwv.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnd6a2Nlc21mb2ZwZWN1eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2ODkxOTAsImV4cCI6MjA3NjI2NTE5MH0.j7TQnwbw-gW2S6QBjyp4wsQJrXUVYmg3wwVWVPRe1b4');
+    
+    const msgElement = document.getElementById('msg');
+    const formElement = document.getElementById('new-pass-form');
 
-    // Quando Supabase rileva il token nella URL, permette il cambio password
-    supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        document.getElementById('msg').textContent = 'Inserisci la nuova password';
-        document.getElementById('new-pass-form').classList.remove('hidden');
+    // 1. Ascolta i cambiamenti di stato di Supabase
+    supabase.auth.onAuthStateChange((event, session) => {
+      
+        // L'evento 'PASSWORD_RECOVERY' è corretto, ma l'evento 'SIGNED_IN' 
+        // viene spesso sparato quando Supabase rileva il token nell'hash URL.
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session?.user?.aud === 'authenticated')) {
+          
+            msgElement.textContent = 'Inserisci la tua nuova password';
+            formElement.classList.remove('hidden');
+
+            // Pulisce immediatamente l'URL per evitare problemi di refresh
+            if (window.location.hash) {
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+      } else if (event === 'SIGNED_OUT') {
+            msgElement.textContent = 'Link non valido o sessione scaduta. Richiedi un nuovo reset.';
+            formElement.classList.add('hidden');
+        }
+    });
+    
+    // 2. Chiamata immediata per forzare la lettura dei token al caricamento della pagina
+    // Questo è essenziale in una PWA/SPA per garantire che il token nell'URL venga processato.
+    (async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session && session.access_token) {
+            // Se c'è una sessione, assumiamo che sia di recupero (l'utente è arrivato tramite il link)
+            // e affidiamo il controllo al listener onAuthStateChange.
+            // In caso contrario, il listener non verrebbe sempre chiamato al primo caricamento.
+        } else if (!window.location.hash) {
+            // Se non c'è sessione e non ci sono token nell'URL, mostriamo subito il messaggio di errore.
+            msgElement.textContent = 'Link di reset non valido o non trovato. Richiedi un nuovo reset.';
+        }
+    })();
+
+    // 3. Logica di aggiornamento password
+    formElement.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const newPassword = document.getElementById('new-password').value;
+      
+      // Controllo minimo di sicurezza
+      if (newPassword.length < 6) {
+          msgElement.textContent = 'La password deve avere almeno 6 caratteri.';
+          return;
       }
-    });
-
-    document.getElementById('new-pass-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const newPassword = document.getElementById('new-password').value;
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) {
-        document.getElementById('msg').textContent = 'Errore: ' + error.message;
-      } else {
-        document.getElementById('msg').textContent = '✅ Password aggiornata! Ora puoi effettuare il login.';
-        document.getElementById('new-pass-form').classList.add('hidden');
-      }
-    });
-  </script>
+      
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      
+      if (error) {
+        document.getElementById('msg').textContent = 'Errore aggiornamento: ' + error.message;
+      } else {
+        document.getElementById('msg').textContent = '✅ Password aggiornata! Verrai reindirizzato al login.';
+        formElement.classList.add('hidden');
+         // Reindirizza al login principale dopo 3 secondi
+         setTimeout(() => {
+             window.location.href = 'https://nin82.github.io/magazzino-app/'; 
+         }, 3000);
+      }
+    });
+  </script>
 </body>
 </html>
