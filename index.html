@@ -460,131 +460,120 @@ const appSections = document.querySelectorAll(
 // Nasconde l'app all'avvio (mostra solo il form di login)
 appSections.forEach(el => el.style.display = 'none');
 
-// =============================================
-// 🔹 GESTIONE DELLA SESSIONE (CORRETTO)
-// =============================================
-
-// Listener principale che reagisce a login, logout e link di conferma email.
+// ===========================================
+// 🔹 GESTIONE DELLA SESSIONE
+// ===========================================
 supabase.auth.onAuthStateChange((event, session) => {
-    // console.log('Auth Event:', event, 'Session:', session); // Utile per il debug
-    
-    if (session) {
-        // L'utente è autenticato (o la conferma via email è riuscita)
-        showApp();
-    } else {
-        // L'utente è disconnesso o non ha la sessione
-        showAuth();
-    }
-    
-    // Pulisce l'URL dai parametri di token/hash dopo che Supabase li ha processati.
-    // Questo è cruciale in un ambiente PWA/SPA come GitHub Pages.
-    if (window.location.hash) {
-        window.history.replaceState({}, document.title, window.location.pathname);
-    }
+  console.log('Auth Event:', event, session);
+
+  if (session) {
+    showApp();
+  } else {
+    showAuth();
+  }
+
+  // Pulisce URL da token e parametri
+  if (window.location.hash || window.location.search) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
 });
 
-// === Funzione per mostrare l'AUTH container ===
+// ===========================================
+// 🔹 FUNZIONE MOSTRA AUTH
+// ===========================================
 function showAuth() {
-    if (authContainer) authContainer.style.display = 'block';
-    appSections.forEach(el => el.style.display = 'none');
+  if (authContainer) authContainer.style.display = 'block';
+  appSections.forEach(el => el.style.display = 'none');
 }
 
-
-// === LOGIN ===
+// ===========================================
+// 🔹 LOGIN
+// ===========================================
 document.getElementById('login-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return showNotification('Errore login: ' + error.message, 'error');
-  // Non chiamiamo showApp() qui. Sarà chiamato da onAuthStateChange.
+  e.preventDefault();
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value.trim();
+
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    showNotification('❌ Errore login: ' + error.message, 'error');
+  } else {
+    showNotification('✅ Accesso riuscito!', 'success');
+    // showApp() sarà chiamato da onAuthStateChange
+  }
 });
 
-// === REGISTRAZIONE ===
+// ===========================================
+// 🔹 REGISTRAZIONE
+// ===========================================
 document.getElementById('register-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('reg-email').value;
-    const password = document.getElementById('reg-password').value;
-    const warehouse = document.getElementById('warehouse-name').value;
+  e.preventDefault();
 
-    const tenant_id = crypto.randomUUID();
-    
-    // 🛑 AGGIUNGI L'URL DI REINDIRIZZAMENTO CORRETTO QUI 🛑
-   
-    // Crea utente su Supabase Auth
-    const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-            data: { tenant_id },
-            // FORZA IL REINDIRIZZAMENTO SULLA CARTELLA CORRETTA:
-            emailRedirectTo: 'https://nin82.github.io/magazzino-app/', 
-        }
-    });
+  const email = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value.trim();
+  const warehouse = document.getElementById('warehouse-name').value.trim();
 
-    if (error) return showNotification('Errore registrazione: ' + error.message, 'error');
+  const tenant_id = crypto.randomUUID();
 
-    // Crea il record in utenti_magazzino
-    const user = data.user;
-    if (user) {
-        await supabase.from('utenti_magazzino').insert([
-            { user_id: user.id, tenant_id }
-        ]);
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { tenant_id },
+      emailRedirectTo: 'https://nin82.github.io/magazzino-app/',
+    },
+  });
 
-        // (Facoltativo) salva nome magazzino nella tabella tenants se la usi
-        await supabase.from('tenants').insert([{ id: tenant_id, name: warehouse }]);
-    }
+  if (error) return showNotification('❌ Errore registrazione: ' + error.message, 'error');
 
-    showNotification('✅ Registrazione completata! Verifica la tua email.', 'success');
-    document.getElementById('register-form').classList.add('hidden');
-    document.getElementById('login-form').classList.remove('hidden');
+  const user = data.user;
+  if (user) {
+    await supabase.from('utenti_magazzino').insert([{ user_id: user.id, tenant_id }]);
+    await supabase.from('tenants').insert([{ id: tenant_id, name: warehouse }]);
+  }
+
+  showNotification('✅ Registrazione completata! Verifica la tua email.', 'success');
+  document.getElementById('register-form').classList.add('hidden');
+  document.getElementById('login-form').classList.remove('hidden');
 });
 
-// === TOGGLE tra login e registrazione ===
-document.getElementById('show-register').addEventListener('click', () => {
-  document.getElementById('login-form').classList.add('hidden');
-  document.getElementById('register-form').classList.remove('hidden');
-});
-document.getElementById('back-login').addEventListener('click', () => {
-  document.getElementById('register-form').classList.add('hidden');
-  document.getElementById('login-form').classList.remove('hidden');
-});
-
-
-// === TOGGLE tra login, registrazione e reset ===
+// ===========================================
+// 🔹 TOGGLE LOGIN / REGISTRAZIONE
+// ===========================================
 document.getElementById('show-register').addEventListener('click', () => {
   document.getElementById('login-form').classList.add('hidden');
   document.getElementById('register-form').classList.remove('hidden');
 });
-
 document.getElementById('back-login').addEventListener('click', () => {
   document.getElementById('register-form').classList.add('hidden');
   document.getElementById('login-form').classList.remove('hidden');
 });
 
-// 🔹 Mostra il form di reset password
+// ===========================================
+// 🔹 TOGGLE LOGIN / RESET PASSWORD
+// ===========================================
 document.getElementById('show-reset').addEventListener('click', () => {
   document.getElementById('login-form').classList.add('hidden');
   document.getElementById('reset-form').classList.remove('hidden');
 });
-
-// 🔹 Torna al login dal reset
 document.getElementById('back-login-from-reset').addEventListener('click', () => {
   document.getElementById('reset-form').classList.add('hidden');
   document.getElementById('login-form').classList.remove('hidden');
 });
 
-// === RESET PASSWORD ===
+// ===========================================
+// 🔹 RESET PASSWORD (INVIO EMAIL)
 document.getElementById('reset-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const email = document.getElementById('reset-email').value.trim();
-  const msg = document.getElementById('msg');
+
   if (!email) {
-    msg.textContent = 'Inserisci la tua email';
+    showNotification('❌ Inserisci la tua email', 'error');
     return;
   }
 
-  msg.textContent = '⏳ Invio in corso...';
+  showNotification('⏳ Invio email di reset in corso...', 'info');
 
   const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
     emailRedirectTo: 'https://nin82.github.io/magazzino-app/reset.html',
@@ -592,15 +581,21 @@ document.getElementById('reset-form').addEventListener('submit', async (e) => {
 
   if (error) {
     console.error('Errore reset:', error);
-    msg.textContent = '❌ Errore invio reset: ' + error.message;
+    showNotification('❌ Errore invio reset: ' + error.message, 'error');
   } else {
     console.log('Reset email inviata:', data);
-    msg.textContent = '📧 Email inviata! Controlla la tua casella di posta.';
+    showNotification('📧 Email inviata! Controlla la tua posta.', 'success');
     document.getElementById('reset-form').reset();
+    setTimeout(() => {
+      document.getElementById('reset-form').classList.add('hidden');
+      document.getElementById('login-form').classList.remove('hidden');
+    }, 2500);
   }
 });
 
-// === LOGOUT ===
+// ===========================================
+// 🔹 LOGOUT
+// ===========================================
 const logoutBtn = document.createElement('button');
 logoutBtn.textContent = 'Logout';
 logoutBtn.className = 'btn-secondary';
@@ -609,19 +604,18 @@ logoutBtn.id = 'logout-btn';
 document.querySelector('h1')?.appendChild(logoutBtn);
 
 logoutBtn.addEventListener('click', async () => {
-  await supabase.auth.signOut();
-  location.reload();
+  await supabase.auth.signOut();
+  location.reload();
 });
 
-// === Mostra app dopo login ===
+// ===========================================
+// 🔹 MOSTRA APP DOPO LOGIN
+// ===========================================
 async function showApp() {
-  authContainer.style.display = 'none';
-  appSections.forEach(el => el.style.display = '');
-  await refreshAll();
+  authContainer.style.display = 'none';
+  appSections.forEach(el => el.style.display = '');
+  await refreshAll();
 }
-
-
-
 // ================== SUPABASE REALTIME ==================
 
 // Realtime su log_operazioni
