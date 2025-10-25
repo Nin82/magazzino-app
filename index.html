@@ -473,12 +473,12 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
 
   const tenant_id = crypto.randomUUID();
 
-  // Crea utente su Supabase Auth
+// Crea utente su Supabase Auth
  const { data, error } = await supabase.auth.signUp({
-  email: regEmail.value,
-  password: regPassword.value
+  email: email, // ✅ CORREZIONE: Uso la variabile 'email'
+  password: password // ✅ CORREZIONE: Uso la variabile 'password'
 }, {
-  redirectTo: 'https://nin82.github.io/magazzino-app/'  // dove vuoi portare l'utente dopo conferma
+  redirectTo: 'https://nin82.github.io/magazzino-app/' 
 });
 
   if (error) return showNotification('Errore registrazione: ' + error.message, 'error');
