@@ -263,10 +263,10 @@ tr:hover { background-color:#eff6ff; }
 
 
 
-<h1>📦 Gestione Magazzino 2.2.2 fix fcus top</h1>
+**<h1 class="hidden">**📦 Gestione Magazzino 2.2.2 fix fcus top</h1>
 <div id="top-anchor" tabindex="-1"></div>
 <!-- Tabs -->
-<div class="tab-container">
+**<div class="tab-container hidden">**
   <button role="tab" aria-controls="tab-carico" data-target="tab-carico" class="active">➕ Carico</button>
   <button role="tab" aria-controls="tab-scarico" data-target="tab-scarico">➖ Scarico</button>
   <button role="tab" aria-controls="tab-qr" data-target="tab-qr">📷 QR Scanner</button>
@@ -426,7 +426,7 @@ tr:hover { background-color:#eff6ff; }
 <div id="notification" style="color:#fff;background:#4f46e5;padding:12px;margin-bottom:20px;border-radius:8px;display:none;"></div>
 <hr>
 <h2>Storico Ultime 50 Operazioni</h2>
-<div class="controls-container">
+**<div class="controls-container hidden">**
   <label for="filter-type">Tipo Operazione:</label>
   <select id="filter-type">
     <option value="Tutti">Tutti</option>
@@ -442,7 +442,7 @@ tr:hover { background-color:#eff6ff; }
   <button onclick="resetDatabase()" class="btn-reset">⚠️ Resetta Database (Cancella Tutto)</button> 
 </div>
 
-<div id="full-log-container">
+**<div id="full-log-container" class="hidden">**
   <div class="card-historico">
     <div class="table-responsive-wrapper">
       <table id="full-log">
@@ -482,8 +482,6 @@ const appSections = document.querySelectorAll(
   '.tab-container, [role="tabpanel"], h1, hr, .controls-container, #full-log-container'
 );
 
-// Nasconde l'app all'avvio (mostra solo il form di login)
-appSections.forEach(el => el.style.display = 'none');
 
 
 // ================== GESTIONE DELLA SESSIONE ==================
