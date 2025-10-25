@@ -187,7 +187,7 @@ tr:hover { background-color:#eff6ff; }
 
 <!-- ====================== AUTENTICAZIONE MULTI-MAGAZZINO ====================== -->
 <div id="auth-container" style="max-width:400px;margin:50px auto;background:white;padding:20px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.1)">
-<h2>🔐 Accesso al Magazzino0</h2>
+<h2>🔐 Accesso al Magazzino1</h2>
   
   <form id="login-form">
     <label>Email:</label>
@@ -473,6 +473,17 @@ authContainer.style.display = 'block';
 const isRecovery = window.location.hash.includes('type=recovery');
 
 
+const logoutBtn = document.createElement('button');
+logoutBtn.textContent = 'Logout';
+logoutBtn.className = 'btn-secondary'; // Assumi che "btn-secondary" sia la tua classe di stile
+logoutBtn.id = 'logout-btn';
+// 💡 Nascondi il bottone all'avvio, showApp() lo mostrerà.
+logoutBtn.style.display = 'none'; 
+
+// Cerca l'h1 per inserire il bottone (può essere un altro contenitore principale)
+document.querySelector('h1')?.parentNode.insertBefore(logoutBtn, document.querySelector('h1').nextSibling);
+
+
 // ====================== 1. FUNZIONI DI VISUALIZZAZIONE (DEVONO ESSERE QUI) ======================
 
 // === Nasconde app e mostra login ===
@@ -601,7 +612,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
 document.getElementById('register-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    // 🛑 ID CORRETTI DAL TUO HTML
+    // 🛑 VERIFICA: Questi ID devono corrispondere ai campi nel tuo HTML.
     const email = document.getElementById('reg-email').value.trim();
     const password = document.getElementById('reg-password').value.trim();
     const warehouse = document.getElementById('warehouse-name').value.trim(); 
@@ -619,7 +630,7 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
         warehouse_name: warehouse
     }));
 
-    // 2. Crea utente su Supabase Auth
+    // 2. CREA UTENTE SU SUPABASE AUTH (Questa è la riga che mancava o falliva)
     const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -636,13 +647,14 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
         return showNotification('❌ Errore registrazione: ' + error.message, 'error');
     }
     
-    // 4. L'utente è stato creato, aspetta la conferma email.
+    // 4. L'utente è stato creato. Ora aspetta la conferma email.
     showNotification(`✅ Registrazione completata! Verifica la tua email (${email}).`, 'success');
 
     // 5. Passa al form di login
     document.getElementById('register-form').classList.add('hidden');
     document.getElementById('login-form').classList.remove('hidden');
 });
+
 
 // === GESTIONE CAMBIO PASSWORD DOPO REINDIRIZZAMENTO EMAIL ===
 document.getElementById('update-password-form').addEventListener('submit', async (e) => {
@@ -668,10 +680,11 @@ document.getElementById('update-password-form').addEventListener('submit', async
 });
 
 // === LOGOUT ===
-document.getElementById('logout-btn')?.addEventListener('click', async () => {
+ddocument.getElementById('logout-btn')?.addEventListener('click', async () => {
     await supabase.auth.signOut();
     location.reload(); 
 });
+
 // ====================== 4. LISTENERS SECONDARI (TOGGLE E RESET) ======================
 
 // === TOGGLE tra login e registrazione ===
