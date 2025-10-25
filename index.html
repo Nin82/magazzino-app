@@ -187,7 +187,7 @@ tr:hover { background-color:#eff6ff; }
 
 <!-- ====================== AUTENTICAZIONE MULTI-MAGAZZINO ====================== -->
 <div id="auth-container" style="max-width:400px;margin:50px auto;background:white;padding:20px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.1)">
-<h2>🔐 Accesso al Magazzino1</h2>
+<h2>🔐 Accesso al Magazzino0</h2>
   
   <form id="login-form">
     <label>Email:</label>
@@ -474,7 +474,7 @@ const isRecovery = window.location.hash.includes('type=recovery');
 
 
 
-/ ====================== CREAZIONE ELEMENTO LOGOUT NEL DOM ======================
+// ====================== CREAZIONE ELEMENTO LOGOUT NEL DOM ======================
 // (Usa questo titolo per identificare il blocco, se vuoi)
 
 const logoutBtn = document.createElement('button');
@@ -500,7 +500,8 @@ function hideApp() {
 
 // === Mostra app dopo login e imposta il Magazzino (Multi-Tenant) ===
 async function showApp() {
-    const { data: { user } } = await supabase.auth.getUser();
+const { data } = await supabase.auth.getUser();
+const user = data?.user;    
 
     if (user) {
         // Logica per recuperare il tenant_id
@@ -717,7 +718,42 @@ document.getElementById('reset-password-form').addEventListener('submit', async 
 // === GESTIONE CAMBIO PASSWORD DOPO REINDIRIZZAMENTO EMAIL (update-password-form) ===
 document.getElementById('update-password-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    // ... (Mantieni la logica interna come l'abbiamo definita)
+
+    const newPassword = document.getElementById('update-password').value.trim();
+    const confirmPassword = document.getElementById('confirm-update-password').value.trim();
+
+    if (!newPassword || !confirmPassword) {
+        showNotification('Inserisci entrambe le password', 'error');
+        return;
+    }
+
+    if (newPassword !== confirmPassword) {
+        showNotification('Le password non corrispondono', 'error');
+        return;
+    }
+
+    try {
+        // Chiamata Supabase per aggiornare la password dopo reset
+        const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+
+        if (error) {
+            showNotification('Errore durante il cambio password: ' + error.message, 'error');
+            return;
+        }
+
+        showNotification('✅ Password aggiornata correttamente!', 'success');
+
+        // Dopo il successo, torna al login
+        document.getElementById('update-password-form').classList.add('hidden');
+        document.getElementById('login-form').classList.remove('hidden');
+
+        // Pulisce i campi
+        document.getElementById('update-password').value = '';
+        document.getElementById('confirm-update-password').value = '';
+
+    } catch (err) {
+        showNotification('Errore imprevisto: ' + err.message, 'error');
+    }
 });
 
 // ... (Incolla qui tutti gli altri listeners: toggle login/register, reset password, etc.)
@@ -906,42 +942,77 @@ function showNotification(msg,type='info'){
 }
 
 // ================== FUNZIONI ==================
-async function addCarico(barcode, article, qty){
-    const { data:existing } = await supabase.from('magazzino').select('*').eq('barcode',barcode).single();
-    if(existing){
-        await supabase.from('magazzino').update({quantity:existing.quantity+qty}).eq('barcode',barcode);
-    } else {
-        await supabase.from('magazzino').insert([{barcode,article,quantity:qty}]);
-    }
-    await supabase.from('log_operazioni').insert([{type:'Carico',barcode,article,quantity:qty}]);
-    await trimLog(50);
-    showNotification(`Carico registrato: ${qty}x ${article}`,'success');
-await getAndDisplayStock(barcode, 'carico-giacenza-display', 'carico');
+async function addCarico(barcode, article, qty) {
+    const { data: existing, error } = await supabase
+        .from('magazzino')
+        .select('*')
+        .eq('barcode', barcode)
+        .maybeSingle(); // ✅ safer
 
- // Sparisce dopo 5 secondi
+    if (error) {
+        console.error('Errore fetch magazzino:', error);
+        showNotification('Errore durante il caricamento del magazzino', 'error');
+        return;
+    }
+
+    if (existing) {
+        await supabase
+            .from('magazzino')
+            .update({ quantity: existing.quantity + qty })
+            .eq('barcode', barcode);
+    } else {
+        await supabase
+            .from('magazzino')
+            .insert([{ barcode, article, quantity: qty }]);
+    }
+
+    await supabase
+        .from('log_operazioni')
+        .insert([{ type: 'Carico', barcode, article, quantity: qty }]);
+
+    await trimLog(50);
+    showNotification(`Carico registrato: ${qty}x ${article}`, 'success');
+    await getAndDisplayStock(barcode, 'carico-giacenza-display', 'carico');
+
     setTimeout(() => {
         const giacenzaDisplay = document.getElementById('carico-giacenza-display');
         if (giacenzaDisplay) giacenzaDisplay.textContent = '';
     }, 5000);
 }
-async function addScarico(barcode, qty){
-    const { data:existing } = await supabase.from('magazzino').select('*').eq('barcode',barcode).single();
-    if(!existing || existing.quantity<qty){ showNotification("Errore: quantità insufficiente",'error'); return; }
-    const newQty = existing.quantity - qty;
-    await supabase.from('magazzino').update({quantity:newQty}).eq('barcode', barcode);
-    await supabase.from('log_operazioni').insert([{type:'Scarico',barcode,article:existing.article,quantity:qty}]);
-    await trimLog(50);
-    showNotification(`Scarico registrato: ${qty}x ${existing.article}`,'success');
 
- // Sparisce dopo 5 secondi
+async function addScarico(barcode, qty) {
+    const { data: existing, error } = await supabase
+        .from('magazzino')
+        .select('*')
+        .eq('barcode', barcode)
+        .maybeSingle(); // ✅ più sicuro
+
+    if (error) {
+        console.error('Errore fetch magazzino:', error);
+        showNotification('Errore durante lo scarico', 'error');
+        return;
+    }
+
+    if (!existing || existing.quantity < qty) {
+        showNotification("Errore: quantità insufficiente", 'error');
+        return;
+    }
+
+    const newQty = existing.quantity - qty;
+    await supabase.from('magazzino').update({ quantity: newQty }).eq('barcode', barcode);
+    await supabase
+        .from('log_operazioni')
+        .insert([{ type: 'Scarico', barcode, article: existing.article, quantity: qty }]);
+    await trimLog(50);
+    showNotification(`Scarico registrato: ${qty}x ${existing.article}`, 'success');
+
     setTimeout(() => {
         const giacenzaDisplay = document.getElementById('scarico-giacenza-display');
         if (giacenzaDisplay) giacenzaDisplay.textContent = '';
     }, 5000);
 
-await getAndDisplayStock(barcode, 'scarico-giacenza-display', 'scarico');
+    await getAndDisplayStock(barcode, 'scarico-giacenza-display', 'scarico');
 }
-
 // ================== FUNZIONI SUPPORTO ELIMINA 50 ==================
 async function trimLog(maxRecords = 50) {
     // Conta quanti record ci sono
@@ -1011,63 +1082,54 @@ async function renderTables(){
 }
 
 
-async function deleteRecord(id){
-    if(!confirm("Confermi l'eliminazione? Verrà ripristinata la giacenza.")) return;
+async function deleteRecord(id) {
+    if (!confirm("Confermi l'eliminazione? Verrà ripristinata la giacenza.")) return;
 
     try {
-        // 1. Recupera il record di log
-        const { data: logItem, error: logFetchError } = await supabase.from('log_operazioni').select('*').eq('id',id).maybeSingle();
-        if(logFetchError) throw logFetchError;
-        if(!logItem){  
-            showNotification("Record di log non trovato",'error');  
-            return;  
+        const { data: logItem, error: logFetchError } = await supabase
+            .from('log_operazioni')
+            .select('*')
+            .eq('id', id)
+            .maybeSingle(); // ✅ safer
+
+        if (logFetchError) throw logFetchError;
+        if (!logItem) {
+            showNotification("Record di log non trovato", 'error');
+            return;
         }
 
-        // 2. Recupera la giacenza attuale
-        // Senza la clausola .select('*') il codice è più pulito
-        const { data:existing, error: existingError } = await supabase
+        const { data: existing, error: existingError } = await supabase
             .from('magazzino')
             .select('article, quantity')
             .eq('barcode', logItem.barcode)
-            .maybeSingle();
+            .maybeSingle(); // ✅ safer
 
         if (existingError) throw existingError;
 
-        let newQty = 0;
-        // Se non esiste, la giacenza attuale è 0
-        const existingQty = (existing ? existing.quantity : 0);
-        
-        // 3. Calcola la nuova giacenza e usa l'upsert con onConflict
-        if(logItem.type==='CARICO'){
-            // Se annullo un CARICO, diminuisco la quantità
-            newQty = existingQty - logItem.quantity;
-            newQty = Math.max(newQty, 0); // Non andiamo sotto zero
-        } else { // SCARICO
-            // Se annullo uno SCARICO, aumento la quantità
-            newQty = existingQty + logItem.quantity;
-        }
+        const existingQty = existing ? existing.quantity : 0;
+        let newQty = logItem.type === 'CARICO'
+            ? Math.max(existingQty - logItem.quantity, 0)
+            : existingQty + logItem.quantity;
 
-        // 🚨 MODIFICA CHIAVE: Uso di .onConflict('barcode') per forzare l'UPDATE
         const { error: upsertError } = await supabase
             .from('magazzino')
             .upsert(
-                { barcode: logItem.barcode, article: logItem.article, quantity: newQty }, 
-                { onConflict: 'barcode' } // RISOLVE L'ERRORE DI CHIAVE DUPLICATA
+                { barcode: logItem.barcode, article: logItem.article, quantity: newQty },
+                { onConflict: 'barcode' }
             );
-        
         if (upsertError) throw upsertError;
 
-        // 4. Elimina il record dallo storico
-        const { error: deleteError } = await supabase.from('log_operazioni').delete().eq('id',id);
+        const { error: deleteError } = await supabase
+            .from('log_operazioni')
+            .delete()
+            .eq('id', id);
         if (deleteError) throw deleteError;
-        
-        showNotification(`✅ Movimento annullato. Giàcenza ripristinata a ${newQty}.`, 'success');
 
+        showNotification(`✅ Movimento annullato. Giàcenza ripristinata a ${newQty}.`, 'success');
     } catch (e) {
         showNotification(`❌ Errore durante l'annullamento: ${e.message}`, 'error');
     }
 
-    // 5. Aggiorna l'interfaccia
     await renderTables();
     await renderStockSummary();
     await renderCharts();
@@ -1248,41 +1310,27 @@ async function refreshAll(){
 
 
 // ================== FILTRI ==================
-document.getElementById('filter-type').addEventListener('change', renderTables); // Applica filtro tipo su cambio
-document.getElementById('filter-articolo').addEventListener('input', renderTables); // Applica filtro articolo su ogni digitazione
-document.getElementById('clear-filter').addEventListener('click', ()=>{
-    document.getElementById('filter-type').value='Tutti';
-    document.getElementById('filter-articolo').value='';
-    renderTables();
+const filterType = document.getElementById('filter-type');
+const filterArticolo = document.getElementById('filter-articolo');
+const clearFilter = document.getElementById('clear-filter');
 
-});
+if (filterType) {
+    filterType.addEventListener('change', renderTables); // Applica filtro tipo su cambio
+}
+
+if (filterArticolo) {
+    filterArticolo.addEventListener('input', renderTables); // Applica filtro articolo su ogni digitazione
+}
+
+if (clearFilter) {
+    clearFilter.addEventListener('click', () => {
+        if (filterType) filterType.value = 'Tutti';
+        if (filterArticolo) filterArticolo.value = '';
+        renderTables();
+    });
+}
 
 // ================== FORM ==================
-caricoArticle.addEventListener('input', async () => {
-    const name = caricoArticle.value.trim();
-    const giacenzaDisplay = document.getElementById('carico-giacenza-display');
-    if (!name) {
-        giacenzaDisplay.textContent = '';
-        return;
-    }
-
-    const { data: existing } = await supabase
-        .from('magazzino')
-        .select('barcode, quantity')
-        .eq('article', name)
-        .maybeSingle();
-
-    if (existing) {
-        // Se esiste, aggiorna barcode solo se campo vuoto
-        if (!caricoBarcode.value) caricoBarcode.value = existing.barcode;
-        giacenzaDisplay.textContent = `Giacenza Attuale: ${existing.quantity} unità`;
-    } else {
-        // Nuovo articolo
-        if (!caricoBarcode.value) caricoBarcode.value = ''; // non sovrascrivere se già inserito QR
-        giacenzaDisplay.textContent = 'Nuovo Articolo (Giacenza: 0)';
-    }
-});
-
 
 caricoBarcode.addEventListener('input', async () => {
     if (ignoreCaricoBarcodeListener) return;
@@ -1349,7 +1397,7 @@ window.scanCooldown = false;
 window.isScanning = false;
 
 async function startQRScanner() {
-    if (window.isScanning) return; // previene doppi start
+    if (window.isScanning) return;
     window.isScanning = true;
 
     const video = document.getElementById('qr-video');
@@ -1358,7 +1406,7 @@ async function startQRScanner() {
 
     try {
         if ('BarcodeDetector' in window) {
-            // ✅ Usa API nativa se supportata
+            // ✅ BarcodeDetector nativo
             window.videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
             video.srcObject = window.videoStream;
 
@@ -1381,44 +1429,55 @@ async function startQRScanner() {
                 }
                 requestAnimationFrame(scanLoop);
             };
-
             requestAnimationFrame(scanLoop);
+
         } else {
-            // 🧩 Se BarcodeDetector non esiste → import dinamico di html5-qrcode
+            // 🧩 Html5-qrcode fallback
             if (!window.html5QrInstance) {
-                console.log('📦 Caricamento libreria html5-qrcode...');
                 const module = await import('https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js');
                 const { Html5Qrcode } = module;
                 window.html5QrInstance = new Html5Qrcode("qr-video");
             }
 
-            await window.html5QrInstance.start(
-                { facingMode: "environment" },
-                { fps: 10, qrbox: Math.min(window.innerWidth * 0.8, 300) },
-                qrCodeMessage => {
-                    if (qrCodeMessage !== window.lastScanned && !window.scanCooldown) {
-                        window.lastScanned = qrCodeMessage;
-                        resultInput.value = window.lastScanned;
-                        showNotification(`📷 Codice rilevato: ${window.lastScanned}`, 'success');
-                        playBeep(150, 600, 0.5);
-                        window.scanCooldown = true;
-                        setTimeout(() => (window.scanCooldown = false), 1000);
-                    }
-                },
-                errorMessage => {
-                    // ignora errori
+            if (window.html5QrInstance) {
+                try {
+                    await window.html5QrInstance.start(
+                        { facingMode: "environment" },
+                        { fps: 10, qrbox: Math.min(window.innerWidth * 0.8, 300) },
+                        qrCodeMessage => {
+                            if (qrCodeMessage !== window.lastScanned && !window.scanCooldown) {
+                                window.lastScanned = qrCodeMessage;
+                                resultInput.value = window.lastScanned;
+                                showNotification(`📷 Codice rilevato: ${window.lastScanned}`, 'success');
+                                playBeep(150, 600, 0.5);
+                                window.scanCooldown = true;
+                                setTimeout(() => (window.scanCooldown = false), 1000);
+                            }
+                        },
+                        errorMessage => {
+                            // ignora errori
+                        }
+                    );
+                } catch (err) {
+                    console.error('Errore avvio html5QrInstance:', err);
+                    alert('Impossibile avviare lo scanner QR.');
+                    window.isScanning = false;
                 }
-            );
+            } else {
+                console.error('Html5Qrcode non disponibile.');
+                alert('Scanner QR non disponibile nel tuo browser.');
+            }
         }
 
         if (statusLabel) {
-            statusLabel.textContent = '📸 Scanner attivo';
+            statusLabel.textContent = '📷 Scanner attivo';
             statusLabel.style.color = '#16a34a';
         }
+
     } catch (err) {
-        console.error('Errore fotocamera:', err);
-        alert('Impossibile accedere alla fotocamera. Controlla permessi e browser.');
+        console.error(err);
         window.isScanning = false;
+        alert('Errore avvio scanner QR.');
     }
 }
 
@@ -1438,8 +1497,7 @@ function stopQRScanner() {
     }
 
     if (window.html5QrInstance) {
-        window.html5QrInstance
-            .stop()
+        window.html5QrInstance.stop()
             .then(() => {
                 window.html5QrInstance.clear();
                 window.html5QrInstance = null;
