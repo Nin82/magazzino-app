@@ -456,6 +456,7 @@ function playBeep(duration = 100, frequency = 440, volume = 0.5) {
 const supabaseUrl = 'https://eevwzkcesmfofpecuxwv.supabase.co'
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnd6a2Nlc21mb2ZwZWN1eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2ODkxOTAsImV4cCI6MjA3NjI2NTE5MH0.j7TQnwbw-gW2S6QBjyp4wsQJrXUVYmg3wwVWVPRe1b4'
 const supabase = createClient(supabaseUrl, supabaseKey)
+let currentTenantId = null;
 
 // ====================== AUTENTICAZIONE MULTI-MAGAZZINO ======================
 const authContainer = document.getElementById('auth-container');
@@ -573,9 +574,45 @@ logoutBtn.addEventListener('click', async () => {
 
 // === Mostra app dopo login ===
 async function showApp() {
-  authContainer.style.display = 'none';
-  appSections.forEach(el => el.style.display = '');
-  await refreshAll();
+    authContainer.style.display = 'none';
+    appSections.forEach(el => el.style.display = '');
+
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (user) {
+        // 1. Recupera il tenant_id associato all'utente loggato
+        const { data, error } = await supabase
+            .from('utenti_magazzino')
+            .select('tenant_id')
+            .eq('user_id', user.id)
+            .maybeSingle(); 
+
+        if (error || !data || !data.tenant_id) {
+            console.error('Errore nel recupero del tenant_id o non trovato:', error?.message);
+            // Forza il logout se non trova l'ID del magazzino
+            await supabase.auth.signOut(); 
+            location.reload();
+            return;
+        }
+
+        // 2. Imposta la variabile globale
+        currentTenantId = data.tenant_id;
+        
+        // 3. (OPZIONALE) Mostra il nome del Magazzino nell'intestazione
+        const { data: tenantData } = await supabase
+            .from('tenants')
+            .select('name')
+            .eq('id', currentTenantId)
+            .maybeSingle();
+
+        if (tenantData && document.querySelector('h1')) {
+            // Aggiorna il titolo principale con il nome del magazzino
+            document.querySelector('h1').innerHTML = `📦 Gestione Magazzino - ${tenantData.name} <button id="logout-btn" class="btn-secondary" style="float:right;margin-top:-50px;">Logout</button>`;
+        }
+    }
+    
+    // Solo dopo aver impostato currentTenantId, possiamo aggiornare i dati
+    await refreshAll();
 }
 
 // === MOSTRA / NASCONDI FORM RESET ===
@@ -612,27 +649,6 @@ document.getElementById('reset-password-form').addEventListener('submit', async 
   document.getElementById('login-form').classList.remove('hidden');
 });
 
-// ================== SUPABASE REALTIME ==================
-
-// Realtime su log_operazioni
-const logChannel = supabase.channel('realtime-log_operazioni')
-  .on('postgres_changes', { event: '*', schema: 'public', table: 'log_operazioni' }, payload => {
-    console.log('Realtime log_operazioni:', payload);
-    renderTables();
-    renderStockSummary();
-    renderCharts();
-    renderAndamentoGiornaliero();
-  })
-  .subscribe();
-
-// Realtime su magazzino
-const magazzinoChannel = supabase.channel('realtime-magazzino')
-  .on('postgres_changes', { event: '*', schema: 'public', table: 'magazzino' }, payload => {
-    console.log('Realtime magazzino:', payload);
-    renderStockSummary();
-    renderCharts();
-    renderAndamentoGiornaliero();
-  })
   .subscribe();
 
 // ================== ELEMENTI ==================
@@ -667,6 +683,12 @@ async function populateArticleSuggestions() {
 
 // Quando l’utente digita o seleziona un articolo
 caricoArticle.addEventListener('input', async () => {
+    // Controllo di sicurezza: se non c'è l'ID del magazzino, usciamo subito
+    if (!currentTenantId) {
+        document.getElementById('carico-giacenza-display').textContent = '⚠️ Errore: Magazzino non identificato.';
+        return;
+    }
+
     const name = caricoArticle.value.trim();
     const giacenzaDisplay = document.getElementById('carico-giacenza-display');
     
@@ -678,15 +700,16 @@ caricoArticle.addEventListener('input', async () => {
         return;
     }
 
+    // 💡 QUERY FILTRATA PER TENANT ID
     const { data: existing } = await supabase
         .from('magazzino')
         .select('barcode, quantity')
         .eq('article', name)
+        .eq('tenant_id', currentTenantId) // ✅ FILTRO ESSENZIALE AGGIUNTO QUI
         .maybeSingle();
 
-    if (existing) 
-    {
-        // Se esiste, aggiorna barcode solo se campo vuoto
+    if (existing) {
+        // Se esiste, aggiorna barcode solo se campo vuoto o se corrisponde al barcode trovato
         if (!caricoBarcode.value || caricoBarcode.value === existing.barcode) {
             caricoBarcode.value = existing.barcode;
             // 🚨 AGGIUNTA CHIAVE: Blocca il campo Barcode in sola lettura
@@ -788,15 +811,23 @@ async function getAndDisplayStock(barcode, displayElementId, mode) {
     const displayElement = document.getElementById(displayElementId);
     if (!displayElement) return;
 
+    // 💡 1. CONTROLLO DI SICUREZZA
+    if (!currentTenantId) {
+        displayElement.textContent = '⚠️ Errore: Magazzino non identificato.';
+        return;
+    }
+
     if (!barcode) {
         displayElement.textContent = '';
         return;
     }
 
+    // ✅ 2. QUERY FILTRATA PER TENANT ID
     const { data: existing } = await supabase
         .from('magazzino')
         .select('quantity')
         .eq('barcode', barcode)
+        .eq('tenant_id', currentTenantId) // ⬅️ AGGIUNTA FONDAMENTALE
         .maybeSingle();
 
     if (existing) {
@@ -881,12 +912,49 @@ async function trimLog(maxRecords = 50) {
 
 
 
-async function getStockSummary(){ const { data } = await supabase.from('magazzino').select('*'); return data || []; }
+async function getStockSummary(){ 
+    // 💡 1. CONTROLLO DI SICUREZZA
+    if (!currentTenantId) {
+        console.error("Tentativo di leggere la giacenza senza ID magazzino.");
+        return [];
+    }
+    
+    // ✅ 2. FILTRO ESSENZIALE: Includi il filtro per il magazzino corrente
+    const { data, error } = await supabase.from('magazzino')
+        .select('*')
+        .eq('tenant_id', currentTenantId) // ⬅️ AGGIUNTA FONDAMENTALE
+        .order('article', { ascending: true }); 
+        
+    if (error) {
+        console.error("Errore nel recupero della giacenza:", error);
+        return [];
+    }
+
+    return data || []; 
+}
 async function getLog(filterType='Tutti',filterArticle=''){ 
-    let query = supabase.from('log_operazioni').select('*').order('date',{ascending:false}); 
+    // 💡 1. CONTROLLO DI SICUREZZA
+    if (!currentTenantId) {
+        console.error("Tentativo di leggere il log senza ID magazzino.");
+        return [];
+    }
+
+    let query = supabase.from('log_operazioni')
+        .select('*')
+        // ✅ 2. FILTRO ESSENZIALE: filtra per l'ID del magazzino corrente
+        .eq('tenant_id', currentTenantId) 
+        .order('date',{ascending:false}); 
+
+    // 3. Applica i filtri esistenti (invariati)
     if(filterType!=='Tutti') query=query.eq('type',filterType); 
     if(filterArticle) query=query.ilike('article',`%${filterArticle}%`);
-    const { data } = await query; return data || []; 
+    
+    const { data, error } = await query;
+    if (error) {
+        console.error("Errore nel recupero del log filtrato:", error);
+        return [];
+    }
+    return data || []; 
 }
 async function renderStockSummary(){
     const tbody = document.querySelector('#stock-summary tbody');
@@ -989,22 +1057,44 @@ async function deleteRecord(id){
 }
 
 async function resetDatabase(){
-    if(!confirm("ATTENZIONE: elimini TUTTO il database?")) return;
+    // 1. Controllo di sicurezza e conferma
+    if (!confirm("ATTENZIONE: Sei sicuro di voler resettare il tuo magazzino? Tutti i dati di giacenza e log verranno CANCELLATI PERMANENTEMENTE solo per il tuo magazzino!")) return;
+    
+    // Controllo ID Magazzino
+    if (!currentTenantId) { 
+        showNotification('Errore di sicurezza: ID magazzino non trovato.', 'error'); 
+        return; 
+    }
 
-    // Cancella prima log_operazioni
-    const { error: logError } = await supabase.from('log_operazioni').delete().neq('id',0);
-    if(logError) { showNotification("Errore cancellazione log: "+logError.message,'error'); return; }
+    showNotification('⏳ Eliminazione dati in corso...', 'info');
 
-    // Cancella magazzino
-    const { error: stockError } = await supabase.from('magazzino').delete().neq('barcode','');
-    if(stockError) { showNotification("Errore cancellazione magazzino: "+stockError.message,'error'); return; }
+    // 2. Cancella prima log_operazioni (solo del tenant corrente)
+    const { error: logError } = await supabase.from('log_operazioni')
+        .delete()
+        .eq('tenant_id', currentTenantId); // ✅ FILTRO ESSENZIALE
+    
+    if(logError) { 
+        showNotification("❌ Errore cancellazione log: "+logError.message,'error'); 
+        return; 
+    }
 
-    // Aggiorna UI
+    // 3. Cancella magazzino (solo del tenant corrente)
+    const { error: stockError } = await supabase.from('magazzino')
+        .delete()
+        .eq('tenant_id', currentTenantId); // ✅ FILTRO ESSENZIALE
+    
+    if(stockError) { 
+        showNotification("❌ Errore cancellazione magazzino: "+stockError.message,'error'); 
+        return; 
+    }
+
+    // 4. Aggiorna UI
     renderTables();
     renderStockSummary();
     renderCharts();
-    showNotification("Database resettato",'success');
+    showNotification("✅ Magazzino resettato con successo!",'success');
 }
+
 async function downloadCSV(filename,data){
     const csv = data.map(r=>Object.values(r).join(',')).join('\n');
     const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
