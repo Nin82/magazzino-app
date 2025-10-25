@@ -478,17 +478,16 @@ const supabaseUrl = 'https://eevwzkcesmfofpecuxwv.supabase.co'
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnd6a2Nlc21mb2ZwZWN1eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2ODkxOTAsImV4cCI6MjA3NjI2NTE5MH0.j7TQnwbw-gW2S6QBjyp4wsQJrXUVYmg3wwVWVPRe1b4'
 const supabase = createClient(supabaseUrl, supabaseKey)
 const authContainer = document.getElementById('auth-container');
+const appSections = document.querySelectorAll(
+  '.tab-container, [role="tabpanel"], h1, hr, .controls-container, #full-log-container'
 );
-
 
 // Nasconde l'app all'avvio (mostra solo il form di login)
 appSections.forEach(el => el.style.display = 'none');
 
+
 // ================== GESTIONE DELLA SESSIONE ==================
-const authContainer = document.getElementById('auth-container');
-const appSections = document.querySelectorAll(
-  '.tab-container, [role="tabpanel"], h1, hr, .controls-container, #full-log-container'
-);
+
 
 // Nasconde l'app all'avvio
 appSections.forEach(el => el.style.display = 'none');
