@@ -71,51 +71,35 @@
     const formElement = document.getElementById('new-pass-form');
     const newPasswordInput = document.getElementById('new-password');
 
-    // ----------------------------------------------------
-    // 1. Logica di Inizializzazione (La parte più critica)
-    // ----------------------------------------------------
+    // =======================================================
+    // 1. Funzione di avvio (CRUCIALE per leggere i token URL)
+    // =======================================================
+    async function initResetFlow() {
+        msgElement.textContent = 'Verifica del link in corso...';
+        
+        // Forza Supabase a leggere e processare immediatamente l'hash URL
+        const { data: { session } } = await supabase.auth.getSession();
 
-    // Funzione che attiva il form se i token sono stati elaborati
-    function activateResetForm() {
-        msgElement.textContent = 'Perfetto! Inserisci la tua nuova password.';
-        formElement.classList.remove('hidden');
-        newPasswordInput.focus();
-        // Pulisce l'URL SOLO dopo l'attivazione
-        if (window.location.hash) {
+        // Controlla se l'URL contiene il token (necessario per distinguere da un refresh)
+        const hasRecoveryToken = window.location.hash.includes('access_token') || window.location.hash.includes('type=recovery');
+
+        if (session && hasRecoveryToken) {
+            // ✅ SUCCESSO: Sessione temporanea stabilita. Attiviamo il form.
+            msgElement.textContent = 'Perfetto! Inserisci la tua nuova password.';
+            formElement.classList.remove('hidden');
+
+            // Pulisce l'URL SOLO dopo che la sessione è stata letta con successo
             window.history.replaceState({}, document.title, window.location.pathname);
+            newPasswordInput.focus();
+            
+        } else {
+            // ❌ FALLIMENTO: Token mancante, scaduto, o pagina aperta direttamente.
+            msgElement.textContent = 'Errore: Link non valido, scaduto o già utilizzato. Richiedi un nuovo link di reset.';
+            formElement.classList.add('hidden');
         }
     }
 
-    // 1.1 Listener per catturare il cambio di stato (PASSWORD_RECOVERY/SIGNED_IN)
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (session && (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN')) {
-        activateResetForm();
-      } else if (event === 'SIGNED_OUT') {
-           // Si attiva se il token scade dopo il caricamento
-           msgElement.textContent = 'Sessione di reset scaduta o link non valido. Richiedi un nuovo reset.';
-           formElement.classList.add('hidden');
-        }
-    });
-
-    // 1.2 Controllo immediato all'avvio (gestisce il caricamento iniziale)
-    (async () => {
-        // Forza Supabase a leggere i token nell'hash URL immediatamente.
-        const { data: { session } } = await supabase.auth.getSession();
-
-        // Se la sessione è valida e l'URL ha l'hash (il link non è stato usato in modo diretto)
-        if (session && window.location.hash.includes('access_token')) {
-            activateResetForm();
-        } else if (!window.location.hash) {
-            // L'utente è arrivato sulla pagina senza token
-            msgElement.textContent = 'Per reimpostare la password, usa il link che ti abbiamo inviato via email.';
-            formElement.classList.add('hidden');
-        }
-    })();
-
-
-    // ----------------------------------------------------
     // 2. Logica di Aggiornamento Password
-    // ----------------------------------------------------
     formElement.addEventListener('submit', async (e) => {
       e.preventDefault();
       const newPassword = newPasswordInput.value;
@@ -125,29 +109,32 @@
           return;
       }
       
-      // ✅ CRUCIALE: Controlla che una sessione sia attiva prima di chiamare updateUser
+      // Controlla la sessione UN'ULTIMA VOLTA prima della chiamata critica.
       const { data: { session } } = await supabase.auth.getSession();
-
+      
       if (!session) {
-          // Questo gestisce il caso in cui il token sia scaduto al momento del submit
-          msgElement.textContent = 'Errore: Sessione di reset non valida. Richiedi un nuovo link.';
+          msgElement.textContent = 'Errore di sessione. Il link è scaduto o è stato utilizzato. Riprova.';
           formElement.classList.add('hidden');
           return;
       }
 
+      // Chiama l'aggiornamento solo se la sessione è attiva
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       
       if (error) {
         document.getElementById('msg').textContent = 'Errore aggiornamento: ' + error.message;
       } else {
-        document.getElementById('msg').textContent = '✅ Password aggiornata! Sarai reindirizzato al login principale.';
+        document.getElementById('msg').textContent = '✅ Password aggiornata! Sarai reindirizzato al login.';
         formElement.classList.add('hidden');
-         // Reindirizza al login principale dopo 3 secondi
+         // Reindirizza al login principale
          setTimeout(() => {
              window.location.href = REDIRECT_HOME; 
          }, 3000);
       }
     });
+
+    // Avvia il flusso di reset al caricamento della pagina
+    initResetFlow();
   </script>
 </body>
 </html>
