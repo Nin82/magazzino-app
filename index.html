@@ -187,7 +187,7 @@ tr:hover { background-color:#eff6ff; }
 
 <!-- ====================== AUTENTICAZIONE MULTI-MAGAZZINO ====================== -->
 <div id="auth-container" style="max-width:400px;margin:50px auto;background:white;padding:20px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.1)">
-  <h2>🔐 Accesso al Magazzino 6</h2>
+  <h2>🔐 Accesso al Magazzino 7</h2>
 
   <!-- LOGIN -->
   <form id="login-form">
@@ -578,23 +578,27 @@ document.getElementById('back-login-from-reset').addEventListener('click', () =>
 // === RESET PASSWORD ===
 document.getElementById('reset-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  
+
   const email = document.getElementById('reset-email').value.trim();
   if (!email) return showNotification('Inserisci la tua email', 'error');
 
-  // Il redirect deve essere la tua pagina reset.html
-  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-    emailRedirectTo: 'https://nin82.github.io/magazzino-app/reset.html',
-  });
+  try {
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      // Deve puntare alla tua pagina reset.html
+      emailRedirectTo: 'https://nin82.github.io/magazzino-app/reset.html',
+    });
 
-  if (error) {
-    console.error('Errore reset:', error);
-    showNotification('Errore invio reset: ' + error.message, 'error');
-  } else {
+    if (error) throw error;
+
     console.log('Reset email inviata:', data);
     showNotification('📧 Email inviata! Controlla la tua casella di posta.', 'success');
+
     document.getElementById('reset-form').classList.add('hidden');
     document.getElementById('login-form').classList.remove('hidden');
+
+  } catch (err) {
+    console.error('Errore reset:', err);
+    showNotification('Errore invio reset: ' + err.message, 'error');
   }
 });
 
@@ -1465,6 +1469,7 @@ document.getElementById('stop-qr').addEventListener('click', stopQRScanner);
 <script type="module" src="main.js"></script>
 </body>
 </html>
+
 
 
 
