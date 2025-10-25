@@ -187,7 +187,7 @@ tr:hover { background-color:#eff6ff; }
 
 <!-- ====================== AUTENTICAZIONE MULTI-MAGAZZINO ====================== -->
 <div id="auth-container" style="max-width:400px;margin:50px auto;background:white;padding:20px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.1)">
-<h2>🔐 Accesso al Magazzino</h2>
+<h2>🔐 Accesso al Magazzino1</h2>
   
   <form id="login-form">
     <label>Email:</label>
@@ -473,17 +473,18 @@ authContainer.style.display = 'block';
 const isRecovery = window.location.hash.includes('type=recovery');
 
 
+
+/ ====================== CREAZIONE ELEMENTO LOGOUT NEL DOM ======================
+// (Usa questo titolo per identificare il blocco, se vuoi)
+
 const logoutBtn = document.createElement('button');
 logoutBtn.textContent = 'Logout';
 logoutBtn.className = 'btn-secondary'; 
 logoutBtn.id = 'logout-btn';
-
-// ✅ POSIZIONAMENTO FISSO (CSS): Mettiamo il bottone in alto a destra fuori dal flusso
+// ✅ POSIZIONAMENTO FISSO: Sovrappone tutto e garantisce la visibilità.
 logoutBtn.style.cssText = 'position: fixed; top: 24px; right: 24px; z-index: 1000;'; 
 logoutBtn.style.display = 'none'; // Nascondi all'avvio
-
-// ✅ AGGIUNGI AL BODY (Il punto più sicuro per evitare errori di timing)
-document.body.appendChild(logoutBtn);
+document.body.appendChild(logoutBtn); // Aggiungi al BODY
 
 // ====================== 1. FUNZIONI DI VISUALIZZAZIONE (DEVONO ESSERE QUI) ======================
 
@@ -664,9 +665,11 @@ document.getElementById('logout-btn')?.addEventListener('click', async () => {
     location.reload(); 
 });
 
-// ====================== 4. LISTENERS SECONDARI (TOGGLE E RESET) ======================
+// ===============================================
+// 4. CONTINUAZIONE: LISTENER SECONDARI (TOGGLE E RESET)
+// ===============================================
 
-// === TOGGLE tra login e registrazione ===
+// === TOGGLE tra login e registrazione ("Registrati" e "Torna al Login") ===
 document.getElementById('show-register').addEventListener('click', () => {
     document.getElementById('login-form').classList.add('hidden');
     document.getElementById('register-form').classList.remove('hidden');
@@ -696,7 +699,6 @@ document.getElementById('reset-password-form').addEventListener('submit', async 
     document.getElementById('reset-password-form').querySelector('button[type="submit"]').textContent = 'Invio in corso...';
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        // Usa lo stesso URL di reindirizzamento della registrazione
         redirectTo: 'https://nin82.github.io/magazzino-app/' 
     });
 
@@ -712,28 +714,10 @@ document.getElementById('reset-password-form').addEventListener('submit', async 
     document.getElementById('login-form').classList.remove('hidden');
 });
 
-// === GESTIONE CAMBIO PASSWORD DOPO REINDIRIZZAMENTO EMAIL ===
-// Questo listener era già nel tuo file, assicurati che sia presente per completare il flusso di reset!
+// === GESTIONE CAMBIO PASSWORD DOPO REINDIRIZZAMENTO EMAIL (update-password-form) ===
 document.getElementById('update-password-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const newPassword = document.getElementById('new-password-input').value.trim();
-    const msgEl = document.getElementById('reset-msg');
-
-    if (newPassword.length < 6) {
-        msgEl.textContent = 'La password deve avere almeno 6 caratteri.';
-        return;
-    }
-
-    msgEl.textContent = '⏳ Aggiornamento in corso...';
-
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-
-    if (error) {
-        msgEl.textContent = '❌ Errore: ' + error.message;
-    } else {
-        msgEl.textContent = '✅ Password aggiornata! Accesso effettuato.';
-        // onAuthStateChange gestirà l'apertura dell'app in base alla nuova sessione
-    }
+    // ... (Mantieni la logica interna come l'abbiamo definita)
 });
 
 // ... (Incolla qui tutti gli altri listeners: toggle login/register, reset password, etc.)
