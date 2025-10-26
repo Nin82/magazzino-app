@@ -458,314 +458,233 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 
-// ====================== VARIABILI GLOBALI E INIZIALIZZAZIONE UI ======================
-// ✅ VARIABILE GLOBALE ESSENZIALE PER IL MULTI-TENANT
-let currentTenantId = null; 
+// ====================== VARIABILI GLOBALI E INIZIALIZZAZIONE ======================
+let currentTenantId = null;
 
 const authContainer = document.getElementById('auth-container');
 const appSections = document.querySelectorAll(
-    '.tab-container, [role="tabpanel"], h1, hr, .controls-container, #full-log-container'
+  '.tab-container, [role="tabpanel"], h1, hr, .controls-container, #full-log-container'
 );
-// Forza l'avvio con l'app nascosta e il login visibile
-appSections.forEach(el => el.style.display = 'none'); 
-authContainer.style.display = 'block'; 
+
+// Nascondi app, mostra login
+appSections.forEach(el => el.style.display = 'none');
+authContainer.style.display = 'block';
 
 const isRecovery = window.location.hash.includes('type=recovery');
 
-
-
-// ====================== CREAZIONE ELEMENTO LOGOUT NEL DOM ======================
-// (Usa questo titolo per identificare il blocco, se vuoi)
-
+// ====================== LOGOUT BUTTON ======================
 const logoutBtn = document.createElement('button');
 logoutBtn.textContent = 'Logout';
-logoutBtn.className = 'btn-secondary'; 
+logoutBtn.className = 'btn-secondary';
 logoutBtn.id = 'logout-btn';
-// ✅ POSIZIONAMENTO FISSO: Sovrappone tutto e garantisce la visibilità.
-logoutBtn.style.cssText = 'position: fixed; top: 24px; right: 24px; z-index: 1000;'; 
-logoutBtn.style.display = 'none'; // Nascondi all'avvio
-document.body.appendChild(logoutBtn); // Aggiungi al BODY
+logoutBtn.style.cssText = 'position: fixed; top: 24px; right: 24px; z-index: 1000;';
+logoutBtn.style.display = 'none';
+document.body.appendChild(logoutBtn);
 
-// ====================== 1. FUNZIONI DI VISUALIZZAZIONE (DEVONO ESSERE QUI) ======================
-
-// === Nasconde app e mostra login ===
+// ====================== FUNZIONI UI ======================
 function hideApp() {
-    appSections.forEach(el => el.style.display = 'none');
-    authContainer.style.display = 'block'; 
-    currentTenantId = null; 
-    if (document.querySelector('h1')) {
-        document.querySelector('h1').innerHTML = '📦 Gestione Magazzino Completo';
-    }
+  appSections.forEach(el => (el.style.display = 'none'));
+  authContainer.style.display = 'block';
+  currentTenantId = null;
+  const titleEl = document.querySelector('h1');
+  if (titleEl) titleEl.textContent = '📦 Gestione Magazzino Completo';
 }
 
-// === Mostra app dopo login e imposta il Magazzino (Multi-Tenant) ===
 async function showApp() {
-const { data } = await supabase.auth.getUser();
-const user = data?.user;    
+  const { data } = await supabase.auth.getUser();
+  const user = data?.user;
+  if (!user) return hideApp();
 
-    if (user) {
-        // Logica per recuperare il tenant_id
-        const { data: tenantData, error: tenantError } = await supabase
-            .from('utenti_magazzino')
-            .select('tenant_id')
-            .eq('user_id', user.id)
-            .maybeSingle(); 
+  // Recupera tenant_id mapping
+  const { data: tenantData, error: tenantError } = await supabase
+    .from('utenti_magazzino')
+    .select('tenant_id')
+    .eq('user_id', user.id)
+    .maybeSingle();
 
-        if (tenantError || !tenantData || !tenantData.tenant_id) {
-            console.error('❌ ID magazzino non trovato. Eseguo logout.');
-            await supabase.auth.signOut();
-            return;
-        }
+  if (tenantError || !tenantData?.tenant_id) {
+    console.error('❌ ID magazzino non trovato. Eseguo logout.');
+    await supabase.auth.signOut();
+    return;
+  }
 
-        currentTenantId = tenantData.tenant_id;
-        
-        // Aggiorna UI: NASCONDE LOGIN, MOSTRA APP
-        authContainer.style.display = 'none'; 
-        appSections.forEach(el => el.style.display = '');
+  currentTenantId = tenantData.tenant_id;
 
-        // Aggiorna titolo
-        const { data: whData } = await supabase
-            .from('tenants')
-            .select('name')
-            .eq('id', currentTenantId)
-            .maybeSingle();
-        const titleElement = document.querySelector('h1');
-        if (titleElement) {
-            const whName = whData ? whData.name : 'Magazzino';
-            titleElement.innerHTML = `📦 Gestione Magazzino - ${whName}`;
-        }
-    }
-    
-    // Aggiorna i dati se la funzione esiste (Usa currentTenantId)
-    if (typeof refreshAll === 'function') {
-        await refreshAll();
-    }
+  // Mostra app
+  authContainer.style.display = 'none';
+  appSections.forEach(el => (el.style.display = ''));
+  logoutBtn.style.display = 'block';
+
+  // Aggiorna titolo con nome magazzino
+  const { data: whData } = await supabase
+    .from('tenants')
+    .select('name')
+    .eq('id', currentTenantId)
+    .maybeSingle();
+
+  const titleElement = document.querySelector('h1');
+  if (titleElement) {
+    const whName = whData?.name || 'Magazzino';
+    titleElement.textContent = `📦 Gestione Magazzino - ${whName}`;
+  }
+
+  // Refresh dati
+  if (typeof refreshAll === 'function') await refreshAll();
 }
 
-
-// ====================== 2. LISTENER DI STATO SUPABASE (DEVE SEGUIRE LE FUNZIONI) ======================
-
+// ====================== SUPABASE AUTH STATE ======================
 supabase.auth.onAuthStateChange(async (event, session) => {
-    
-    // 💡 1. Gestione del Recupero Password (Priorità Assoluta)
-    if (isRecovery || event === 'PASSWORD_RECOVERY') {
-        // Logica che mostra il form di update password
-        document.getElementById('login-form').classList.add('hidden');
-        document.getElementById('register-form').classList.add('hidden');
-        document.getElementById('reset-password-form').classList.add('hidden');
-        document.getElementById('update-password-form').classList.remove('hidden');
-        document.getElementById('reset-msg').textContent = 'Sei in modalità di recupero. Inserisci la tua nuova password.';
-        
-        authContainer.style.display = 'block';
-        appSections.forEach(el => el.style.display = 'none');
-        
-        return; 
-    }
-
-    // 💡 2. Gestione della Sessione Normale (Logica Multi-Tenant)
-    if (session) {
-        // Logica CRITICA di creazione magazzino dopo la conferma email
-        const pendingData = localStorage.getItem('pending_tenant_data');
-        if (pendingData) {
-            const { tenant_id, warehouse_name } = JSON.parse(pendingData);
-            
-            await supabase.from('utenti_magazzino').insert([{ user_id: session.user.id, tenant_id: tenant_id }]);
-            await supabase.from('tenants').insert([{ id: tenant_id, name: warehouse_name }]);
-
-            localStorage.removeItem('pending_tenant_data');
-            showNotification(`✅ Magazzino "${warehouse_name}" creato con successo!`, 'info');
-        }
-
-        // Procede con l'apertura dell'app
-        showApp();
-    } else {
-        // Nessuna sessione attiva (DISCONNESSIONE)
-        
-        // ✅ CHIAMATA ESSENZIALE
-        hideApp(); 
-
-        // Mostra il login e nasconde gli altri form
-        document.getElementById('login-form').classList.remove('hidden');
-        document.getElementById('reset-password-form').classList.add('hidden');
-        document.getElementById('update-password-form').classList.add('hidden');
-        document.getElementById('register-form').classList.add('hidden'); 
-    }
-});
-
-
-// ====================== 3. LISTENER DEI FORM (DOPO IL LISTENER DI STATO) ======================
-
-// === LOGIN ===
-document.getElementById('login-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    
-    document.getElementById('login-form').querySelector('button').textContent = 'Accesso in corso...';
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    document.getElementById('login-form').querySelector('button').textContent = 'Login';
-
-    if (error) return showNotification('Errore login: ' + error.message, 'error');
-    
-    // showApp verrà chiamata dal listener onAuthStateChange (o da qui per sicurezza)
-    showApp(); 
-});
-
-// === GESTIONE REGISTRAZIONE UTENTE e CREAZIONE MAGAZZINO ===
-document.getElementById('register-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    // 🛑 VERIFICA: Questi ID devono corrispondere ai campi nel tuo HTML.
-    const email = document.getElementById('reg-email').value.trim();
-    const password = document.getElementById('reg-password').value.trim();
-    const warehouse = document.getElementById('warehouse-name').value.trim(); 
-    
-    const msgEl = document.getElementById('register-form').querySelector('.btn-action');
-    
-    // Generazione di un ID magazzino univoco
-    const tenant_id = 'wh-' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5); 
-
-    msgEl.textContent = '⏳ Registrazione in corso...';
-    
-    // 1. SALVATAGGIO TEMPORANEO DEI DATI
-    localStorage.setItem('pending_tenant_data', JSON.stringify({
-        tenant_id: tenant_id,
-        warehouse_name: warehouse
-    }));
-
-    // 2. CREA UTENTE SU SUPABASE AUTH (Questa è la riga che mancava o falliva)
-    const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-            emailRedirectTo: 'https://nin82.github.io/magazzino-app/', 
-        }
-    }); 
-    
-    msgEl.textContent = 'Crea Account'; 
-    
-    // 3. Gestione Risposta Auth
-    if (error) {
-        localStorage.removeItem('pending_tenant_data'); 
-        return showNotification('❌ Errore registrazione: ' + error.message, 'error');
-    }
-    
-    // 4. L'utente è stato creato. Ora aspetta la conferma email.
-    showNotification(`✅ Registrazione completata! Verifica la tua email (${email}).`, 'success');
-
-    // 5. Passa al form di login
-    document.getElementById('register-form').classList.add('hidden');
-    document.getElementById('login-form').classList.remove('hidden');
-});
-
-
-
-// === LOGOUT ===
-document.getElementById('logout-btn')?.addEventListener('click', async () => {
-    await supabase.auth.signOut();
-    location.reload(); 
-});
-
-// ===============================================
-// 4. CONTINUAZIONE: LISTENER SECONDARI (TOGGLE E RESET)
-// ===============================================
-
-// === TOGGLE tra login e registrazione ("Registrati" e "Torna al Login") ===
-document.getElementById('show-register').addEventListener('click', () => {
+  if (isRecovery || event === 'PASSWORD_RECOVERY') {
     document.getElementById('login-form').classList.add('hidden');
-    document.getElementById('register-form').classList.remove('hidden');
+    document.getElementById('register-form').classList.add('hidden');
+    document.getElementById('reset-password-form').classList.add('hidden');
+    document.getElementById('update-password-form').classList.remove('hidden');
+    document.getElementById('reset-msg').textContent =
+      'Sei in modalità di recupero. Inserisci la tua nuova password.';
+    authContainer.style.display = 'block';
+    appSections.forEach(el => (el.style.display = 'none'));
+    return;
+  }
+
+  if (session) {
+    // Gestione creazione nuovo tenant da registrazione
+    const pendingData = localStorage.getItem('pending_tenant_data');
+    if (pendingData) {
+      const { tenant_id, warehouse_name } = JSON.parse(pendingData);
+      await supabase.from('tenants').upsert([{ id: tenant_id, name: warehouse_name }], {
+        onConflict: 'id',
+      });
+      await supabase
+        .from('utenti_magazzino')
+        .upsert([{ user_id: session.user.id, tenant_id: tenant_id }], { onConflict: 'user_id' });
+
+      localStorage.removeItem('pending_tenant_data');
+      showNotification(`✅ Magazzino "${warehouse_name}" creato con successo!`, 'info');
+    }
+
+    showApp();
+  } else {
+    hideApp();
+    document.getElementById('login-form').classList.remove('hidden');
+    document.getElementById('reset-password-form').classList.add('hidden');
+    document.getElementById('update-password-form').classList.add('hidden');
+    document.getElementById('register-form').classList.add('hidden');
+  }
+});
+
+// ====================== FORM LISTENER ======================
+// LOGIN
+document.getElementById('login-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value.trim();
+
+  const btn = document.getElementById('login-form').querySelector('button');
+  btn.textContent = 'Accesso in corso...';
+
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  btn.textContent = 'Login';
+  if (error) return showNotification('Errore login: ' + error.message, 'error');
+
+  showApp();
+});
+
+// REGISTRAZIONE UTENTE E MAGAZZINO
+document.getElementById('register-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const email = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value.trim();
+  const warehouse = document.getElementById('warehouse-name').value.trim();
+  const btn = document.getElementById('register-form').querySelector('.btn-action');
+
+  const tenant_id = 'wh-' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
+  localStorage.setItem('pending_tenant_data', JSON.stringify({ tenant_id, warehouse_name: warehouse }));
+
+  btn.textContent = '⏳ Registrazione in corso...';
+
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { emailRedirectTo: window.location.href },
+  });
+
+  btn.textContent = 'Crea Account';
+  if (error) {
+    localStorage.removeItem('pending_tenant_data');
+    return showNotification('❌ Errore registrazione: ' + error.message, 'error');
+  }
+
+  showNotification(`✅ Registrazione completata! Verifica la tua email (${email}).`, 'success');
+  document.getElementById('register-form').classList.add('hidden');
+  document.getElementById('login-form').classList.remove('hidden');
+});
+
+// LOGOUT
+document.getElementById('logout-btn').addEventListener('click', async () => {
+  await supabase.auth.signOut();
+  location.reload();
+});
+
+// TOGGLE LOGIN / REGISTER
+document.getElementById('show-register').addEventListener('click', () => {
+  document.getElementById('login-form').classList.add('hidden');
+  document.getElementById('register-form').classList.remove('hidden');
 });
 document.getElementById('back-login').addEventListener('click', () => {
-    document.getElementById('register-form').classList.add('hidden');
-    document.getElementById('login-form').classList.remove('hidden');
+  document.getElementById('register-form').classList.add('hidden');
+  document.getElementById('login-form').classList.remove('hidden');
 });
 
-// === MOSTRA / NASCONDI FORM RESET (Link "Password dimenticata?") ===
-document.getElementById('forgot-password-link').addEventListener('click', (e) => {
-    e.preventDefault();
-    document.getElementById('login-form').classList.add('hidden');
-    document.getElementById('register-form').classList.add('hidden');
-    document.getElementById('reset-password-form').classList.remove('hidden');
+// RESET PASSWORD
+document.getElementById('forgot-password-link').addEventListener('click', e => {
+  e.preventDefault();
+  document.getElementById('login-form').classList.add('hidden');
+  document.getElementById('register-form').classList.add('hidden');
+  document.getElementById('reset-password-form').classList.remove('hidden');
 });
-
 document.getElementById('back-login-from-reset').addEventListener('click', () => {
-    document.getElementById('reset-password-form').classList.add('hidden');
-    document.getElementById('login-form').classList.remove('hidden');
+  document.getElementById('reset-password-form').classList.add('hidden');
+  document.getElementById('login-form').classList.remove('hidden');
+});
+document.getElementById('reset-password-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const email = document.getElementById('reset-email').value.trim();
+  const btn = document.getElementById('reset-password-form').querySelector('button[type="submit"]');
+  btn.textContent = 'Invio in corso...';
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.href });
+  btn.textContent = 'Invia Link di Reset';
+  if (error) return showNotification('Errore: ' + error.message, 'error');
+  showNotification('✅ Link di reset inviato. Controlla la tua email!', 'success');
+  document.getElementById('reset-password-form').classList.add('hidden');
+  document.getElementById('login-form').classList.remove('hidden');
 });
 
-// === RESET PASSWORD CON SUPABASE (Invio email di reset) ===
-document.getElementById('reset-password-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('reset-email').value;
-    document.getElementById('reset-password-form').querySelector('button[type="submit"]').textContent = 'Invio in corso...';
-
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'https://nin82.github.io/magazzino-app/' 
-    });
-
-    document.getElementById('reset-password-form').querySelector('button[type="submit"]').textContent = 'Invia Link di Reset';
-
-    if (error) {
-        showNotification('Errore: ' + error.message, 'error');
-        return;
-    }
-
-    showNotification('✅ Link di reset inviato. Controlla la tua email!', 'success');
-    document.getElementById('reset-password-form').classList.add('hidden');
-    document.getElementById('login-form').classList.remove('hidden');
-});
-
-// === GESTIONE CAMBIO PASSWORD DOPO REINDIRIZZAMENTO EMAIL (update-password-form) ===
+// UPDATE PASSWORD
 window.addEventListener('DOMContentLoaded', () => {
-    const updateForm = document.getElementById('update-password-form');
-    const newPasswordInput = document.getElementById('new-password-input');
-    const confirmPasswordInput = document.getElementById('confirm-new-password-input'); // aggiunto
+  const updateForm = document.getElementById('update-password-form');
+  const newPasswordInput = document.getElementById('new-password-input');
+  const confirmPasswordInput = document.getElementById('confirm-new-password-input');
 
-    if (!updateForm || !newPasswordInput || !confirmPasswordInput) {
-        console.warn('⚠️ Form o campi update-password non trovati nel DOM.');
-        return;
-    }
+  if (!updateForm || !newPasswordInput || !confirmPasswordInput) return;
 
-    updateForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
+  updateForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const newPassword = newPasswordInput.value.trim();
+    const confirmPassword = confirmPasswordInput.value.trim();
 
-        const newPassword = newPasswordInput.value.trim();
-        const confirmPassword = confirmPasswordInput.value.trim();
+    if (!newPassword || !confirmPassword) return showNotification('Inserisci entrambe le password', 'error');
+    if (newPassword !== confirmPassword) return showNotification('Le password non corrispondono', 'error');
+    if (newPassword.length < 6) return showNotification('La password deve essere di almeno 6 caratteri', 'error');
 
-        if (!newPassword || !confirmPassword) {
-            showNotification('Inserisci entrambe le password', 'error');
-            return;
-        }
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) return showNotification('Errore durante il cambio password: ' + error.message, 'error');
 
-        if (newPassword !== confirmPassword) {
-            showNotification('Le password non corrispondono', 'error');
-            return;
-        }
-
-        if (newPassword.length < 6) {
-            showNotification('La password deve essere di almeno 6 caratteri', 'error');
-            return;
-        }
-
-        try {
-            const { data, error } = await supabase.auth.updateUser({ password: newPassword });
-
-            if (error) {
-                showNotification('Errore durante il cambio password: ' + error.message, 'error');
-                return;
-            }
-
-            showNotification('✅ Password aggiornata correttamente!', 'success');
-
-            updateForm.classList.add('hidden');
-            document.getElementById('login-form').classList.remove('hidden');
-
-            newPasswordInput.value = '';
-            confirmPasswordInput.value = '';
-        } catch (err) {
-            showNotification('Errore imprevisto: ' + err.message, 'error');
-        }
-    });
+    showNotification('✅ Password aggiornata correttamente!', 'success');
+    updateForm.classList.add('hidden');
+    document.getElementById('login-form').classList.remove('hidden');
+    newPasswordInput.value = '';
+    confirmPasswordInput.value = '';
+  });
 });
 
 
@@ -778,127 +697,107 @@ const scaricoQty = document.getElementById('scarico-qty');
 const notificationElement = document.getElementById('notification');
 let ignoreCaricoBarcodeListener = false;	
 
-// ================== AUTOCOMPLETE ARTICOLO SU CARICO ==================
+// ================== AUTOCOMPLETE ARTICOLO SU CARICO (MULTI-TENANT) ==================
 
-// Popola i suggerimenti del datalist in base al magazzino
+// Popola i suggerimenti del datalist in base al magazzino loggato (tenant)
 async function populateArticleSuggestions() {
-    const { data, error } = await supabase.from('magazzino').select('article');
-    if (error) {
-        console.error('Errore caricamento articoli:', error);
-        return;
-    }
+  try {
+    if (!currentTenantId) return; // Nessun tenant selezionato
+
+    const { data, error } = await supabase
+      .from('magazzino')
+      .select('article')
+      .eq('tenant_id', currentTenantId);
+
+    if (error) throw error;
 
     const datalist = document.getElementById('article-suggestions');
-    datalist.innerHTML = ''; // svuota
+    if (!datalist) return;
 
-    data.sort((a,b) => a.article.localeCompare(b.article))
-        .forEach(item => {
-            const option = document.createElement('option');
-            option.value = item.article;
-            datalist.appendChild(option);
-        });
+    datalist.innerHTML = ''; // svuota datalist
+
+    // Evita duplicati se ci sono articoli ripetuti
+    const uniqueArticles = [...new Set(data.map(a => a.article))];
+
+    uniqueArticles
+      .sort((a, b) => a.localeCompare(b))
+      .forEach(article => {
+        const option = document.createElement('option');
+        option.value = article;
+        datalist.appendChild(option);
+      });
+
+  } catch (err) {
+    console.error('Errore in populateArticleSuggestions():', err.message);
+  }
 }
 
-// Quando l’utente digita o seleziona un articolo
+// ================== LISTENER CARICO ARTICLE ==================
 caricoArticle.addEventListener('input', async () => {
-    const name = caricoArticle.value.trim();
-    const giacenzaDisplay = document.getElementById('carico-giacenza-display');
-    
-    // 🚨 RESET INIZIALE: Rimuovi readonly e svuota Barcode se l'utente sta modificando
-    caricoBarcode.removeAttribute('readonly');
-    if (!name) {
-        giacenzaDisplay.textContent = '';
-        caricoBarcode.value = '';
-        return;
-    }
+  const name = caricoArticle.value.trim();
+  const giacenzaDisplay = document.getElementById('carico-giacenza-display');
+  const barcodeInput = caricoBarcode;
 
-    const { data: existing } = await supabase
-        .from('magazzino')
-        .select('barcode, quantity')
-        .eq('article', name)
-        .maybeSingle();
+  barcodeInput.removeAttribute('readonly');
 
-    if (existing) 
-    {
-        // Se esiste, aggiorna barcode solo se campo vuoto
-        if (!caricoBarcode.value || caricoBarcode.value === existing.barcode) {
-            caricoBarcode.value = existing.barcode;
-            // 🚨 AGGIUNTA CHIAVE: Blocca il campo Barcode in sola lettura
-            caricoBarcode.setAttribute('readonly', true);
-        }
-        giacenzaDisplay.textContent = `Giacenza Attuale: ${existing.quantity} unità`;
-    } else {
-        // Nuovo articolo
-        // 🚨 AGGIUNTA: Rimuove readonly per permettere l'inserimento manuale del barcode
-        caricoBarcode.removeAttribute('readonly'); 
-        if (!caricoBarcode.value) caricoBarcode.value = ''; 
-        giacenzaDisplay.textContent = 'Nuovo Articolo (Giacenza: 0)';
-    }
-});
+  if (!name) {
+    giacenzaDisplay.textContent = '';
+    barcodeInput.value = '';
+    return;
+  }
 
-// 🔽 nuovo elemento select per lo scarico
-const scaricoArticle = document.getElementById('scarico-article');
+  try {
+    if (!currentTenantId) return;
 
-// Autocompila l’articolo quando inserisci o scanni un barcode
-scaricoBarcode.addEventListener('input', async () => {
-    const code = scaricoBarcode.value.trim();
-    if (!code) {
-        document.getElementById('scarico-giacenza-display').textContent = '';
-        // ➡️ FIX: Resetta anche la select se l'input è vuoto
-        scaricoArticle.value = '';
-        return;
-    }
-   
-    // 1. Tenta di trovare il barcode in magazzino
     const { data: existing, error } = await supabase
-        .from('magazzino')
-        .select('article')
-        .eq('barcode', code)
-        .maybeSingle();
+      .from('magazzino')
+      .select('barcode, quantity')
+      .eq('article', name)
+      .eq('tenant_id', currentTenantId)
+      .maybeSingle();
+
+    if (error) throw error;
 
     if (existing) {
-        // ➡️ FIX: Se esiste, imposta il valore della select al barcode
-        // La select usa il barcode come valore, quindi questo funziona
-        scaricoArticle.value = code;
+      // Articolo già presente → autocompila barcode e blocca input
+      if (!barcodeInput.value || barcodeInput.value === existing.barcode) {
+        barcodeInput.value = existing.barcode;
+        barcodeInput.setAttribute('readonly', true);
+      }
+      giacenzaDisplay.textContent = `Giacenza Attuale: ${existing.quantity} unità`;
+      giacenzaDisplay.style.color = '#4f46e5';
     } else {
-        scaricoArticle.value = ''; 
+      // Nuovo articolo
+      barcodeInput.removeAttribute('readonly');
+      barcodeInput.value = '';
+      giacenzaDisplay.textContent = 'Nuovo Articolo (Giacenza: 0)';
+      giacenzaDisplay.style.color = '#6b7280';
     }
 
-    // 2. Aggiorna la giacenza
-    getAndDisplayStock(code, 'scarico-giacenza-display', 'scarico');
+  } catch (err) {
+    console.error('Errore caricamento articolo:', err.message);
+    giacenzaDisplay.textContent = '❌ Errore caricamento dati';
+    giacenzaDisplay.style.color = '#ef4444';
+  }
 });
 
-// Autocompila barcode quando si seleziona un articolo dalla select Scarico
-scaricoArticle.addEventListener('change', async () => {
-    const barcode = scaricoArticle.value;
+// ================== AUTOCOMPLETE SCARICO (MULTI-TENANT) ==================
 
-    // Controllo che il barcode esista ancora in magazzino
-    if (barcode) {
-        const { data: existing, error } = await supabase
-            .from('magazzino')
-            .select('barcode')
-            .eq('barcode', barcode)
-            .maybeSingle();
+const scaricoArticle = document.getElementById('scarico-article');
 
-        scaricoBarcode.value = (existing && existing.barcode) || '';
-    } else {
-        scaricoBarcode.value = '';
-    }
-    
-    // ➡️ AGGIORNA LA GIACENZA
-    getAndDisplayStock(barcode, 'scarico-giacenza-display', 'scarico');
-});
-
-// ================== FUNZIONI SUPPORTO ==================
-
-// Popola la tendina con gli articoli presenti nel magazzino
+// 🔹 Popola la select con articoli del magazzino loggato (tenant)
 async function populateScaricoArticles() {
-  const { data, error } = await supabase.from('magazzino').select('article, barcode');
+  if (!currentTenantId) return;
+
+  const { data, error } = await supabase
+    .from('magazzino')
+    .select('article, barcode')
+    .eq('tenant_id', currentTenantId);
 
   scaricoArticle.innerHTML = '<option value="">-- Seleziona Articolo --</option>';
 
   if (error) {
-    console.error('Errore caricamento articoli:', error);
+    console.error('Errore caricamento articoli scarico:', error);
     return;
   }
 
@@ -907,202 +806,412 @@ async function populateScaricoArticles() {
       .sort((a, b) => a.article.localeCompare(b.article))
       .forEach(item => {
         const opt = document.createElement('option');
-        opt.value = item.barcode;
+        opt.value = item.barcode; // usa barcode come value
         opt.textContent = item.article;
+        opt.dataset.barcode = item.barcode; // utile per future referenze
         scaricoArticle.appendChild(opt);
       });
   }
 }
 
+// 🔹 Quando inserisci o scanni un barcode → compila articolo + giacenza
+scaricoBarcode.addEventListener('input', async () => {
+  const code = scaricoBarcode.value.trim();
+  const giacenzaDisplay = document.getElementById('scarico-giacenza-display');
 
+  if (!code) {
+    scaricoArticle.value = '';
+    giacenzaDisplay.textContent = '';
+    return;
+  }
 
-// ================== FUNZIONI SUPPORT (Nuova) ==================
+  if (!currentTenantId) return;
 
+  const { data, error } = await supabase
+    .from('magazzino')
+    .select('article, quantity')
+    .eq('tenant_id', currentTenantId)
+    .eq('barcode', code)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Errore ricerca barcode:', error);
+    return;
+  }
+
+  if (data) {
+    scaricoArticle.value = data.barcode;
+    giacenzaDisplay.textContent = `Giacenza Attuale: ${data.quantity} unità`;
+  } else {
+    scaricoArticle.value = '';
+    giacenzaDisplay.textContent = '❌ Articolo non trovato in magazzino';
+  }
+});
+
+// 🔹 Quando selezioni un articolo dalla select → compila barcode + giacenza
+scaricoArticle.addEventListener('change', async () => {
+  const barcode = scaricoArticle.value;
+  const giacenzaDisplay = document.getElementById('scarico-giacenza-display');
+
+  if (!barcode) {
+    scaricoBarcode.value = '';
+    giacenzaDisplay.textContent = '';
+    return;
+  }
+
+  if (!currentTenantId) return;
+
+  const { data, error } = await supabase
+    .from('magazzino')
+    .select('barcode, quantity')
+    .eq('tenant_id', currentTenantId)
+    .eq('barcode', barcode)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Errore caricamento dati articolo:', error);
+    return;
+  }
+
+  if (data) {
+    scaricoBarcode.value = data.barcode;
+    giacenzaDisplay.textContent = `Giacenza Attuale: ${data.quantity} unità`;
+  } else {
+    scaricoBarcode.value = '';
+    giacenzaDisplay.textContent = '❌ Articolo non trovato';
+  }
+});
+
+// ================== FUNZIONI SUPPORTO SCARICO (MULTI-TENANT) ==================
+async function populateScaricoArticles() {
+  try {
+    if (!currentTenantId) return; // Assicurati che il tenant sia selezionato
+
+    const scaricoArticle = document.getElementById('scarico-article');
+    if (!scaricoArticle) return;
+
+    scaricoArticle.innerHTML = '<option value="">-- Seleziona Articolo --</option>';
+
+    // ✅ Filtra per tenant (magazzino) loggato
+    const { data, error } = await supabase
+      .from('magazzino')
+      .select('article, barcode')
+      .eq('tenant_id', currentTenantId);
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      console.warn('Nessun articolo trovato per questo magazzino.');
+      return;
+    }
+
+    // Evita duplicati nel caso di articoli ripetuti
+    const unique = {};
+    data.forEach(item => {
+      if (!unique[item.article]) unique[item.article] = item.barcode;
+    });
+
+    // Ordina alfabeticamente e crea le opzioni
+    Object.keys(unique)
+      .sort((a, b) => a.localeCompare(b))
+      .forEach(articleName => {
+        const opt = document.createElement('option');
+        opt.value = articleName;                 // valore = nome articolo
+        opt.dataset.barcode = unique[articleName]; // memorizza barcode
+        opt.textContent = articleName;
+        scaricoArticle.appendChild(opt);
+      });
+
+  } catch (err) {
+    console.error('Errore in populateScaricoArticles():', err.message);
+  }
+}
+
+// ================== SUPPORTO ==================
 async function getAndDisplayStock(barcode, displayElementId, mode) {
     const displayElement = document.getElementById(displayElementId);
     if (!displayElement) return;
 
-    if (!barcode) {
-        displayElement.textContent = '';
-        return;
-    }
+    if (!barcode) { displayElement.textContent = ''; return; }
 
-    const { data: existing } = await supabase
-        .from('magazzino')
-        .select('quantity')
-        .eq('barcode', barcode)
-        .maybeSingle();
+    try {
+        const { data: userData } = await supabase.auth.getUser();
+        const user = userData?.user;
+        if (!user) throw new Error('Utente non autenticato');
 
-    if (existing) {
-        const qty = existing.quantity;
-        displayElement.textContent = `Giacenza Attuale: ${qty} unità`;
-    } else {
-        if (mode === 'carico') {
-            displayElement.textContent = 'NUOVO Articolo (Giacenza: 0)';
-        } else { // mode === 'scarico'
-            displayElement.textContent = 'Articolo NON in giacenza';
+        const { data: existing } = await supabase
+            .from('magazzino')
+            .select('quantity')
+            .eq('barcode', barcode)
+            .eq('tenant_id', currentTenantId)
+            .maybeSingle();
+
+        if (existing) {
+            const qty = existing.quantity;
+            displayElement.textContent = `Giacenza Attuale: ${qty} unità`;
+            displayElement.style.color = qty > 0 ? '#4f46e5' : '#ef4444';
+        } else {
+            displayElement.textContent = mode === 'carico' 
+                ? '🆕 Nuovo Articolo (Giacenza: 0)'
+                : '❌ Articolo NON in giacenza';
+            displayElement.style.color = mode === 'carico' ? '#6b7280' : '#ef4444';
         }
+    } catch (err) {
+        console.error('Errore getAndDisplayStock:', err);
+        displayElement.textContent = '❌ Errore nel caricamento giacenza';
+        displayElement.style.color = '#ef4444';
     }
 }
 
-// ================== NOTIFICHE ==================
-function showNotification(msg,type='info'){
+// ================== NOTIFICHE (versione migliorata) ==================
+let notificationTimeout;
+
+function showNotification(msg, type='info') {
+    const notificationElement = document.getElementById('notification');
+    if (!notificationElement) return;
+
     notificationElement.textContent = msg;
-    notificationElement.style.display='block';
-    notificationElement.style.backgroundColor = type==='success'?'#10b981': type==='error'?'#ef4444':'#4f46e5';
-    setTimeout(()=>{notificationElement.style.display='none'},3000);
-}
-
-// ================== FUNZIONI ==================
-async function addCarico(barcode, article, qty) {
-    const { data: existing, error } = await supabase
-        .from('magazzino')
-        .select('*')
-        .eq('barcode', barcode)
-        .maybeSingle(); // ✅ safer
-
-    if (error) {
-        console.error('Errore fetch magazzino:', error);
-        showNotification('Errore durante il caricamento del magazzino', 'error');
-        return;
-    }
-
-    if (existing) {
-        await supabase
-            .from('magazzino')
-            .update({ quantity: existing.quantity + qty })
-            .eq('barcode', barcode);
-    } else {
-        await supabase
-            .from('magazzino')
-            .insert([{ barcode, article, quantity: qty }]);
-    }
-
-    await supabase
-        .from('log_operazioni')
-        .insert([{ type: 'Carico', barcode, article, quantity: qty }]);
-
-    await trimLog(50);
-    showNotification(`Carico registrato: ${qty}x ${article}`, 'success');
-    await getAndDisplayStock(barcode, 'carico-giacenza-display', 'carico');
+    notificationElement.style.display = 'block';
+    notificationElement.style.padding = '10px';
+    notificationElement.style.borderRadius = '8px';
+    notificationElement.style.color = '#fff';
+    notificationElement.style.textAlign = 'center';
+    notificationElement.style.fontWeight = '500';
+    notificationElement.style.transition = 'opacity 0.3s ease';
+    notificationElement.style.backgroundColor =
+        type==='success' ? '#10b981' :
+        type==='error' ? '#ef4444' : '#4f46e5';
+    notificationElement.style.opacity = '1';
 
     setTimeout(() => {
-        const giacenzaDisplay = document.getElementById('carico-giacenza-display');
-        if (giacenzaDisplay) giacenzaDisplay.textContent = '';
-    }, 5000);
+        notificationElement.style.opacity = '0';
+        setTimeout(() => { notificationElement.style.display = 'none'; }, 300);
+    }, 3000);
+}
+
+// ================== FUNZIONI AGGIORNATE ==================
+
+async function addCarico(barcode, article, qty) {
+    try {
+        const { data: userData } = await supabase.auth.getUser();
+        const user = userData?.user;
+        if (!user) throw new Error('Utente non loggato');
+
+        const { data: existing } = await supabase
+            .from('magazzino')
+            .select('*')
+            .eq('barcode', barcode)
+            .eq('tenant_id', currentTenantId)
+            .maybeSingle();
+
+        if (existing) {
+            await supabase
+                .from('magazzino')
+                .update({ quantity: existing.quantity + qty })
+                .eq('barcode', barcode)
+                .eq('tenant_id', currentTenantId);
+        } else {
+            await supabase
+                .from('magazzino')
+                .insert([{ barcode, article, quantity: qty, tenant_id: currentTenantId }]);
+        }
+
+        await supabase
+            .from('log_operazioni')
+            .insert([{ type:'Carico', barcode, article, quantity: qty, tenant_id: currentTenantId }]);
+
+        await trimLog(50);
+        showNotification(`Carico registrato: ${qty}x ${article}`, 'success');
+        await getAndDisplayStock(barcode, 'carico-giacenza-display', 'carico');
+        setTimeout(() => { document.getElementById('carico-giacenza-display').textContent=''; }, 5000);
+
+    } catch(err) {
+        console.error('Errore addCarico:', err);
+        showNotification('Errore durante il caricamento del magazzino', 'error');
+    }
 }
 
 async function addScarico(barcode, qty) {
-    const { data: existing, error } = await supabase
-        .from('magazzino')
-        .select('*')
-        .eq('barcode', barcode)
-        .maybeSingle(); // ✅ più sicuro
+    try {
+        const { data: existing } = await supabase
+            .from('magazzino')
+            .select('*')
+            .eq('barcode', barcode)
+            .eq('tenant_id', currentTenantId)
+            .maybeSingle();
 
-    if (error) {
-        console.error('Errore fetch magazzino:', error);
+        if (!existing || existing.quantity < qty) {
+            showNotification("Errore: quantità insufficiente", 'error');
+            return;
+        }
+
+        const newQty = existing.quantity - qty;
+        await supabase
+            .from('magazzino')
+            .update({ quantity: newQty })
+            .eq('barcode', barcode)
+            .eq('tenant_id', currentTenantId);
+
+        await supabase
+            .from('log_operazioni')
+            .insert([{ type:'Scarico', barcode, article: existing.article, quantity: qty, tenant_id: currentTenantId }]);
+
+        await trimLog(50);
+        showNotification(`Scarico registrato: ${qty}x ${existing.article}`, 'success');
+        await getAndDisplayStock(barcode, 'scarico-giacenza-display', 'scarico');
+        setTimeout(() => { document.getElementById('scarico-giacenza-display').textContent=''; }, 5000);
+
+    } catch(err) {
+        console.error('Errore addScarico:', err);
         showNotification('Errore durante lo scarico', 'error');
-        return;
     }
-
-    if (!existing || existing.quantity < qty) {
-        showNotification("Errore: quantità insufficiente", 'error');
-        return;
-    }
-
-    const newQty = existing.quantity - qty;
-    await supabase.from('magazzino').update({ quantity: newQty }).eq('barcode', barcode);
-    await supabase
-        .from('log_operazioni')
-        .insert([{ type: 'Scarico', barcode, article: existing.article, quantity: qty }]);
-    await trimLog(50);
-    showNotification(`Scarico registrato: ${qty}x ${existing.article}`, 'success');
-
-    setTimeout(() => {
-        const giacenzaDisplay = document.getElementById('scarico-giacenza-display');
-        if (giacenzaDisplay) giacenzaDisplay.textContent = '';
-    }, 5000);
-
-    await getAndDisplayStock(barcode, 'scarico-giacenza-display', 'scarico');
 }
-// ================== FUNZIONI SUPPORTO ELIMINA 50 ==================
-async function trimLog(maxRecords = 50) {
-    // Conta quanti record ci sono
-    const { count } = await supabase
-        .from('log_operazioni')
-        .select('id', { count: 'exact' });
 
-    if (count > maxRecords) {
-        // Recupera gli ID più vecchi da eliminare
+// ================== FUNZIONI SUPPORTO ELIMINA 50 (Multi-Magazzino) ==================
+async function trimLog(maxRecords = 50) {
+    try {
+        const { data, count } = await supabase
+            .from('log_operazioni')
+            .select('id', { count: 'exact' })
+            .eq('tenant_id', currentTenantId);
+
+        if (!count || count <= maxRecords) return;
+
         const { data: oldRecords } = await supabase
             .from('log_operazioni')
             .select('id')
-            .order('date', { ascending: true }) // dal più vecchio
+            .eq('tenant_id', currentTenantId)
+            .order('date', { ascending: true })
             .limit(count - maxRecords);
 
+        if (!oldRecords || oldRecords.length === 0) return;
         const idsToDelete = oldRecords.map(r => r.id);
+        await supabase.from('log_operazioni').delete().in('id', idsToDelete);
+    } catch (err) {
+        console.error('Errore trimLog:', err);
+    }
+}
 
-        if (idsToDelete.length > 0) {
-            await supabase.from('log_operazioni').delete().in('id', idsToDelete);
-        }
+// ================== FUNZIONI DI SUPPORTO ==================
+
+async function getStockSummary() {
+    try {
+        const { data } = await supabase.from('magazzino').select('*').eq('tenant_id', currentTenantId);
+        return data || [];
+    } catch(err) {
+        console.error('Errore getStockSummary:', err);
+        return [];
+    }
+}
+
+async function getLog(filterType='Tutti', filterArticle='') {
+    try {
+        let query = supabase.from('log_operazioni').select('*').eq('tenant_id', currentTenantId).order('date', { ascending:false });
+        if (filterType.toLowerCase() !== 'tutti') query = query.eq('type', filterType);
+        if (filterArticle) query = query.ilike('article', `%${filterArticle}%`);
+        const { data } = await query;
+        return data || [];
+    } catch(err) {
+        console.error('Errore getLog:', err);
+        return [];
     }
 }
 
 
+// ================== FUNZIONI DI SUPPORTO MULTI-MAGAZZINO ==================
 
-async function getStockSummary(){ const { data } = await supabase.from('magazzino').select('*'); return data || []; }
-async function getLog(filterType='Tutti',filterArticle=''){ 
-    let query = supabase.from('log_operazioni').select('*').order('date',{ascending:false}); 
-    if(filterType!=='Tutti') query=query.eq('type',filterType); 
-    if(filterArticle) query=query.ilike('article',`%${filterArticle}%`);
-    const { data } = await query; return data || []; 
-}
-async function renderStockSummary(){
-    const tbody = document.querySelector('#stock-summary tbody');
-    const data = await getStockSummary();
-    tbody.innerHTML='';
-    // Aggiorna colspan a 4 per includere la colonna Azioni
-    if(data.length===0){tbody.innerHTML='<tr><td colspan="4" style="text-align:center;padding:20px">Nessun articolo in giacenza.</td></tr>'; return;} 
-    
-    data.sort((a,b)=>b.quantity-a.quantity).forEach(item=>{
-        const qtyClass = item.quantity<10?'qty-low':'';
-        const row = tbody.insertRow();
-        // 🚨 AGGIUNTA CHIAVE: La quarta cella con il pulsante "Elimina"
-        row.innerHTML=`<td>${item.article}</td><td>${item.barcode}</td><td class="qty-cell"><span class="${qtyClass}">${item.quantity}</span></td><td><button onclick="deleteStockRecord('${item.barcode}')" class="btn-danger btn-small">Elimina</button></td>`;
-    });
+async function getStockSummary() {
+    try {
+        if (!currentTenantId) {
+            console.warn('❌ getStockSummary: tenant non impostato');
+            return [];
+        }
+
+        const { data, error } = await supabase
+            .from('magazzino')
+            .select('*')
+            .eq('tenant_id', currentTenantId); // 🔹 Filtra per magazzino corrente
+
+        if (error) throw error;
+        return data || [];
+    } catch (err) {
+        console.error("Errore getStockSummary:", err);
+        return [];
+    }
 }
 
-async function renderTables(){
-    const typeFilter = document.getElementById('filter-type').value;
-    const articoloFilter = document.getElementById('filter-articolo').value.toLowerCase();
+async function getLog(filterType = 'Tutti', filterArticle = '') {
+    try {
+        if (!currentTenantId) {
+            console.warn('❌ getLog: tenant non impostato');
+            return [];
+        }
+
+        let query = supabase
+            .from('log_operazioni')
+            .select('*')
+            .eq('tenant_id', currentTenantId) // 🔹 Filtra per magazzino corrente
+            .order('date', { ascending: false });
+
+        if (filterType.toLowerCase() !== 'tutti') {
+            query = query.eq('type', filterType);
+        }
+        if (filterArticle) {
+            query = query.ilike('article', `%${filterArticle}%`);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        return data || [];
+    } catch (err) {
+        console.error("Errore getLog:", err);
+        return [];
+    }
+}
+
+async function renderTables() {
+    const typeFilter = document.getElementById('filter-type')?.value || 'Tutti';
+    const articoloFilter = (document.getElementById('filter-articolo')?.value || '').toLowerCase();
     const tbody = document.querySelector('#full-log tbody');
-    const data = await getLog(typeFilter,articoloFilter);
-    tbody.innerHTML='';
-    if(data.length===0){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:20px">Nessun risultato trovato.</td></tr>'; return;}
-    data.forEach(r=>{
-        const color = r.type==='Carico'?'#059669':'#dc2626';
-        const icon = r.type==='Carico'?'⬆️':'⬇️';
+    if (!tbody) return;
+
+    // Recupera log filtrati per magazzino corrente
+    const data = await getLog(typeFilter, articoloFilter);
+    tbody.innerHTML = '';
+
+    if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px">Nessun risultato trovato.</td></tr>';
+        return;
+    }
+
+    data.forEach(r => {
+        const color = r.type?.toLowerCase() === 'carico' ? '#059669' : '#dc2626';
+        const icon = r.type?.toLowerCase() === 'carico' ? '⬆️' : '⬇️';
         const tr = document.createElement('tr');
-        tr.innerHTML=`<td>${new Date(r.date).toLocaleString()}</td>
-                      <td style="color:${color};font-weight:bold">${icon} ${r.type}</td>
-                      <td>${r.barcode}</td>
-                      <td>${r.article}</td>
-                      <td>${r.quantity}</td>
-                      <td><button class="btn-delete" onclick="deleteRecord(${r.id})">❌ Annulla</button></td>`;
+        tr.innerHTML = `
+            <td>${new Date(r.date).toLocaleString()}</td>
+            <td style="color:${color};font-weight:bold">${icon} ${r.type}</td>
+            <td>${r.barcode}</td>
+            <td>${r.article}</td>
+            <td>${r.quantity}</td>
+            <td><button class="btn-delete" onclick="deleteRecord(${r.id})">❌ Annulla</button></td>
+        `;
         tbody.appendChild(tr);
     });
 }
-
 
 async function deleteRecord(id) {
     if (!confirm("Confermi l'eliminazione? Verrà ripristinata la giacenza.")) return;
 
     try {
+        // Recupera record log considerando solo il magazzino dell'utente
         const { data: logItem, error: logFetchError } = await supabase
             .from('log_operazioni')
             .select('*')
             .eq('id', id)
-            .maybeSingle(); // ✅ safer
+            .eq('tenant_id', currentTenantId) // ✅ filtro multi-magazzino
+            .maybeSingle();
 
         if (logFetchError) throw logFetchError;
         if (!logItem) {
@@ -1110,175 +1219,234 @@ async function deleteRecord(id) {
             return;
         }
 
+        // Recupera giacenza corrente solo nel magazzino corrente
         const { data: existing, error: existingError } = await supabase
             .from('magazzino')
             .select('article, quantity')
             .eq('barcode', logItem.barcode)
-            .maybeSingle(); // ✅ safer
+            .eq('tenant_id', currentTenantId) // ✅ filtro multi-magazzino
+            .maybeSingle();
 
         if (existingError) throw existingError;
 
-        const existingQty = existing ? existing.quantity : 0;
-        let newQty = logItem.type === 'CARICO'
+        const existingQty = existing?.quantity || 0;
+        const typeNormalized = logItem.type.toLowerCase();
+        const newQty = typeNormalized === 'carico'
             ? Math.max(existingQty - logItem.quantity, 0)
             : existingQty + logItem.quantity;
 
+        // Aggiorna quantità solo nel magazzino corrente
         const { error: upsertError } = await supabase
             .from('magazzino')
             .upsert(
-                { barcode: logItem.barcode, article: logItem.article, quantity: newQty },
-                { onConflict: 'barcode' }
+                { barcode: logItem.barcode, article: logItem.article, quantity: newQty, tenant_id: currentTenantId },
+                { onConflict: ['barcode', 'tenant_id'] } // ✅ upsert per multi-magazzino
             );
         if (upsertError) throw upsertError;
 
+        // Elimina record log solo nel magazzino corrente
         const { error: deleteError } = await supabase
             .from('log_operazioni')
             .delete()
-            .eq('id', id);
+            .eq('id', id)
+            .eq('tenant_id', currentTenantId);
         if (deleteError) throw deleteError;
 
-        showNotification(`✅ Movimento annullato. Giàcenza ripristinata a ${newQty}.`, 'success');
+        showNotification(`✅ Movimento annullato. Giacenza ripristinata a ${newQty}.`, 'success');
+
     } catch (e) {
-        showNotification(`❌ Errore durante l'annullamento: ${e.message}`, 'error');
+        console.error("Errore deleteRecord:", e);
+        showNotification(`❌ Errore durante l'annullamento: ${e.message || e}`, 'error');
     }
 
+    // Aggiorna UI
     await renderTables();
     await renderStockSummary();
-    await renderCharts();
-    await renderAndamentoGiornaliero();
+    await renderCharts?.();
+    await renderAndamentoGiornaliero?.();
 }
 
-async function resetDatabase(){
-    if(!confirm("ATTENZIONE: elimini TUTTO il database?")) return;
+async function resetDatabase() {
+    if (!confirm("ATTENZIONE: elimini TUTTO il magazzino corrente?")) return;
 
-    // Cancella prima log_operazioni
-    const { error: logError } = await supabase.from('log_operazioni').delete().neq('id',0);
-    if(logError) { showNotification("Errore cancellazione log: "+logError.message,'error'); return; }
+    if (!currentTenantId) {
+        showNotification("❌ Tenant non definito. Login richiesto.", 'error');
+        return;
+    }
 
-    // Cancella magazzino
-    const { error: stockError } = await supabase.from('magazzino').delete().neq('barcode','');
-    if(stockError) { showNotification("Errore cancellazione magazzino: "+stockError.message,'error'); return; }
+    try {
+        // Cancella log_operazioni solo per il tenant corrente
+        const { error: logError } = await supabase
+            .from('log_operazioni')
+            .delete()
+            .eq('tenant_id', currentTenantId);
 
-    // Aggiorna UI
-    renderTables();
-    renderStockSummary();
-    renderCharts();
-    showNotification("Database resettato",'success');
+        if (logError) throw logError;
+
+        // Cancella magazzino solo per il tenant corrente
+        const { error: stockError } = await supabase
+            .from('magazzino')
+            .delete()
+            .eq('tenant_id', currentTenantId);
+
+        if (stockError) throw stockError;
+
+        // Aggiorna UI
+        await renderTables();
+        await renderStockSummary();
+        await renderCharts?.();
+        showNotification("Database del magazzino resettato", 'success');
+
+    } catch (e) {
+        console.error("Errore resetDatabase:", e);
+        showNotification(`❌ Errore reset: ${e.message || e}`, 'error');
+    }
 }
-async function downloadCSV(filename,data){
-    const csv = data.map(r=>Object.values(r).join(',')).join('\n');
-    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+
+async function downloadCSV(filename, data) {
+    if (!data || !data.length) return showNotification("Nessun dato da esportare",'info');
+    const csv = [Object.keys(data[0]).join(','), ...data.map(r=>Object.values(r).map(v=>`"${v}"`).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = filename;
     link.click();
 }
-async function downloadSummaryCSV(){
+
+async function downloadSummaryCSV() { downloadCSV('riepilogo_giacenze.csv', await getStockSummary()); }
+async function downloadLogCSV() { downloadCSV('log_operazioni.csv', await getLog()); }
+
+// ================== FUNZIONE STOCK SUMMARY FILTRATA ==================
+async function getStockSummary() {
+    try {
+        if (!currentTenantId) return []; // nessun magazzino selezionato
+
+        const { data, error } = await supabase
+            .from('magazzino')
+            .select('*')
+            .eq('tenant_id', currentTenantId); // filtro multi-magazzino
+
+        if (error) throw error;
+        return data || [];
+    } catch (err) {
+        console.error("Errore getStockSummary:", err);
+        return [];
+    }
+}
+
+// ================== RENDER CHART GIACENZE ==================
+async function renderCharts() {
     const data = await getStockSummary();
-    downloadCSV('riepilogo_giacenze.csv',data);
-}
-async function downloadLogCSV(){
-    const data = await getLog();
-    downloadCSV('log_operazioni.csv',data);
+    const chartContainer = d3.select("#chart-giacenze");
+    chartContainer.html(''); // reset
+
+    if (!data || data.length === 0) {
+        chartContainer.html("Nessun dato disponibile");
+        return;
+    }
+
+    const top10 = data.sort((a, b) => b.quantity - a.quantity).slice(0, 10);
+    const width = 600, height = 300;
+    const svg = chartContainer.append("svg").attr("width", width).attr("height", height);
+
+    const x = d3.scaleBand()
+        .domain(top10.map(d => d.article))
+        .range([50, width - 20])
+        .padding(0.2);
+
+    const y = d3.scaleLinear()
+        .domain([0, d3.max(top10, d => d.quantity) || 10])
+        .range([height - 40, 20]);
+
+    svg.append("g")
+        .attr("transform", `translate(0,${height - 40})`)
+        .call(d3.axisBottom(x))
+        .selectAll("text")
+        .attr("transform", "rotate(-40)")
+        .style("text-anchor", "end");
+
+    svg.append("g")
+        .attr("transform", "translate(50,0)")
+        .call(d3.axisLeft(y));
+
+    svg.selectAll("rect")
+        .data(top10)
+        .enter()
+        .append("rect")
+        .attr("x", d => x(d.article))
+        .attr("y", d => y(d.quantity))
+        .attr("width", x.bandwidth())
+        .attr("height", d => height - 40 - y(d.quantity))
+        .attr("fill", "#4f46e5");
 }
 
-// ================== DASHBOARD ==================
-async function renderCharts(){
-    const data = await getStockSummary();
-    const top10 = data.sort((a,b)=>b.quantity-a.quantity).slice(0,10);
-    d3.select("#chart-giacenze").html('');
-    const width=600,height=300;
-    const svg=d3.select("#chart-giacenze").append("svg").attr("width",width).attr("height",height);
-    const x=d3.scaleBand().domain(top10.map(d=>d.article)).range([50,width-20]).padding(0.2);
-    const y=d3.scaleLinear().domain([0,d3.max(top10,d=>d.quantity)]).range([height-40,20]);
-    svg.append("g").attr("transform",`translate(0,${height-40})`).call(d3.axisBottom(x)).selectAll("text").attr("transform","rotate(-40)").style("text-anchor","end");
-    svg.append("g").attr("transform","translate(50,0)").call(d3.axisLeft(y));
-    svg.selectAll("rect").data(top10).enter().append("rect")
-       .attr("x",d=>x(d.article)).attr("y",d=>y(d.quantity))
-       .attr("width",x.bandwidth()).attr("height",d=>height-40-y(d.quantity))
-       .attr("fill","#4f46e5");
-}
-
-
+// ================== RENDER ANDAMENTO GIORNALIERO ==================
 async function renderAndamentoGiornaliero() {
-    const { data: logData } = await supabase
-        .from('log_operazioni')
-        .select('date,type,quantity');
+    if (!currentTenantId) {
+        d3.select("#chart-andamento").html("Seleziona un magazzino");
+        return;
+    }
 
-    if(!logData || logData.length === 0){
-        d3.select("#chart-andamento").html("Nessun dato disponibile");
+    const { data: logData, error } = await supabase
+        .from('log_operazioni')
+        .select('date,type,quantity')
+        .eq('tenant_id', currentTenantId) // filtro multi-magazzino
+        .order('date', { ascending: true });
+
+    const chartContainer = d3.select("#chart-andamento");
+    chartContainer.html(''); // reset
+
+    if (error || !logData || logData.length === 0) {
+        chartContainer.html("Nessun dato disponibile");
         return;
     }
 
     // Raggruppa per giorno
     const dailyMap = {};
     logData.forEach(r => {
-        const day = new Date(r.date).toISOString().slice(0,10); // YYYY-MM-DD
-        if(!dailyMap[day]) dailyMap[day] = 0;
-        dailyMap[day] += r.type === 'Carico' ? r.quantity : -r.quantity;
+        const day = new Date(r.date).toISOString().slice(0, 10);
+        dailyMap[day] = (dailyMap[day] || 0) + (r.type.toLowerCase() === 'carico' ? r.quantity : -r.quantity);
     });
 
-    // Trasforma in array ordinato
     const dailyArray = Object.entries(dailyMap)
         .map(([date, qty]) => ({ date: new Date(date), qty }))
-        .sort((a,b)=>a.date - b.date);
+        .sort((a, b) => a.date - b.date);
 
-    // Imposta dimensioni grafico
+    if (dailyArray.length === 0) {
+        chartContainer.html("Nessun dato disponibile");
+        return;
+    }
+
     const width = 600, height = 300;
-    d3.select("#chart-andamento").html('');
-    const svg = d3.select("#chart-andamento").append("svg").attr("width", width).attr("height", height);
+    const svg = chartContainer.append("svg").attr("width", width).attr("height", height);
 
     const x = d3.scaleTime()
         .domain(d3.extent(dailyArray, d => d.date))
-        .range([50, width-20]);
-    const y = d3.scaleLinear()
-        .domain([d3.min(dailyArray, d=>d.qty), d3.max(dailyArray, d=>d.qty)])
-        .range([height-40, 20]);
+        .range([50, width - 20]);
 
-    // Line generator
+    const y = d3.scaleLinear()
+        .domain([Math.min(0, d3.min(dailyArray, d => d.qty) || 0), d3.max(dailyArray, d => d.qty) || 10])
+        .range([height - 40, 20]);
+
     const line = d3.line()
         .x(d => x(d.date))
         .y(d => y(d.qty))
         .curve(d3.curveMonotoneX);
 
-    // Assi
-    svg.append("g").attr("transform",`translate(0,${height-40})`).call(d3.axisBottom(x));
-    svg.append("g").attr("transform","translate(50,0)").call(d3.axisLeft(y));
+    svg.append("g")
+        .attr("transform", `translate(0,${height - 40})`)
+        .call(d3.axisBottom(x));
 
-    // Linea andamento
+    svg.append("g")
+        .attr("transform", "translate(50,0)")
+        .call(d3.axisLeft(y));
+
     svg.append("path")
         .datum(dailyArray)
-        .attr("fill","none")
-        .attr("stroke","#10b981")
-        .attr("stroke-width",2)
+        .attr("fill", "none")
+        .attr("stroke", "#10b981")
+        .attr("stroke-width", 2)
         .attr("d", line);
-}
-
-/* ================= NUOVA FUNZIONE: ELIMINAZIONE GIACENZA ================= */
-// Funzione per eliminare un articolo dal Magazzino (tabella 'magazzino')
-async function deleteStockRecord(barcode) {
-    if (!confirm('Sei sicuro di voler eliminare questo articolo dal Magazzino? Questa operazione non è reversibile e lascerà i movimenti storici orfani!')) {
-        return;
-    }
-
-    // 1. Eliminazione dal magazzino
-    const { error: deleteError } = await supabase
-        .from('magazzino')
-        .delete()
-        .eq('barcode', barcode);
-
-    if (deleteError) {
-        showNotification(`❌ Errore nell'eliminazione: ${deleteError.message}`, 'error');
-        return;
-    }
-
-    showNotification(`🗑️ Articolo con Barcode ${barcode} eliminato correttamente dal Magazzino.`, 'success');
-
-    // 2. Aggiorna l'interfaccia
-    // La funzione è stata resa globale (non è definita nel blocco INIT)
-    await renderStockSummary();
-    await renderCharts();
-    await renderAndamentoGiornaliero();
 }
 
 /* ================= NUOVA FUNZIONE: GESTIONE FOCUS ================= */
@@ -1306,44 +1474,36 @@ function setInitialFocus(tabId) {
     }
 }
 
-// ================== INIT ==================
+// ================== INIT MULTI-MAGAZZINO ==================
 window.downloadLogCSV = downloadLogCSV;
 window.downloadSummaryCSV = downloadSummaryCSV;
 window.deleteRecord = deleteRecord;
 window.resetDatabase = resetDatabase;
 window.deleteStockRecord = deleteStockRecord;
 
-async function refreshAll(){
+async function refreshAll() {
     await renderStockSummary();
     await renderTables();
     await renderCharts();
     await renderAndamentoGiornaliero(); 
 }
 
-
 // ================== FILTRI ==================
 const filterType = document.getElementById('filter-type');
 const filterArticolo = document.getElementById('filter-articolo');
 const clearFilter = document.getElementById('clear-filter');
 
-if (filterType) {
-    filterType.addEventListener('change', renderTables); // Applica filtro tipo su cambio
-}
-
-if (filterArticolo) {
-    filterArticolo.addEventListener('input', renderTables); // Applica filtro articolo su ogni digitazione
-}
-
+if (filterType) filterType.addEventListener('change', () => refreshAll());
+if (filterArticolo) filterArticolo.addEventListener('input', () => refreshAll());
 if (clearFilter) {
     clearFilter.addEventListener('click', () => {
         if (filterType) filterType.value = 'Tutti';
         if (filterArticolo) filterArticolo.value = '';
-        renderTables();
+        refreshAll();
     });
 }
 
-// ================== FORM ==================
-
+// ================== FORM CARICO ==================
 caricoBarcode.addEventListener('input', async () => {
     if (ignoreCaricoBarcodeListener) return;
 
@@ -1359,46 +1519,44 @@ caricoBarcode.addEventListener('input', async () => {
         .from('magazzino')
         .select('article, quantity')
         .eq('barcode', barcode)
+        .eq('tenant_id', currentTenantId)
         .maybeSingle();
 
     if (existing) {
         caricoArticle.value = existing.article;
         giacenzaDisplay.textContent = `Giacenza Attuale: ${existing.quantity} unità`;
     } else {
-        // Nuovo barcode
         giacenzaDisplay.textContent = 'Nuovo Articolo (Giacenza: 0)';
     }
 });
 
-
-
-document.getElementById('carico-form').addEventListener('submit', async e=>{
+document.getElementById('carico-form').addEventListener('submit', async e => {
     e.preventDefault();
-    await addCarico(caricoBarcode.value,caricoArticle.value,parseInt(caricoQty.value));
-    caricoBarcode.value=''; caricoArticle.value=''; caricoQty.value=1;
-    refreshAll();
+    await addCarico(caricoBarcode.value, caricoArticle.value, parseInt(caricoQty.value), currentTenantId);
+    caricoBarcode.value = '';
+    caricoArticle.value = '';
+    caricoQty.value = 1;
+    await refreshAll();
 });
-document.getElementById('scarico-form').addEventListener('submit', async e=>{
+
+// ================== FORM SCARICO ==================
+document.getElementById('scarico-form').addEventListener('submit', async e => {
     e.preventDefault();
-
     const barcode = scaricoArticle.value || scaricoBarcode.value;
+    await addScarico(barcode, parseInt(scaricoQty.value), currentTenantId);
 
-    await addScarico(barcode, parseInt(scaricoQty.value));
-
-    // Resetta campi
     scaricoBarcode.value = '';
     scaricoQty.value = 1;
 
-    // Aggiorna select scarico per includere eventuali barcode non presenti
-    await refreshScaricoSelect();
-
-    refreshAll();
+    await refreshScaricoSelect(currentTenantId);
+    await refreshAll();
 });
 
+// ================== POPOLAMENTO SELECT / AUTOCOMPLETE ==================
 window.addEventListener('DOMContentLoaded', async () => {
     await refreshAll();
-    await populateScaricoArticles();
-    await populateArticleSuggestions();	
+    await populateScaricoArticles(currentTenantId);
+    await populateArticleSuggestions(currentTenantId);  
 });
 
 // ====================== QR SCANNER ROBUSTO ======================
@@ -1548,7 +1706,7 @@ document.querySelectorAll('.tab-container button').forEach(btn => {
     });
 });
 
-// ====================== PULSANTE "USA BARCODE" OTTIMIZZATO ======================
+// ====================== PULSANTE "USA BARCODE" MULTI-MAGAZZINO ======================
 document.getElementById('use-qr').addEventListener('click', async () => {
     const qrCode = document.getElementById('qr-result').value;
     const target = document.getElementById('qr-target').value;
@@ -1567,26 +1725,23 @@ document.getElementById('use-qr').addEventListener('click', async () => {
     document.getElementById(tabId).classList.remove('hidden');
 
     if (target === 'carico') {
-        // ⚡ Disabilita temporaneamente il listener per non cancellare il barcode
         ignoreCaricoBarcodeListener = true;
-
         const giacenzaDisplay = document.getElementById('carico-giacenza-display');
         caricoBarcode.value = qrCode;
 
-        // Controlla se il barcode esiste già in magazzino
+        // 🔹 Controlla barcode esistente SOLO nel magazzino/tenant corrente
         const { data: existing } = await supabase
             .from('magazzino')
             .select('article, quantity')
             .eq('barcode', qrCode)
+            .eq('tenant_id', currentTenantId) // filtro multi-magazzino
             .maybeSingle();
 
         if (existing) {
-            // Barcode esistente → aggancia articolo e giacenza
             caricoArticle.value = existing.article;
             giacenzaDisplay.textContent = `Giacenza Attuale: ${existing.quantity} unità`;
             showNotification(`Barcode agganciato: ${qrCode}`, 'success');
         } else {
-            // Barcode nuovo → lascia articolo libero
             caricoArticle.value = '';
             giacenzaDisplay.textContent = 'Nuovo Articolo (Giacenza: 0)';
             showNotification('Nuovo articolo, inserisci il nome', 'success');
@@ -1594,11 +1749,15 @@ document.getElementById('use-qr').addEventListener('click', async () => {
 
         caricoQty.focus();
         ignoreCaricoBarcodeListener = false;
+
     } else {
         // SCARICO
         scaricoBarcode.value = qrCode;
+
+        // Aggiorna select scarico solo con articoli del tenant corrente
+        await refreshScaricoSelect(qrCode, currentTenantId);
+
         scaricoQty.focus();
-        await refreshScaricoSelect(qrCode); // aggiorna select e aggiunge barcode se manca
         showNotification(`Barcode inserito nello Scarico: ${qrCode}`, 'success');
     }
 
