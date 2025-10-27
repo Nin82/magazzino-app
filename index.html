@@ -908,6 +908,12 @@
              handleAuthStateChange(session);
          });
     }
+
+                  .then(() => console.log('✅ Service Worker registrato correttamente.'))
+                .catch(err => console.error('❌ Errore registrazione Service Worker:', err));
+        });
+    }
 </script>
 </body>
 </html>
+
