@@ -26,996 +26,963 @@
 /* ================= STILE ================= */
 body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif; margin: 0; padding: 24px; background: #f8fafc; color: #1f2937; }
 .hidden { display: none; }
-.auth-container { max-width: 400px; margin: 40px auto; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
-h1 { color: #1f2937; margin-bottom: 24px; font-size: 1.875rem; font-weight: 700; }
-.form-group { margin-bottom: 16px; }
-label { display: block; margin-bottom: 4px; font-weight: 500; color: #374151; }
-input[type="email"], input[type="password"], input[type="text"], input[type="number"], select { 
-    width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; font-size: 1rem; 
-}
-.btn-action { 
-    background-color: #4f46e5; color: white; padding: 10px 15px; border: none; border-radius: 6px; 
-    cursor: pointer; font-size: 1rem; font-weight: 600; transition: background-color 0.2s; 
-    width: 100%; margin-top: 10px;
-}
-.btn-action:hover { background-color: #4338ca; }
-.btn-secondary { 
-    background-color: #6b7280; color: white; padding: 10px 15px; border: none; border-radius: 6px; 
-    cursor: pointer; font-size: 0.875rem; transition: background-color 0.2s; 
-}
-.btn-secondary:hover { background-color: #4b5563; }
-.link { color: #4f46e5; cursor: pointer; text-decoration: none; display: block; margin-top: 8px; font-size: 0.875rem; text-align: right;}
-.link:hover { text-decoration: underline; }
-
-/* Notification area */
-#notification-area {
-    position: fixed; top: 10px; right: 10px; z-index: 2000; 
-    display: flex; flex-direction: column; gap: 10px;
-}
-.notification {
-    padding: 10px 20px; border-radius: 8px; color: white; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); 
-    opacity: 0; transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out; 
-    transform: translateY(10px); min-width: 250px;
-}
-.notification.show { opacity: 1; transform: translateY(0); }
-.notification.success { background-color: #10b981; }
-.notification.error { background-color: #ef4444; }
-.notification.info { background-color: #3b82f6; }
-
+h1 { color: #1e3a8a; font-weight: 800; margin-bottom: 24px; }
+h2,h3 { color: #374151; border-bottom:2px solid #e5e7eb; padding-bottom:8px; margin-top:30px; }
+hr { border:0; border-top:1px solid #e0e7eb; margin:30px 0; }
 /* Tabs */
-.tab-container { display: flex; margin-bottom: 20px; border-bottom: 2px solid #e5e7eb; }
-.tab-button { 
-    padding: 10px 15px; cursor: pointer; border: none; background: transparent; 
-    color: #6b7280; font-weight: 500; transition: color 0.2s, border-bottom 0.2s; 
-}
-.tab-button.active { 
-    color: #4f46e5; border-bottom: 3px solid #4f46e5; font-weight: 600; 
-}
-.tab-content { padding: 20px 0; border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; background: white; }
-.tab-content:not(.active) { display: none; }
-
-/* Tables */
-table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; border-radius: 8px; overflow: hidden; box-shadow: var(--shadow); }
-th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #f3f4f6; }
-th { background-color: #f9fafb; font-weight: 600; color: #374151; }
-tr:hover { background-color: #f5f5f5; }
-
-/* Container for controls */
-.controls-container { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
-.controls-container > div { padding: 15px; border: 1px solid #e5e7eb; border-radius: 8px; background: white; }
-
-/* Responsive Adjustments */
-@media (max-width: 600px) {
-    body { padding: 12px; }
-    .controls-container { grid-template-columns: 1fr; }
-    h1 { font-size: 1.5rem; }
+.tab-container { 
+    margin-bottom: 24px; 
+    position: -webkit-sticky; /* supporto Safari */
+    position: sticky;
+    top: 0; /* distanza dal top della finestra */
+    z-index: 1000; /* sopra gli altri contenuti */
+    background-color: #fff; /* evita trasparenze */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* leggera separazione visiva */
 }
 
-/* QR Scanner */
-#qr-video { width: 100%; max-height: 300px; object-fit: cover; border-radius: 8px; }
-#qr-container { position: relative; }
-#qr-overlay { 
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-    border: 4px solid #4f46e5; box-sizing: border-box; pointer-events: none; 
+.tab-container button { 
+    background: #fff; 
+    color: #6b7280; 
+    font-weight: 600; 
+    border: 1px solid #e5e7eb; 
+    border-bottom: none; 
+    padding: 10px 20px; 
+    border-radius: 8px 8px 0 0; 
+    margin-right: -1px; 
+    transition: all 0.2s; 
+    outline: none; 
 }
+
+.tab-container button:hover { 
+    background: #f3f4f6; 
+    color: #1f2937; 
+}
+
+.tab-container button.active { 
+    background: #fff; 
+    color: #1e3a8a; 
+    border-color: #1e3a8a; 
+    border-bottom: 2px solid #fff; 
+    position: relative; 
+    z-index: 10; 
+}
+
+[role="tabpanel"] { 
+    background: #fff; 
+    padding: 20px; 
+    border: 1px solid #e5e7eb; 
+    border-radius: 0 8px 8px 8px; 
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); 
+    position: relative; 
+    top: -1px; 
+}
+/* Pulsanti */
+button { cursor:pointer; background:#4f46e5; color:#fff; border:none; padding:10px 18px; border-radius:8px; margin:5px 5px 5px 0; transition:all 0.2s ease-in-out; font-weight:600; white-space:nowrap; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
+button:hover { background:#4338ca; transform:translateY(-1px); box-shadow:0 4px 8px rgba(0,0,0,0.15); }
+.btn-action { background:#10b981; } .btn-action:hover { background:#059669; }
+.btn-delete { background:#ef4444; } .btn-delete:hover { background:#dc2626; }
+.btn-secondary { background:#e5e7eb; color:#374151; box-shadow:none; } .btn-secondary:hover { background:#d1d5db; transform:translateY(-1px); box-shadow:0 2px 4px rgba(0,0,0,0.1);}
+.btn-reset { background:#991b1b; font-weight:700; } .btn-reset:hover { background:#7f1d1d; }
+/* Form */
+input, select { padding:10px 12px; border:1px solid #d1d5db; border-radius:6px; margin-right:10px; width:100%; max-width:250px; transition:border-color 0.2s, box-shadow 0.2s; font-size:1rem; }
+input:focus, select:focus { border-color:#4f46e5; box-shadow:0 0 0 3px rgba(79,70,229,0.2); outline:none; }
+input[readonly] { background-color:#f3f4f6; cursor:not-allowed; }
+label { font-weight:600; margin-bottom:4px; display:block; color:#374151; }
+#carico-form, #scarico-form { display:flex; gap:20px; flex-wrap:wrap; align-items:flex-end; }
+#carico-form div, #scarico-form div { display:flex; flex-direction:column; flex-grow:1; min-width:180px; }
+#carico-form button, #scarico-form button { margin-top:10px; }
+/* Notifica */
+#notification { font-weight:600; text-align:center; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
+/* Tabelle */
+table { width:100%; border-collapse:separate; border-spacing:0; margin-top:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); border-radius:8px; overflow:hidden; }
+th, td { padding:12px 16px; text-align:left; border-bottom:1px solid #f3f4f6; }
+th { background:#eef2ff; font-size:0.8rem; color:#1e3a8a; font-weight:700; text-transform:uppercase; }
+tr:last-child td { border-bottom:none; } 
+tr:nth-child(even) { background-color:#f9fafb; }
+tr:hover { background-color:#eff6ff; }
+.qty-cell { font-weight:700; color:#10b981; font-size:1.1rem; }
+.qty-low { color:#f97316; background-color:#fff7ed; border-radius:4px; padding:2px 6px; display:inline-block; }
+/* Dashboard e filtri */
+#chart-giacenze, #chart-andamento { 
+    background:#fff; 
+    padding:20px; 
+    margin-bottom:20px; 
+    border-radius:8px; 
+    box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); 
+    /* 🚨 AGGIUNTA CHIAVE: abilita lo scroll orizzontale */
+    overflow-x: auto; 
+}
+
+.controls-container { background:#f3f4f6; padding:15px; border-radius:8px; box-shadow:inset 0 1px 3px rgba(0,0,0,0.05); display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+/* La Card dello storico (simili a #chart-giacenze) */
+.card-historico {
+    background:#fff; 
+    padding:20px; 
+    margin-bottom:20px; 
+    border-radius:8px; 
+    box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); 
+    /* Regolazione del padding per ospitare la scroll bar senza sporgenze */
+    padding: 20px 20px 0 20px; 
+}
+
+/* Wrapper per rendere la tabella scrollabile */
+.table-responsive-wrapper {
+    width: 100%; 
+    overflow-x: auto; /* La chiave: abilita lo scroll orizzontale */
+    -webkit-overflow-scrolling: touch; 
+}
+/* Forza una larghezza minima sulla tabella per assicurare che lo scroll si attivi e pulisce stili duplicati */
+#full-log, 
+#stock-summary { 
+    min-width: 600px; /* Larghezza sufficiente per tutte le colonne */
+    margin-top: 0; /* Rimuove margine duplicato */
+    box-shadow: none; /* Rimuove ombra duplicata */
+    border-radius: 0;
+}
+
+@media(max-width:768px){ 
+    /* body torna a padding normale */
+    body{
+        padding: 12px; 
+        margin: 0; 
+    } 
+    
+    #carico-form,#scarico-form{flex-direction:column;align-items:stretch;gap:15px;} 
+    #carico-form div,#scarico-form div{min-width:100%;} 
+    input,select{max-width:100%;margin-right:0;} 
+
+    /* Tutti i contenitori tornano a width: 100% (pulizia da calc) */
+    .tab-container,
+    [role="tabpanel"],
+    .controls-container,
+    .card-historico {
+        width: 100%; 
+        margin-left: 0; 
+        margin-right: 0;
+        box-sizing: border-box;
+    }
+    
+    /* Regole specifiche per mobile */
+    .controls-container {
+        padding: 15px 12px;
+        flex-direction:column;
+        align-items:stretch;
+    }
+    
+    /* La Card dello storico: rimuove padding laterale per ospitare la tabella scrollabile */
+    .card-historico {
+   #chart-giacenze, 
+   #chart-andamento {
+    padding: 12px 0 0 0;
+}
+    
+    .controls-container label{margin-bottom:0;} 
+    .controls-container button{width:100%;margin-right:0;} 
+    th,td{font-size:0.75rem;padding:8px 10px;} 
+}
+
 </style>
 </head>
 <body>
 
-<!-- ================= AREA NOTIFICHE ================= -->
-<div id="notification-area"></div>
+<!-- ====================== AUTENTICAZIONE MULTI-MAGAZZINO ====================== -->
+<div id="auth-container" style="max-width:400px;margin:50px auto;background:white;padding:20px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.1)">
+<h2>🔐 Accesso al Magazzino1</h2>
+  
+  <form id="login-form">
+    <label>Email:</label>
+    <input type="email" id="email" required placeholder="email@esempio.com">
 
-<!-- ================= AUTENTICAZIONE ================= -->
-<div id="auth-container" class="auth-container">
-    <h1>Accesso Magazzino</h1>
+    <label>Password:</label>
+    <input type="password" id="password" required placeholder="••••••••">
 
-    <!-- FORM LOGIN -->
-    <form id="login-form">
-        <div class="form-group">
-            <label for="email">Email</label>
-            <input type="email" id="email" required>
-        </div>
-        <div class="form-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" required>
-        </div>
-        <button type="submit" class="btn-action">Login</button>
-        <a href="#" id="forgot-password-link" class="link">Password dimenticata?</a>
-        <button type="button" id="show-register" class="btn-secondary" style="margin-top: 15px;">Registrati</button>
-    </form>
+    <button type="submit" class="btn-action">Login</button>
+  </form>
 
-    <!-- FORM REGISTRAZIONE -->
-    <form id="register-form" class="hidden">
-        <div class="form-group">
-            <label for="reg-email">Email</label>
-            <input type="email" id="reg-email" required>
-        </div>
-        <div class="form-group">
-            <label for="reg-password">Password (min 6 caratteri)</label>
-            <input type="password" id="reg-password" required minlength="6">
-        </div>
-        <div class="form-group">
-            <label for="warehouse-name">Nome Magazzino</label>
-            <input type="text" id="warehouse-name" required>
-        </div>
-        <button type="submit" class="btn-action">Crea Account</button>
-        <button type="button" id="back-login" class="btn-secondary" style="margin-top: 15px;">Torna al Login</button>
-    </form>
 
-    <!-- FORM RESET PASSWORD (Invio email) -->
-    <form id="reset-password-form" class="hidden">
-        <p style="margin-bottom: 15px;">Inserisci la tua email per ricevere il link di reset.</p>
-        <div class="form-group">
-            <label for="reset-email">Email</label>
-            <input type="email" id="reset-email" required>
-        </div>
-        <button type="submit" class="btn-action">Invia Link di Reset</button>
-        <button type="button" id="back-login-from-reset" class="btn-secondary" style="margin-top: 15px;">Torna al Login</button>
-    </form>
-    
-    <!-- FORM AGGIORNAMENTO PASSWORD (Dopo reindirizzamento email) -->
-    <form id="update-password-form" class="hidden">
-        <p id="reset-msg" style="margin-bottom: 15px; font-weight: bold;"></p>
-        <div class="form-group">
-            <label for="new-password-input">Nuova Password</label>
-            <input type="password" id="new-password-input" required minlength="6">
-        </div>
-        <button type="submit" class="btn-action">Aggiorna Password</button>
-    </form>
+  <form id="register-form" class="hidden">
+    <label>Email:</label>
+    <input type="email" id="reg-email" required placeholder="email@esempio.com">
+
+    <label>Password:</label>
+    <input type="password" id="reg-password" required placeholder="••••••••">
+
+    <label>Nome Magazzino:</label>
+    <input type="text" id="warehouse-name" required placeholder="Es. Magazzino Roma">
+
+    <button type="submit" class="btn-action">Crea Account</button>
+    <button id="back-login" class="btn-secondary" type="button">Torna al Login</button>
+  </form>
+
+</form>
+
+  <p style="margin-top:5px; text-align:right;">
+    <a href="#" id="forgot-password-link" style="color:#4f46e5; font-size:0.9em;">Hai dimenticato la password?</a>
+  </p>
+
+  <p style="margin-top:10px;">Non hai un account?
+  <button id="show-register" class="btn-secondary" type="button">Registrati</button>
+  </p>
+  
+  <form id="reset-password-form" class="hidden">
+    <label>Email per il Reset:</label>
+    <input type="email" id="reset-email" required placeholder="email@esempio.com">
+    <button type="submit" class="btn-action">Invia Link di Reset</button>
+    <button id="back-login-from-reset" class="btn-secondary" type="button">Torna al Login</button>
+  </form>
+
+<form id="update-password-form" class="hidden" style="padding-top:20px;">
+    <h2>Imposta Nuova Password</h2>
+    <p id="reset-msg" style="color: #4f46e5; margin-bottom: 15px;">Inserisci la tua nuova password.</p>
+    <input type="password" id="new-password-input" placeholder="Nuova password (min 6 caratteri)" required>
+    <button type="submit" class="btn-action">Aggiorna Password</button>
+</form>
+
 </div>
-<!-- ================= FINE AUTENTICAZIONE ================= -->
 
+<h1>📦 Gestione Magazzino 2.2.2 fix fcus top</h1>
 
-<!-- ================= APPLICAZIONE (Visibile dopo il login) ================= -->
-<main id="app-content">
-    <h1>📦 Gestione Magazzino Completo</h1>
-    <hr style="margin-bottom: 24px;">
+<div id="top-anchor" tabindex="-1"></div>
+<!-- Tabs -->
+<div class="tab-container">
+  <button role="tab" aria-controls="tab-carico" data-target="tab-carico" class="active">➕ Carico</button>
+  <button role="tab" aria-controls="tab-scarico" data-target="tab-scarico">➖ Scarico</button>
+  <button role="tab" aria-controls="tab-qr" data-target="tab-qr">📷 QR Scanner</button>
+  <button role="tab" aria-controls="tab-stock-summary" data-target="tab-stock-summary">📜 Riepilogo Giacenze</button>
+  <button role="tab" aria-controls="tab-dashboard" data-target="tab-dashboard">📊 Dashboard</button>
 
-    <!-- TABS -->
-    <div class="tab-container">
-        <button class="tab-button active" data-tab="carico-tab">Carico</button>
-        <button class="tab-button" data-tab="scarico-tab">Scarico</button>
-        <button class="tab-button" data-tab="giacenza-tab">Giacenza</button>
-        <button class="tab-button" data-tab="log-tab">Log</button>
+</div>
+
+<!-- CARICO -->
+<div id="tab-carico" role="tabpanel">
+  <h2>Registra un Nuovo Ingresso</h2>
+  <form id="carico-form">
+
+	<div>
+  <label for="carico-barcode">Barcode:</label>
+  <input 
+    id="carico-barcode" 
+    name="carico-barcode" 
+    placeholder="Codice Barcode"
+    required 
+    autocomplete="off"
+  >
+</div>
+
+    <div>
+      <label for="carico-article">Articolo:</label>
+      <input 
+        id="carico-article" 
+        name="carico-article" 
+        placeholder="Nome Articolo" 
+        required 
+        autocomplete="off"
+        list="article-suggestions"
+      >
+      <datalist id="article-suggestions"></datalist>
     </div>
 
-    <!-- TAB CARICO -->
-    <div id="carico-tab" class="tab-content active">
-        <h2>Carico Merce</h2>
-        <form id="carico-form">
-            <div class="controls-container" style="grid-template-columns: 1fr; margin-top: 20px;">
-                <div id="qr-container">
-                    <video id="qr-video" muted playsinline></video>
-                    <div id="qr-overlay"></div>
-                    <input type="text" id="qr-result" placeholder="Codice QR/Barcode scannerizzato" readonly style="margin-top: 10px;">
-                    <button type="button" id="start-qr" class="btn-action" style="margin-top: 10px;">Avvia Scanner QR</button>
-                    <button type="button" id="stop-qr" class="btn-secondary" style="margin-top: 10px; display: none;">Ferma Scanner QR</button>
-                </div>
-            </div>
-
-            <div class="controls-container">
-                <div>
-                    <div class="form-group">
-                        <label for="carico-barcode">Barcode / Codice</label>
-                        <input type="text" id="carico-barcode" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="carico-article">Articolo</label>
-                        <input type="text" id="carico-article" required>
-                    </div>
-                    <p id="giacenza-display" style="font-weight: bold; margin-bottom: 10px; color: #4f46e5;">Giacenza Attuale: N/D</p>
-                </div>
-                <div>
-                    <div class="form-group">
-                        <label for="carico-qty">Quantità (unità)</label>
-                        <input type="number" id="carico-qty" required min="1">
-                    </div>
-                    <div class="form-group">
-                        <label for="carico-supplier">Fornitore</label>
-                        <input type="text" id="carico-supplier">
-                    </div>
-                    <div class="form-group">
-                        <label for="carico-note">Note</label>
-                        <input type="text" id="carico-note">
-                    </div>
-                    <button type="submit" class="btn-action">Registra Carico</button>
-                </div>
-            </div>
-        </form>
+    <div>
+      <label for="carico-qty">Quantità:</label>
+      <input 
+        type="number" 
+        id="carico-qty" 
+        name="carico-qty"
+        required 
+        min="1" 
+        value="1"
+      >
     </div>
 
-    <!-- TAB SCARICO -->
-    <div id="scarico-tab" class="tab-content">
-        <h2>Scarico Merce</h2>
-        <form id="scarico-form">
-            <div class="controls-container" style="grid-template-columns: 1fr;">
-                <div class="form-group">
-                    <label for="scarico-barcode-select">Seleziona Barcode / Codice</label>
-                    <select id="scarico-barcode-select" required>
-                        <option value="">Seleziona un articolo...</option>
-                    </select>
-                </div>
-            </div>
-            <div class="controls-container">
-                <div>
-                    <div class="form-group">
-                        <label for="scarico-article">Articolo</label>
-                        <input type="text" id="scarico-article" readonly>
-                    </div>
-                    <p id="giacenza-scarico-display" style="font-weight: bold; margin-bottom: 10px; color: #4f46e5;">Giacenza Attuale: N/D</p>
-                </div>
-                <div>
-                    <div class="form-group">
-                        <label for="scarico-qty">Quantità da Scaricare (unità)</label>
-                        <input type="number" id="scarico-qty" required min="1">
-                    </div>
-                    <div class="form-group">
-                        <label for="scarico-note">Motivo / Destinazione</label>
-                        <input type="text" id="scarico-note">
-                    </div>
-                    <button type="submit" class="btn-action">Registra Scarico</button>
-                </div>
-            </div>
-        </form>
+    <div id="carico-giacenza-display" style="font-weight:700; color:#4f46e5; margin-top:10px; min-width:180px;"></div>
+
+    <button type="submit" class="btn-action">✅ Registra Carico</button>
+  </form>
+</div>
+
+<!-- SCARICO -->
+<div id="tab-scarico" role="tabpanel" class="hidden">
+  <h2>Registra uno Scarico</h2>
+  <form id="scarico-form">
+    <div>
+      <label for="scarico-barcode">Barcode:</label>
+      <input 
+        id="scarico-barcode" 
+        name="scarico-barcode" 
+        placeholder="Codice Barcode" 
+        required 
+        autocomplete="off" 
+        inputmode="text"
+      >
     </div>
 
-    <!-- TAB GIACENZA -->
-    <div id="giacenza-tab" class="tab-content">
-        <h2>Giacenza Totale</h2>
-        <input type="text" id="giacenza-search" placeholder="Cerca per Barcode o Articolo..." style="margin-bottom: 15px;">
-        <table id="giacenza-table">
-            <thead>
-                <tr>
-                    <th>Barcode</th>
-                    <th>Articolo</th>
-                    <th>Quantità</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Dati inseriti da JavaScript -->
-            </tbody>
-        </table>
-    </div>
-    
-    <!-- TAB LOG COMPLETO -->
-    <div id="log-tab" class="tab-content">
-        <h2>Log Dettagliato Movimenti</h2>
-        <div id="full-log-container">
-            <input type="text" id="log-search" placeholder="Cerca nel Log..." style="margin-bottom: 15px;">
-            <table id="log-table">
-                <thead>
-                    <tr>
-                        <th>Data</th>
-                        <th>Tipo</th>
-                        <th>Articolo</th>
-                        <th>Qty</th>
-                        <th>Note</th>
-                        <th>Utente</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Dati inseriti da JavaScript -->
-                </tbody>
-            </table>
-        </div>
+    <div>
+      <label for="scarico-article">Articolo:</label>
+      <select 
+        id="scarico-article" 
+        name="scarico-article" 
+        required
+      >
+        <option value="">-- Seleziona Articolo --</option>
+      </select>
     </div>
 
-</main>
-<!-- ================= FINE APPLICAZIONE ================= -->
+    <div>
+      <label for="scarico-qty">Quantità:</label>
+      <input 
+        type="number" 
+        id="scarico-qty" 
+        name="scarico-qty" 
+        required 
+        min="1" 
+        value="1"
+      >
+    </div>
+	<div id="scarico-giacenza-display" style="font-weight:700; color:#ef4444; margin-top:10px; min-width:180px;"></div>
+    <button type="submit" class="btn-delete">🔥 Registra Scarico</button>
+  </form>
+</div>
+
+<!-- INVENTARIO -->
+<div id="tab-stock-summary" role="tabpanel" class="hidden">
+  <h2>Inventario Attuale</h2>
+  <div style="margin-bottom: 15px; margin-top: 15px;">
+    <button onclick="downloadSummaryCSV()" class="btn-secondary">⬇️ Scarica Riepilogo CSV</button>
+  </div>
+  
+    <div class="table-responsive-wrapper">
+    <table id="stock-summary">
+      <thead><tr><th>Articolo</th><th>Barcode</th><th>Giacenza Totale</th><th>Azioni</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  </div>
+
+<!-- DASHBOARD -->
+<div id="tab-dashboard" role="tabpanel" class="hidden">
+  <h2>Metriche Magazzino</h2>
+  <h3>Top 10 Giacenze per Quantità</h3>
+  <div id="chart-giacenze"></div>
+  <h3>Andamento Giornaliero Movimenti Netto</h3>
+  <div id="chart-andamento"></div>
+</div>
+
+<!-- Tab QR Scanner -->
+<div id="tab-qr" role="tabpanel" class="hidden">
+  <h2>Scansiona QR / Barcode</h2>
+
+  <p id="qr-status" style="font-weight:bold; color:#6b7280; margin-bottom:8px;">
+    ⛔ Scanner disattivato
+  </p>
+
+  <video id="qr-video" autoplay muted playsinline style="width:100%; max-width:420px; border-radius:8px; border:1px solid #d1d5db;"></video>
+
+  <div style="margin-top:12px;">
+    <label for="qr-result">Codice rilevato</label>
+    <input id="qr-result" readonly placeholder="Inquadra un codice..." style="width:100%; max-width:420px;">
+  </div>
+
+  <!-- Selettore destinazione -->
+  <div style="margin-top:12px;">
+    <label for="qr-target">Destinazione:</label>
+    <select id="qr-target" style="width:100%; max-width:200px;">
+      <option value="carico">Carico</option>
+      <option value="scarico">Scarico</option>
+    </select>
+  </div>
+
+  <div style="margin-top:10px;">
+    <button id="use-qr" class="btn-action">Usa barcode</button>
+    <button id="stop-qr" class="btn-secondary">Stop scanner</button>
+  </div>
+
+  <p style="margin-top:12px;color:#6b7280">
+    Se il browser non supporta la scansione nativa, verrà usato un fallback.
+  </p>
+</div>
+
+<div id="notification" style="color:#fff;background:#4f46e5;padding:12px;margin-bottom:20px;border-radius:8px;display:none;"></div>
+<hr>
+<h2>Storico Ultime 50 Operazioni</h2>
+<div class="controls-container">
+  <label for="filter-type">Tipo Operazione:</label>
+  <select id="filter-type">
+    <option value="Tutti">Tutti</option>
+    <option value="Carico">Carico</option>
+    <option value="Scarico">Scarico</option>
+  </select>
+
+  <label for="filter-articolo">Articolo (Ricerca):</label>
+  <input id="filter-articolo" placeholder="Cerca articolo..." style="flex-grow:1; max-width: 250px;">
+  
+   <button id="clear-filter" class="btn-secondary">🗑️ Rimuovi Filtro</button>
+  <button onclick="downloadLogCSV()" class="btn-secondary">⬇️ Scarica Log CSV</button>
+  <button onclick="resetDatabase()" class="btn-reset">⚠️ Resetta Database (Cancella Tutto)</button> 
+</div>
+
+<div id="full-log-container">
+  <div class="card-historico">
+    <div class="table-responsive-wrapper">
+      <table id="full-log">
+        <thead><tr><th>Data/Ora</th><th>Tipo</th><th>Barcode</th><th>Articolo</th><th>Quantità</th><th>Azioni</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+  </div>
+
+<script type="module">
+// ================== SUPABASE ==================
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+// ================== SUONO BEEP ==================
+function playBeep(duration = 100, frequency = 440, volume = 0.5) {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+
+    // Colleghiamo l'oscillatore al gainNode e poi all'uscita audio
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    oscillator.type = 'square';       // tipo di onda: square, sine, sawtooth, triangle
+    oscillator.frequency.value = frequency; // frequenza in Hz
+    gainNode.gain.value = volume;     // volume (0-1)
+
+    oscillator.start();
+    setTimeout(() => oscillator.stop(), duration); // ferma dopo `duration` ms
+}
+
+const supabaseUrl = 'https://eevwzkcesmfofpecuxwv.supabase.co'
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnd6a2Nlc21mb2ZwZWN1eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2ODkxOTAsImV4cCI6MjA3NjI2NTE5MH0.j7TQnwbw-gW2S6QBjyp4wsQJrXUVYmg3wwVWVPRe1b4'
+const supabase = createClient(supabaseUrl, supabaseKey)
 
 
-<!-- ================= SCRIPT JAVASCRIPT ================= -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://unpkg.com/html5-qrcode"></script>
+// ====================== VARIABILI GLOBALI E INIZIALIZZAZIONE UI ======================
+let currentTenantId = null; // ✅ Variabile globale per multi-magazzino
 
-<script>
-    // Inizializzazione Supabase (SOSTITUISCI CON LE TUE CREDENZIALI)
-    const SUPABASE_URL = 'https://eevwzkcesmfofpecuxwv.supabase.co'; 
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnd6a2Nlc21mb2ZwZWN1eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2ODkxOTAsImV4cCI6MjA3NjI2NTE5MH0.j7TQnwbw-gW2S6QBjyp4wsQJrXUVYmg3wwVWVPRe1b4'; 
-
-    if (SUPABASE_URL.includes('YOUR_SUPABASE')) {
-        console.error("ERRORE: Inserisci le tue credenziali Supabase.");
-        // Non forzare l'uscita, ma avvisa
-    }
-
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    
-    // Funzione per mostrare notifiche temporanee
-    function showNotification(message, type = 'info', duration = 3000) {
-        const area = document.getElementById('notification-area');
-        const note = document.createElement('div');
-        note.className = `notification ${type}`;
-        note.textContent = message;
-        
-        area.appendChild(note);
-        
-        // Forza il repaint per l'animazione
-        void note.offsetWidth; 
-        note.classList.add('show');
-
-        setTimeout(() => {
-            note.classList.remove('show');
-            note.addEventListener('transitionend', () => note.remove());
-        }, duration);
-    }
-
-// ===============================================
-// 1. VARIABILI GLOBALI E CREAZIONE ELEMENTI UI
-// ===============================================
-// ✅ VARIABILE GLOBALE ESSENZIALE
-let currentTenantId = null; 
-let qrCodeScanner = null; // Gestione scanner QR
-let lastScanned = ''; // Prevenzione doppia scansione
-
-// ✅ SELETTORI CRITICI (Definiti solo UNA volta)
 const authContainer = document.getElementById('auth-container');
 const appSections = document.querySelectorAll(
-    '.tab-container, [role="tabpanel"], h1, hr, .controls-container, #full-log-container'
+  '.tab-container, [role="tabpanel"], h1, hr, .controls-container, #full-log-container'
 );
-// Forziamo lo stato iniziale (Nascosto)
-appSections.forEach(el => el.style.display = 'none'); 
-authContainer.style.display = 'block'; 
+
+// Forza l'avvio con l'app nascosta e il login visibile
+appSections.forEach(el => el.style.display = 'none');
+authContainer.style.display = 'block';
 
 const isRecovery = window.location.hash.includes('type=recovery');
 
-// === CREAZIONE E POSIZIONAMENTO TASTO LOGOUT (SOLUZIONE SICURA) ===
+// ====================== CREAZIONE ELEMENTO LOGOUT ======================
 const logoutBtn = document.createElement('button');
 logoutBtn.textContent = 'Logout';
-logoutBtn.className = 'btn-secondary'; 
+logoutBtn.className = 'btn-secondary';
 logoutBtn.id = 'logout-btn';
-// Posizionamento fisso e Z-index alto per visibilità garantita
-logoutBtn.style.cssText = 'position: fixed; top: 24px; right: 24px; z-index: 1000;'; 
-logoutBtn.style.display = 'none'; 
-document.body.appendChild(logoutBtn); 
+logoutBtn.style.cssText = 'position: fixed; top: 24px; right: 24px; z-index: 1000;';
+logoutBtn.style.display = 'none';
+document.body.appendChild(logoutBtn);
 
-
-// ===============================================
-// 2. FUNZIONI DI GESTIONE VISIBILITÀ (HIDE/SHOW APP)
-// ===============================================
-
-// === Nasconde app e mostra login ===
+// ====================== FUNZIONI DI VISUALIZZAZIONE ======================
 function hideApp() {
-    appSections.forEach(el => el.style.display = 'none');
-    authContainer.style.display = 'block'; 
-    currentTenantId = null; 
-    document.getElementById('logout-btn').style.display = 'none'; // NASCONDE LOGOUT
-    if (document.querySelector('h1')) {
-        document.querySelector('h1').innerHTML = '📦 Gestione Magazzino Completo';
-    }
+  appSections.forEach(el => el.style.display = 'none');
+  authContainer.style.display = 'block';
+  currentTenantId = null;
+  const title = document.querySelector('h1');
+  if (title) title.innerHTML = '📦 Gestione Magazzino Completo';
 }
 
-// === Mostra app dopo login ===
 async function showApp() {
-    const { data: { user } } = await supabase.auth.getUser();
+  const { data } = await supabase.auth.getUser();
+  const user = data?.user;
 
-    if (user) {
-        // Logica per recuperare e impostare currentTenantId (Multi-Tenant)
-        const { data: tenantData, error: tenantError } = await supabase
-            .from('utenti_magazzino')
-            .select('tenant_id')
-            .eq('user_id', user.id)
-            .maybeSingle(); 
+  if (user) {
+    // 🔹 Recupera il tenant_id associato all'utente
+    const { data: tenantData, error: tenantError } = await supabase
+      .from('utenti_magazzino')
+      .select('tenant_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
 
-        if (tenantError || !tenantData || !tenantData.tenant_id) {
-            console.error('❌ ID magazzino non trovato. Eseguo logout.');
-            // Se non trova il tenant_id, DEVE fare il logout per evitare errori
-            await supabase.auth.signOut();
-            return;
-        }
-
-        currentTenantId = tenantData.tenant_id;
-        
-        // Aggiorna UI
-        authContainer.style.display = 'none'; // NASCONDE IL LOGIN
-        appSections.forEach(el => el.style.display = ''); // MOSTRA L'APP
-        document.getElementById('logout-btn').style.display = 'block'; // MOSTRA LOGOUT
-
-        // Aggiorna titolo
-        const { data: whData } = await supabase
-            .from('tenants')
-            .select('name')
-            .eq('id', currentTenantId)
-            .maybeSingle();
-        const titleElement = document.querySelector('h1');
-        if (titleElement) {
-            const whName = whData ? whData.name : 'Magazzino';
-            titleElement.innerHTML = `📦 Gestione Magazzino - ${whName}`;
-        }
+    if (tenantError || !tenantData?.tenant_id) {
+      console.error('❌ ID magazzino non trovato. Logout.');
+      await supabase.auth.signOut();
+      return;
     }
-    
-    // Aggiorna i dati
-    // ✅ CORREZIONE: La funzione si chiama refreshAll(), non refeshAll()
-    if (typeof refreshAll === 'function') {
-        await refreshAll();
-    }
+
+    currentTenantId = tenantData.tenant_id;
+
+    // Mostra app
+    authContainer.style.display = 'none';
+    appSections.forEach(el => el.style.display = '');
+
+    // Titolo personalizzato
+    const { data: whData } = await supabase
+      .from('tenants')
+      .select('name')
+      .eq('id', currentTenantId)
+      .maybeSingle();
+    const title = document.querySelector('h1');
+    if (title) title.innerHTML = `📦 Gestione Magazzino - ${whData?.name || 'Magazzino'}`;
+  }
+
+  if (typeof refreshAll === 'function') await refreshAll();
 }
 
-
-// ===============================================
-// 3. LISTENER DI STATO (onAuthStateChange)
-// ===============================================
+// ====================== LISTENER DI STATO SUPABASE ======================
 supabase.auth.onAuthStateChange(async (event, session) => {
-    
-    // 💡 1. Gestione Recupero Password
-    if (isRecovery || event === 'PASSWORD_RECOVERY') {
-        document.getElementById('login-form').classList.add('hidden');
-        document.getElementById('register-form').classList.add('hidden');
-        document.getElementById('reset-password-form').classList.add('hidden');
-        document.getElementById('update-password-form').classList.remove('hidden');
-        document.getElementById('reset-msg').textContent = 'Sei in modalità di recupero. Inserisci la tua nuova password.';
-        
-        authContainer.style.display = 'block';
-        appSections.forEach(el => el.style.display = 'none');
-        
-        return; 
-    }
-
-    // 💡 2. Gestione Sessione Normale
-    if (session) {
-        // Logica creazione magazzino dopo conferma email
-        const pendingData = localStorage.getItem('pending_tenant_data');
-        if (event === 'SIGNED_IN' && pendingData) { // Solo se è appena stato fatto il login
-            const { tenant_id, warehouse_name } = JSON.parse(pendingData);
-            
-            // Inserimento dati nella tabella ponte (utenti_magazzino) e nella tabella tenants
-            const { error: bridgeError } = await supabase.from('utenti_magazzino').insert([{ user_id: session.user.id, tenant_id: tenant_id }]);
-            const { error: tenantInsertError } = await supabase.from('tenants').insert([{ id: tenant_id, name: warehouse_name }]);
-
-            if (bridgeError || tenantInsertError) {
-                console.error("Errore creazione magazzino iniziale:", bridgeError, tenantInsertError);
-                showNotification('Errore nella creazione del magazzino iniziale. Riprova.', 'error');
-            } else {
-                showNotification(`✅ Magazzino "${warehouse_name}" creato con successo!`, 'success');
-            }
-            
-            localStorage.removeItem('pending_tenant_data');
-        }
-
-        // ✅ CORREZIONE CRITICA: Chiama showApp() SOLO qui.
-        showApp();
-    } else {
-        // Nessuna sessione attiva (DISCONNESSIONE)
-        hideApp(); 
-
-        // Mostra il login e nasconde gli altri form
-        document.getElementById('login-form').classList.remove('hidden');
-        document.getElementById('reset-password-form').classList.add('hidden');
-        document.getElementById('update-password-form').classList.add('hidden');
-        document.getElementById('register-form').classList.add('hidden'); 
-    }
-});
-
-
-// ===============================================
-// 4. LISTENER DEI FORM DI AUTENTICAZIONE E TOGGLE
-// ===============================================
-
-// === LOGIN ===
-document.getElementById('login-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    
-    document.getElementById('login-form').querySelector('button').textContent = 'Accesso in corso...';
-    // showApp verrà chiamata automaticamente da onAuthStateChange se il login ha successo
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    document.getElementById('login-form').querySelector('button').textContent = 'Login';
-
-    if (error) return showNotification('Errore login: ' + error.message, 'error');
-});
-
-// === REGISTRAZIONE UTENTE (signUp) ===
-document.getElementById('register-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const email = document.getElementById('reg-email').value.trim();
-    const password = document.getElementById('reg-password').value.trim();
-    const warehouse = document.getElementById('warehouse-name').value.trim(); 
-    
-    if (warehouse.length < 3) return showNotification('Inserisci un nome valido per il magazzino.', 'error');
-
-    const msgEl = document.getElementById('register-form').querySelector('.btn-action');
-    
-    // Genera un ID univoco per il tenant
-    const tenant_id = 'wh-' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5); 
-
-    msgEl.textContent = '⏳ Registrazione in corso...';
-    
-    // Salva i dati del tenant in LocalStorage in attesa della conferma email
-    localStorage.setItem('pending_tenant_data', JSON.stringify({
-        tenant_id: tenant_id,
-        warehouse_name: warehouse
-    }));
-
-    const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-            emailRedirectTo: 'https://nin82.github.io/magazzino-app/', 
-        }
-    }); 
-    
-    msgEl.textContent = 'Crea Account'; 
-    
-    if (error) {
-        localStorage.removeItem('pending_tenant_data'); 
-        return showNotification('❌ Errore registrazione: ' + error.message, 'error');
-    }
-    
-    showNotification(`✅ Registrazione completata! Verifica la tua email (${email}).`, 'success');
-
-    // Torna al login dopo l'invio dell'email di conferma
+  // Recupero password
+  if (isRecovery || event === 'PASSWORD_RECOVERY') {
+    document.getElementById('login-form').classList.add('hidden');
     document.getElementById('register-form').classList.add('hidden');
+    document.getElementById('reset-password-form').classList.add('hidden');
+    document.getElementById('update-password-form').classList.remove('hidden');
+    document.getElementById('reset-msg').textContent = 'Sei in modalità di recupero. Inserisci la tua nuova password.';
+    authContainer.style.display = 'block';
+    appSections.forEach(el => el.style.display = 'none');
+    return;
+  }
+
+  if (session) {
+    // 🔹 Creazione magazzino in sospeso (da registrazione)
+    const pendingData = localStorage.getItem('pending_tenant_data');
+    if (pendingData) {
+      const { tenant_id, warehouse_name } = JSON.parse(pendingData);
+      await supabase.from('tenants').insert([{ id: tenant_id, name: warehouse_name }]);
+      await supabase.from('utenti_magazzino').insert([{ user_id: session.user.id, tenant_id }]);
+      localStorage.removeItem('pending_tenant_data');
+      showNotification(`✅ Magazzino "${warehouse_name}" creato con successo!`, 'info');
+    }
+    showApp();
+  } else {
+    hideApp();
     document.getElementById('login-form').classList.remove('hidden');
+    document.getElementById('reset-password-form').classList.add('hidden');
+    document.getElementById('update-password-form').classList.add('hidden');
+    document.getElementById('register-form').classList.add('hidden');
+  }
+});
+
+// ====================== LISTENER DEI FORM ======================
+// === LOGIN ===
+document.getElementById('login-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+  const btn = e.target.querySelector('button');
+  btn.textContent = 'Accesso in corso...';
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  btn.textContent = 'Login';
+  if (error) return showNotification('Errore login: ' + error.message, 'error');
+  showApp();
+});
+
+// === REGISTRAZIONE ===
+document.getElementById('register-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const email = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value.trim();
+  const warehouse = document.getElementById('warehouse-name').value.trim();
+  const btn = e.target.querySelector('.btn-action');
+
+  const tenant_id = 'wh-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  localStorage.setItem('pending_tenant_data', JSON.stringify({ tenant_id, warehouse_name: warehouse }));
+
+  btn.textContent = '⏳ Registrazione in corso...';
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { emailRedirectTo: 'https://nin82.github.io/magazzino-app/' },
+  });
+  btn.textContent = 'Crea Account';
+
+  if (error) {
+    localStorage.removeItem('pending_tenant_data');
+    return showNotification('❌ Errore registrazione: ' + error.message, 'error');
+  }
+
+  showNotification(`✅ Registrazione completata! Verifica la tua email (${email}).`, 'success');
+  document.getElementById('register-form').classList.add('hidden');
+  document.getElementById('login-form').classList.remove('hidden');
 });
 
 // === LOGOUT ===
-document.getElementById('logout-btn')?.addEventListener('click', async () => {
-    await supabase.auth.signOut();
-    location.reload(); 
+logoutBtn.addEventListener('click', async () => {
+  await supabase.auth.signOut();
+  location.reload();
 });
 
+// === RESET PASSWORD ===
+document.getElementById('reset-password-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const email = document.getElementById('reset-email').value;
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.textContent = 'Invio in corso...';
 
-// === TOGGLE tra login e registrazione ===
-document.getElementById('show-register').addEventListener('click', () => {
-    document.getElementById('login-form').classList.add('hidden');
-    document.getElementById('register-form').classList.remove('hidden');
-});
-document.getElementById('back-login').addEventListener('click', () => {
-    document.getElementById('register-form').classList.add('hidden');
-    document.getElementById('login-form').classList.remove('hidden');
-});
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: 'https://nin82.github.io/magazzino-app/',
+  });
 
-// === MOSTRA / NASCONDI FORM RESET (Link "Password dimenticata?") ===
-document.getElementById('forgot-password-link').addEventListener('click', (e) => {
-    e.preventDefault();
-    document.getElementById('login-form').classList.add('hidden');
-    document.getElementById('register-form').classList.add('hidden');
-    document.getElementById('reset-password-form').classList.remove('hidden');
-});
-
-document.getElementById('back-login-from-reset').addEventListener('click', () => {
-    document.getElementById('reset-password-form').classList.add('hidden');
-    document.getElementById('login-form').classList.remove('hidden');
+  btn.textContent = 'Invia Link di Reset';
+  if (error) return showNotification('Errore: ' + error.message, 'error');
+  showNotification('✅ Link di reset inviato. Controlla la tua email!', 'success');
+  document.getElementById('reset-password-form').classList.add('hidden');
+  document.getElementById('login-form').classList.remove('hidden');
 });
 
-// === RESET PASSWORD CON SUPABASE (Invio email di reset) ===
-document.getElementById('reset-password-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('reset-email').value;
-    document.getElementById('reset-password-form').querySelector('button[type="submit"]').textContent = 'Invio in corso...';
+// === UPDATE PASSWORD ===
+window.addEventListener('DOMContentLoaded', () => {
+  const updateForm = document.getElementById('update-password-form');
+  if (!updateForm) return;
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'https://nin82.github.io/magazzino-app/' 
-    });
-
-    document.getElementById('reset-password-form').querySelector('button[type="submit"]').textContent = 'Invia Link di Reset';
-
-    if (error) {
-        showNotification('Errore: ' + error.message, 'error');
-        return;
-    }
-
-    showNotification('✅ Link di reset inviato. Controlla la tua email!', 'success');
-    document.getElementById('reset-password-form').classList.add('hidden');
-    document.getElementById('login-form').classList.remove('hidden');
-});
-
-// === GESTIONE CAMBIO PASSWORD DOPO REINDIRIZZAMENTO EMAIL (update-password-form) ===
-document.getElementById('update-password-form').addEventListener('submit', async (e) => {
+  updateForm.addEventListener('submit', async e => {
     e.preventDefault();
     const newPassword = document.getElementById('new-password-input').value.trim();
-    const msgEl = document.getElementById('reset-msg');
+    const confirm = document.getElementById('confirm-new-password-input').value.trim();
 
-    if (newPassword.length < 6) {
-        msgEl.textContent = 'La password deve avere almeno 6 caratteri.';
-        return;
-    }
+    if (!newPassword || newPassword.length < 6) return showNotification('La password deve avere almeno 6 caratteri', 'error');
+    if (newPassword !== confirm) return showNotification('Le password non corrispondono', 'error');
 
-    msgEl.textContent = '⏳ Aggiornamento in corso...';
-    // Aggiorna la password dell'utente corrente (quello in sessione temporanea)
     const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) return showNotification('Errore durante il cambio password: ' + error.message, 'error');
 
-    if (error) {
-        msgEl.textContent = '❌ Errore: ' + error.message;
-    } else {
-        msgEl.textContent = '✅ Password aggiornata! Accesso effettuato.';
-    }
+    showNotification('✅ Password aggiornata correttamente!', 'success');
+    updateForm.classList.add('hidden');
+    document.getElementById('login-form').classList.remove('hidden');
+  });
 });
 
-
-// ===============================================
-// 5. FUNZIONI DI GESTIONE DATI (CRUD)
-// ===============================================
-
-// Variabili per l'input e l'output del Carico
+// ================== ELEMENTI ==================
 const caricoBarcode = document.getElementById('carico-barcode');
 const caricoArticle = document.getElementById('carico-article');
 const caricoQty = document.getElementById('carico-qty');
-const caricoSupplier = document.getElementById('carico-supplier');
-const caricoNote = document.getElementById('carico-note');
-const giacenzaDisplay = document.getElementById('giacenza-display');
-let ignoreCaricoBarcodeListener = false; // Flag per ignorare l'input Carico
-
-// Variabili per l'input e l'output dello Scarico
-const scaricoBarcodeSelect = document.getElementById('scarico-barcode-select');
-const scaricoArticle = document.getElementById('scarico-article');
+const scaricoBarcode = document.getElementById('scarico-barcode');
 const scaricoQty = document.getElementById('scarico-qty');
-const scaricoNote = document.getElementById('scarico-note');
-const giacenzaScaricoDisplay = document.getElementById('giacenza-scarico-display');
+let ignoreCaricoBarcodeListener = false;
 
+// ================== NOTIFICHE ==================
+let notificationTimeout;
 
-// === Funzione Generica per Logging ===
-async function logMovement(type, barcode, article, quantity, note) {
-    if (!currentTenantId) return console.error("Tenant ID non disponibile per il log.");
+function showNotification(msg, type = 'info') {
+  const notificationElement = document.getElementById('notification');
+  if (!notificationElement) return;
 
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    await supabase.from('log_movimenti').insert([{
-        tenant_id: currentTenantId,
-        timestamp: new Date().toISOString(),
-        type: type,
-        barcode: barcode,
-        article: article,
-        quantity: quantity,
-        note: note,
-        user_email: user ? user.email : 'system'
-    }]);
+  if (notificationTimeout) clearTimeout(notificationTimeout);
+
+  notificationElement.textContent = msg;
+  notificationElement.style.display = 'block';
+  notificationElement.style.padding = '10px';
+  notificationElement.style.borderRadius = '8px';
+  notificationElement.style.color = '#fff';
+  notificationElement.style.textAlign = 'center';
+  notificationElement.style.fontWeight = '500';
+  notificationElement.style.transition = 'opacity 0.3s ease';
+  notificationElement.style.backgroundColor =
+    type === 'success' ? '#10b981' :
+    type === 'error' ? '#ef4444' :
+    '#4f46e5';
+  notificationElement.style.opacity = '1';
+
+  notificationTimeout = setTimeout(() => {
+    notificationElement.style.opacity = '0';
+    setTimeout(() => {
+      notificationElement.style.display = 'none';
+    }, 300);
+  }, 3000);
 }
 
-// === Funzione per aggiornare la giacenza ===
-async function updateGiacenza(barcode, article, quantityChange) {
-    if (!currentTenantId) return console.error("Tenant ID non disponibile per la giacenza.");
+// ================== FUNZIONI SUPPORTO ==================
+async function getAndDisplayStock(barcode, displayElementId, mode) {
+  const displayElement = document.getElementById(displayElementId);
+  if (!displayElement) return;
 
-    // 1. Cerca l'articolo nel magazzino del tenant corrente
-    const { data: existing, error: selectError } = await supabase
-        .from('magazzino')
-        .select('*')
-        .eq('barcode', barcode)
-        .eq('tenant_id', currentTenantId)
-        .maybeSingle();
+  if (!barcode) {
+    displayElement.textContent = '';
+    return;
+  }
 
-    if (selectError) {
-        showNotification('Errore di lettura giacenza: ' + selectError.message, 'error');
-        return false;
-    }
-
-    const newQuantity = existing ? existing.quantity + quantityChange : quantityChange;
-
-    if (newQuantity < 0) {
-        showNotification(`Errore: La quantità finale di ${article} non può essere negativa. Giacenza attuale: ${existing.quantity}`, 'error');
-        return false;
-    }
-
-    if (existing) {
-        // 2. Articolo trovato: Aggiorna
-        const { error } = await supabase
-            .from('magazzino')
-            .update({ quantity: newQuantity, article: article }) // Aggiorna anche il nome articolo in caso di modifica
-            .eq('id', existing.id);
-        
-        if (error) {
-            showNotification('Errore di aggiornamento giacenza: ' + error.message, 'error');
-            return false;
-        }
-
-    } else if (quantityChange > 0) {
-        // 3. Articolo nuovo (solo se Carico): Inserisci
-        const { error } = await supabase
-            .from('magazzino')
-            .insert([{ 
-                tenant_id: currentTenantId,
-                barcode: barcode, 
-                article: article, 
-                quantity: newQuantity 
-            }]);
-
-        if (error) {
-            showNotification('Errore di inserimento nuovo articolo: ' + error.message, 'error');
-            return false;
-        }
-    }
-    
-    // Aggiorna la UI
-    giacenzaDisplay.textContent = `Giacenza Attuale: ${newQuantity} unità`;
-    giacenzaScaricoDisplay.textContent = `Giacenza Attuale: ${newQuantity} unità`;
-    
-    return true; // Operazione riuscita
-}
-
-// === Funzione per popolare la select dello scarico ===
-async function refreshScaricoSelect(optionalBarcode = null) {
-    if (!currentTenantId) return;
-
+  try {
+    if (!currentTenantId) throw new Error('Tenant non definito');
     const { data, error } = await supabase
-        .from('magazzino')
-        .select('barcode, article, quantity')
-        .eq('tenant_id', currentTenantId)
-        .gt('quantity', 0) // Solo articoli con giacenza > 0
-        .order('article', { ascending: true });
+      .from('magazzino')
+      .select('quantity')
+      .eq('barcode', barcode)
+      .eq('tenant_id', currentTenantId)
+      .maybeSingle();
 
-    if (error) {
-        showNotification('Errore nel caricamento articoli: ' + error.message, 'error');
-        return;
+    if (error) throw error;
+
+    if (data) {
+      const qty = data.quantity;
+      displayElement.textContent = `Giacenza Attuale: ${qty} unità`;
+      displayElement.style.color = qty > 0 ? '#4f46e5' : '#ef4444';
+    } else {
+      if (mode === 'carico') {
+        displayElement.textContent = '🆕 Nuovo Articolo (Giacenza: 0)';
+        displayElement.style.color = '#6b7280';
+      } else {
+        displayElement.textContent = '❌ Articolo NON in giacenza';
+        displayElement.style.color = '#ef4444';
+      }
     }
-
-    // Pulisce e inserisce l'opzione di default
-    scaricoBarcodeSelect.innerHTML = '<option value="">Seleziona un articolo...</option>';
-
-    data.forEach(item => {
-        const option = document.createElement('option');
-        option.value = item.barcode;
-        option.textContent = `${item.article} (${item.barcode}) - ${item.quantity} in stock`;
-        scaricoBarcodeSelect.appendChild(option);
-    });
-
-    // Se è stato passato un barcode opzionale (da QR), selezionalo
-    if (optionalBarcode) {
-        scaricoBarcodeSelect.value = optionalBarcode;
-        // Triggera il change event per popolare gli altri campi
-        scaricoBarcodeSelect.dispatchEvent(new Event('change'));
-    }
+  } catch (err) {
+    console.error('Errore getAndDisplayStock:', err.message);
+    displayElement.textContent = '❌ Errore nel caricamento giacenza';
+    displayElement.style.color = '#ef4444';
+  }
 }
 
-// === Funzione per aggiornare le tabelle (Chiamata dopo ogni operazione) ===
-async function refreshGiacenzaTable(searchTerm = '') {
-    if (!currentTenantId) return;
-    const tableBody = document.querySelector('#giacenza-table tbody');
-    tableBody.innerHTML = '';
+// ================== FUNZIONI CARICO / SCARICO ==================
+async function addCarico(barcode, article, qty) {
+  try {
+    if (!currentTenantId) throw new Error('Tenant non impostato');
 
-    let query = supabase
-        .from('magazzino')
-        .select('barcode, article, quantity')
-        .eq('tenant_id', currentTenantId)
-        .gt('quantity', 0)
-        .order('article', { ascending: true });
+    // Cerca se l'articolo esiste già
+    const { data: existing, error: fetchError } = await supabase
+      .from('magazzino')
+      .select('*')
+      .eq('barcode', barcode)
+      .eq('tenant_id', currentTenantId)
+      .maybeSingle();
 
-    // Filtro di ricerca
-    if (searchTerm) {
-        query = query.or(`barcode.ilike.%${searchTerm}%,article.ilike.%${searchTerm}%`);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-        showNotification('Errore nel caricamento giacenza: ' + error.message, 'error');
-        return;
-    }
-
-    data.forEach(item => {
-        const row = tableBody.insertRow();
-        row.insertCell().textContent = item.barcode;
-        row.insertCell().textContent = item.article;
-        row.insertCell().textContent = item.quantity;
-    });
-}
-
-// === Funzione per aggiornare la tabella Log ===
-async function refreshLogTable(searchTerm = '') {
-    if (!currentTenantId) return;
-    const tableBody = document.querySelector('#log-table tbody');
-    tableBody.innerHTML = '';
-
-    let query = supabase
-        .from('log_movimenti')
-        .select('timestamp, type, barcode, article, quantity, note, user_email')
-        .eq('tenant_id', currentTenantId)
-        .order('timestamp', { ascending: false })
-        .limit(100); // Limite di 100 voci per performance
-
-    // Filtro di ricerca
-    if (searchTerm) {
-        query = query.or(`barcode.ilike.%${searchTerm}%,article.ilike.%${searchTerm}%,note.ilike.%${searchTerm}%,user_email.ilike.%${searchTerm}%`);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-        showNotification('Errore nel caricamento Log: ' + error.message, 'error');
-        return;
-    }
-
-    const formatter = new Intl.DateTimeFormat('it-IT', { dateStyle: 'short', timeStyle: 'medium' });
-
-    data.forEach(item => {
-        const row = tableBody.insertRow();
-        row.insertCell().textContent = formatter.format(new Date(item.timestamp));
-        row.insertCell().textContent = item.type;
-        row.insertCell().textContent = item.article;
-        row.insertCell().textContent = item.quantity;
-        row.insertCell().textContent = item.note || '-';
-        row.insertCell().textContent = item.user_email.split('@')[0]; // Mostra solo il nome utente
-    });
-}
-
-
-// === Funzione principale di refresh (chiamata in showApp) ===
-async function refreshAll() {
-    await refreshScaricoSelect();
-    await refreshGiacenzaTable();
-    await refreshLogTable();
-}
-
-
-// ===============================================
-// 6. LISTENER PER I DATI (CRUD, QR, TABS)
-// ===============================================
-
-// === Listener Toggle Tabs ===
-document.querySelectorAll('.tab-button').forEach(button => {
-    button.addEventListener('click', async () => {
-        // Toglie active da tutti i bottoni e contenuti
-        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-
-        // Aggiunge active al bottone e al contenuto corrente
-        button.classList.add('active');
-        document.getElementById(button.dataset.tab).classList.add('active');
-
-        // Aggiorna i dati solo quando si passa alla tab
-        if (button.dataset.tab === 'giacenza-tab') {
-            await refreshGiacenzaTable();
-        } else if (button.dataset.tab === 'scarico-tab') {
-            await refreshScaricoSelect();
-        } else if (button.dataset.tab === 'log-tab') {
-            await refreshLogTable();
-        }
-    });
-});
-
-
-// === Carico: Submit Form ===
-document.getElementById('carico-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!currentTenantId) return showNotification("Effettua il login per registrare movimenti.", 'error');
-
-    const barcode = caricoBarcode.value.trim();
-    const article = caricoArticle.value.trim();
-    const qty = parseInt(caricoQty.value, 10);
-    const supplier = caricoSupplier.value.trim();
-    const note = caricoNote.value.trim();
-
-    if (qty <= 0 || !barcode || !article) {
-        return showNotification('Inserisci Barcode, Articolo e Quantità positiva.', 'error');
-    }
-
-    // 1. Aggiorna giacenza (Aggiunge qty)
-    const success = await updateGiacenza(barcode, article, qty);
-
-    if (success) {
-        // 2. Logga il movimento
-        await logMovement('CARICO', barcode, article, qty, `Fornitore: ${supplier || 'N/D'} - ${note}`);
-
-        showNotification(`✅ Carico di ${qty} x ${article} registrato.`, 'success');
-
-        // Pulisce il form Carico
-        caricoBarcode.value = '';
-        caricoArticle.value = '';
-        caricoQty.value = '';
-        caricoSupplier.value = '';
-        caricoNote.value = '';
-        giacenzaDisplay.textContent = 'Giacenza Attuale: N/D';
-
-        // Aggiorna le altre tabelle e select
-        await refreshGiacenzaTable();
-        await refreshLogTable(); 
-        await refreshScaricoSelect();
-
-        caricoBarcode.focus();
-    }
-});
-
-
-// === Scarico: Submit Form ===
-document.getElementById('scarico-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!currentTenantId) return showNotification("Effettua il login per registrare movimenti.", 'error');
-
-    const barcode = scaricoBarcodeSelect.value;
-    const article = scaricoArticle.value;
-    const qty = parseInt(scaricoQty.value, 10);
-    const note = scaricoNote.value.trim();
-
-    // Recupera la giacenza attuale dal display (o la legge se non è stata letta)
-    const currentStockText = giacenzaScaricoDisplay.textContent;
-    const currentStockMatch = currentStockText.match(/(\d+) unità/);
-    const currentStock = currentStockMatch ? parseInt(currentStockMatch[1], 10) : 0;
-
-    if (qty <= 0 || !barcode || !article) {
-        return showNotification('Seleziona Barcode e Quantità positiva.', 'error');
-    }
-    if (qty > currentStock) {
-        return showNotification(`Errore: Quantità in stock insufficiente (${currentStock}).`, 'error');
-    }
-
-    // 1. Aggiorna giacenza (Sottrae qty)
-    const success = await updateGiacenza(barcode, article, -qty);
-
-    if (success) {
-        // 2. Logga il movimento
-        await logMovement('SCARICO', barcode, article, qty, `Destinazione: ${note || 'N/D'}`);
-
-        showNotification(`✅ Scarico di ${qty} x ${article} registrato.`, 'success');
-
-        // Pulisce il form Scarico
-        scaricoBarcodeSelect.value = '';
-        scaricoArticle.value = '';
-        scaricoQty.value = '';
-        scaricoNote.value = '';
-        giacenzaScaricoDisplay.textContent = 'Giacenza Attuale: N/D';
-
-        // Aggiorna le altre tabelle e select
-        await refreshGiacenzaTable();
-        await refreshLogTable();
-        await refreshScaricoSelect();
-
-        // Riporta il focus
-        scaricoBarcodeSelect.focus();
-    }
-});
-
-
-// === Scarico: Listener per la selezione del barcode ===
-scaricoBarcodeSelect.addEventListener('change', async (e) => {
-    const barcode = e.target.value;
-    scaricoArticle.value = '';
-    giacenzaScaricoDisplay.textContent = 'Giacenza Attuale: N/D';
-
-    if (!barcode || !currentTenantId) return;
-
-    // Legge i dati per popolare Articolo e Giacenza
-    const { data: item, error } = await supabase
-        .from('magazzino')
-        .select('article, quantity')
-        .eq('barcode', barcode)
-        .eq('tenant_id', currentTenantId)
-        .maybeSingle();
-
-    if (error) return showNotification('Errore di lettura articolo: ' + error.message, 'error');
-
-    if (item) {
-        scaricoArticle.value = item.article;
-        giacenzaScaricoDisplay.textContent = `Giacenza Attuale: ${item.quantity} unità`;
-        scaricoQty.max = item.quantity; // Imposta il massimo per il controllo HTML5
-    }
-});
-
-
-// === Carico: Listener per la ricerca articolo/giacenza da Barcode ===
-caricoBarcode.addEventListener('change', async (e) => {
-    const barcode = e.target.value.trim();
-    if (!barcode || ignoreCaricoBarcodeListener || !currentTenantId) return;
-
-    caricoArticle.value = '';
-    giacenzaDisplay.textContent = 'Giacenza Attuale: N/D';
-
-    // Controlla barcode esistente SOLO nel magazzino/tenant corrente
-    const { data: existing } = await supabase
-        .from('magazzino')
-        .select('article, quantity')
-        .eq('barcode', barcode)
-        .eq('tenant_id', currentTenantId) // filtro multi-magazzino
-        .maybeSingle();
+    if (fetchError) throw fetchError;
 
     if (existing) {
-        caricoArticle.value = existing.article;
-        giacenzaDisplay.textContent = `Giacenza Attuale: ${existing.quantity} unità`;
+      const { error: updateError } = await supabase
+        .from('magazzino')
+        .update({ quantity: existing.quantity + qty })
+        .eq('barcode', barcode)
+        .eq('tenant_id', currentTenantId);
+      if (updateError) throw updateError;
     } else {
-        giacenzaDisplay.textContent = 'Nuovo Articolo (Giacenza: 0)';
+      const { error: insertError } = await supabase
+        .from('magazzino')
+        .insert([{ barcode, article, quantity: qty, tenant_id: currentTenantId }]);
+      if (insertError) throw insertError;
     }
-    caricoQty.focus();
-});
+
+    // Log operazione
+    await supabase.from('log_operazioni').insert([{
+      type: 'Carico',
+      barcode,
+      article,
+      quantity: qty,
+      tenant_id: currentTenantId
+    }]);
+
+    await trimLog(50);
+    showNotification(`✅ Carico registrato: ${qty}x ${article}`, 'success');
+    await getAndDisplayStock(barcode, 'carico-giacenza-display', 'carico');
+  } catch (err) {
+    console.error('Errore addCarico:', err);
+    showNotification('❌ Errore durante il caricamento', 'error');
+  }
+}
+
+async function addScarico(barcode, qty) {
+  try {
+    if (!currentTenantId) throw new Error('Tenant non impostato');
+
+    const { data: existing, error: fetchError } = await supabase
+      .from('magazzino')
+      .select('*')
+      .eq('barcode', barcode)
+      .eq('tenant_id', currentTenantId)
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+
+    if (!existing || existing.quantity < qty) {
+      showNotification("Errore: quantità insufficiente o articolo mancante", 'error');
+      return;
+    }
+
+    const newQty = existing.quantity - qty;
+    const { error: updateError } = await supabase
+      .from('magazzino')
+      .update({ quantity: newQty })
+      .eq('barcode', barcode)
+      .eq('tenant_id', currentTenantId);
+    if (updateError) throw updateError;
+
+    await supabase.from('log_operazioni').insert([{
+      type: 'Scarico',
+      barcode,
+      article: existing.article,
+      quantity: qty,
+      tenant_id: currentTenantId
+    }]);
+
+    await trimLog(50);
+    showNotification(`📦 Scarico registrato: ${qty}x ${existing.article}`, 'success');
+    await getAndDisplayStock(barcode, 'scarico-giacenza-display', 'scarico');
+  } catch (err) {
+    console.error('Errore addScarico:', err);
+    showNotification('❌ Errore durante lo scarico', 'error');
+  }
+}
+
+// ================== TRIM LOG ==================
+async function trimLog(maxRecords = 50) {
+  try {
+    if (!currentTenantId) return;
+    const { count, error: countError } = await supabase
+      .from('log_operazioni')
+      .select('id', { count: 'exact' })
+      .eq('tenant_id', currentTenantId);
+
+    if (countError) throw countError;
+    if (!count || count <= maxRecords) return;
+
+    const { data: oldRecords, error: oldError } = await supabase
+      .from('log_operazioni')
+      .select('id')
+      .eq('tenant_id', currentTenantId)
+      .order('date', { ascending: true })
+      .limit(count - maxRecords);
+
+    if (oldError) throw oldError;
+    if (!oldRecords?.length) return;
+
+    const idsToDelete = oldRecords.map(r => r.id);
+    await supabase.from('log_operazioni').delete().in('id', idsToDelete);
+  } catch (err) {
+    console.error('Errore trimLog:', err);
+  }
+}
 
 
-// === Listener Ricerca Giacenza ===
-document.getElementById('giacenza-search').addEventListener('input', (e) => {
-    refreshGiacenzaTable(e.target.value.trim());
-});
+/*DA UI AGGIUNTO A MUZZO*/
+// ================== FUNZIONE STOCK SUMMARY FILTRATA ==================
+async function getStockSummary() {
+    try {
+        if (!currentTenantId) return []; // nessun magazzino selezionato
 
-// === Listener Ricerca Log ===
-document.getElementById('log-search').addEventListener('input', (e) => {
-    refreshLogTable(e.target.value.trim());
-});
+        const { data, error } = await supabase
+            .from('magazzino')
+            .select('*')
+            .eq('tenant_id', currentTenantId); // filtro multi-magazzino
+
+        if (error) throw error;
+        return data || [];
+    } catch (err) {
+        console.error("Errore getStockSummary:", err);
+        return [];
+    }
+}
+
+// ================== RENDER CHART GIACENZE ==================
+async function renderCharts() {
+    const data = await getStockSummary();
+    const chartContainer = d3.select("#chart-giacenze");
+    chartContainer.html(''); // reset
+
+    if (!data || data.length === 0) {
+        chartContainer.html("Nessun dato disponibile");
+        return;
+    }
+
+    const top10 = data.sort((a, b) => b.quantity - a.quantity).slice(0, 10);
+    const width = 600, height = 300;
+    const svg = chartContainer.append("svg").attr("width", width).attr("height", height);
+
+    const x = d3.scaleBand()
+        .domain(top10.map(d => d.article))
+        .range([50, width - 20])
+        .padding(0.2);
+
+    const y = d3.scaleLinear()
+        .domain([0, d3.max(top10, d => d.quantity) || 10])
+        .range([height - 40, 20]);
+
+    svg.append("g")
+        .attr("transform", `translate(0,${height - 40})`)
+        .call(d3.axisBottom(x))
+        .selectAll("text")
+        .attr("transform", "rotate(-40)")
+        .style("text-anchor", "end");
+
+    svg.append("g")
+        .attr("transform", "translate(50,0)")
+        .call(d3.axisLeft(y));
+
+    svg.selectAll("rect")
+        .data(top10)
+        .enter()
+        .append("rect")
+        .attr("x", d => x(d.article))
+        .attr("y", d => y(d.quantity))
+        .attr("width", x.bandwidth())
+        .attr("height", d => height - 40 - y(d.quantity))
+        .attr("fill", "#4f46e5");
+}
+
+// ================== RENDER ANDAMENTO GIORNALIERO ==================
+async function renderAndamentoGiornaliero() {
+    if (!currentTenantId) {
+        d3.select("#chart-andamento").html("Seleziona un magazzino");
+        return;
+    }
+
+    const { data: logData, error } = await supabase
+        .from('log_operazioni')
+        .select('date,type,quantity')
+        .eq('tenant_id', currentTenantId) // filtro multi-magazzino
+        .order('date', { ascending: true });
+
+    const chartContainer = d3.select("#chart-andamento");
+    chartContainer.html(''); // reset
+
+    if (error || !logData || logData.length === 0) {
+        chartContainer.html("Nessun dato disponibile");
+        return;
+    }
+
+    // Raggruppa per giorno
+    const dailyMap = {};
+    logData.forEach(r => {
+        const day = new Date(r.date).toISOString().slice(0, 10);
+        dailyMap[day] = (dailyMap[day] || 0) + (r.type.toLowerCase() === 'carico' ? r.quantity : -r.quantity);
+    });
+
+    const dailyArray = Object.entries(dailyMap)
+        .map(([date, qty]) => ({ date: new Date(date), qty }))
+        .sort((a, b) => a.date - b.date);
+
+    if (dailyArray.length === 0) {
+        chartContainer.html("Nessun dato disponibile");
+        return;
+    }
+
+    const width = 600, height = 300;
+    const svg = chartContainer.append("svg").attr("width", width).attr("height", height);
+
+    const x = d3.scaleTime()
+        .domain(d3.extent(dailyArray, d => d.date))
+        .range([50, width - 20]);
+
+    const y = d3.scaleLinear()
+        .domain([Math.min(0, d3.min(dailyArray, d => d.qty) || 0), d3.max(dailyArray, d => d.qty) || 10])
+        .range([height - 40, 20]);
+
+    const line = d3.line()
+        .x(d => x(d.date))
+        .y(d => y(d.qty))
+        .curve(d3.curveMonotoneX);
+
+    svg.append("g")
+        .attr("transform", `translate(0,${height - 40})`)
+        .call(d3.axisBottom(x));
+
+    svg.append("g")
+        .attr("transform", "translate(50,0)")
+        .call(d3.axisLeft(y));
+
+    svg.append("path")
+        .datum(dailyArray)
+        .attr("fill", "none")
+        .attr("stroke", "#10b981")
+        .attr("stroke-width", 2)
+        .attr("d", line);
+}
 
 
 // ===============================================
@@ -1117,20 +1084,8 @@ function onScanError(errorMessage) {
     // Non mostrare l'errore se è un errore continuo (es. nessuna camera trovata)
 }
 
-// ===============================================
-// 8. INITIAL SETUP
-// ===============================================
-document.addEventListener('DOMContentLoaded', async () => {
-    // Inizializza lo stato iniziale (nasconde app, mostra login)
-    // Questo è gestito da onAuthStateChange, ma lo facciamo in modo pulito
-    if (!isRecovery) {
-        hideApp();
-    }
-    
-    // Attiva la tab di default (Carico)
-    document.querySelector('.tab-button[data-tab="carico-tab"]').click();
-});
 
 </script>
+<script type="module" src="main.js"></script>
 </body>
 </html>
