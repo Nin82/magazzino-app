@@ -78,28 +78,37 @@
     <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
 
     <!-- Pagina di Autenticazione -->
-    <div id="auth-page" class="flex flex-col items-center justify-center min-h-screen p-4">
-        <div class="w-full max-w-md bg-white p-8 rounded-xl shadow-2xl">
-            <h1 class="text-3xl font-bold text-center text-primary mb-6">Accesso Magazzino</h1>
-            
-            <form id="login-form" class="space-y-4">
-                <input type="email" id="email" placeholder="Email" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
-                <input type="password" id="password" placeholder="Password" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
-                <button type="submit" class="w-full bg-primary text-white p-3 rounded-lg font-semibold hover:bg-indigo-700 transition duration-150">Accedi</button>
-                <button type="button" id="register-btn" class="w-full text-primary p-2 hover:text-indigo-700 transition duration-150 text-sm">Non hai un account? Registrati</button>
-            </form>
+<div id="auth-page" class="flex flex-col items-center justify-center min-h-screen p-4">
+  <div class="w-full max-w-md bg-white p-8 rounded-xl shadow-2xl">
+    <h1 class="text-3xl font-bold text-center text-primary mb-6">Accesso Magazzino</h1>
 
-            <form id="register-form" class="space-y-4 hidden">
-                <input type="text" id="username-reg" placeholder="Nome Utente/Magazzino" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
-                <input type="email" id="email-reg" placeholder="Email" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
-                <input type="password" id="password-reg" placeholder="Password (min 6 caratteri)" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
-                <button type="submit" class="w-full bg-green-500 text-white p-3 rounded-lg font-semibold hover:bg-green-600 transition duration-150">Registrati</button>
-                <button type="button" id="login-btn-switch" class="w-full text-primary p-2 hover:text-indigo-700 transition duration-150 text-sm">Torna al Login</button>
-            </form>
+    <!-- FORM LOGIN -->
+    <form id="login-form" class="space-y-4">
+      <input type="email" id="email" placeholder="Email" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+      <input type="password" id="password" placeholder="Password" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+      <button type="submit" class="w-full bg-primary text-white p-3 rounded-lg font-semibold hover:bg-indigo-700 transition duration-150">Accedi</button>
+      <button type="button" id="register-btn" class="w-full text-primary p-2 hover:text-indigo-700 transition duration-150 text-sm">
+        Non hai un account? Registrati
+      </button>
+    </form>
 
-            <button id="forgot-password-btn" class="w-full text-gray-500 p-2 hover:text-gray-700 transition duration-150 text-xs mt-2">Password dimenticata?</button>
-        </div>
-    </div>
+    <!-- FORM REGISTRAZIONE -->
+    <form id="register-form" class="space-y-4 hidden">
+      <input type="text" id="username-reg" placeholder="Nome Utente/Magazzino" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+      <input type="email" id="email-reg" placeholder="Email" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+      <input type="password" id="password-reg" placeholder="Password (min 6 caratteri)" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+      <button type="submit" class="w-full bg-green-500 text-white p-3 rounded-lg font-semibold hover:bg-green-600 transition duration-150">Registrati</button>
+      <button type="button" id="login-btn-switch" class="w-full text-primary p-2 hover:text-indigo-700 transition duration-150 text-sm">
+        Hai già un account? Accedi
+      </button>
+    </form>
+
+    <!-- LINK RESET PASSWORD -->
+    <button id="forgot-password-btn" class="w-full text-gray-500 p-2 hover:text-gray-700 transition duration-150 text-xs mt-2">
+      Password dimenticata?
+    </button>
+  </div>
+</div>
     
     <!-- Modal per Reset Password (non è un alert o confirm) -->
     <div id="reset-password-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -891,29 +900,23 @@
     });
 
     // Inizializzazione Logica PWA (se il service worker non è registrato in HTML)
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('service-worker.js') // Assicurati che esista un service-worker.js
-            .then(reg => console.log('✅ Service Worker registrato:', reg.scope))
-            .catch(err => console.error('❌ SW fallito:', err));
-        });
-    }
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js')
+            .then(reg => console.log('✅ Service Worker registrato correttamente:', reg.scope))
+            .catch(err => console.error('❌ Errore registrazione Service Worker:', err));
+    });
+}
 
-    // Controlla l'URL per il reset password all'avvio
-    if (new URLSearchParams(window.location.search).get('type') === 'recovery') {
-        showPage('update-password-page');
-    } else {
-         // Tenta di caricare lo stato iniziale (gestito da onAuthStateChange)
-         supabase.auth.getSession().then(({ data: { session } }) => {
-             handleAuthStateChange(session);
-         });
-    }
-
-                  .then(() => console.log('✅ Service Worker registrato correttamente.'))
-                .catch(err => console.error('❌ Errore registrazione Service Worker:', err));
-        });
-    }
+// Controlla l'URL per il reset password all'avvio
+if (new URLSearchParams(window.location.search).get('type') === 'recovery') {
+    showPage('update-password-page');
+} else {
+    // Tenta di caricare lo stato iniziale (gestito da onAuthStateChange)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+        handleAuthStateChange(session);
+    });
+}
 </script>
 </body>
 </html>
-
