@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<base href="/magazzino-app/">
     <title>Gestione Magazzino Completo</title>
     <!-- ================= PWA & Tailwind CSS ================= -->
     <link rel="manifest" href="manifest.json">
@@ -422,17 +423,18 @@
             showAuthForm('forgot');
         });
 
-        document.getElementById('forgot-password-form').addEventListener('submit', async (e) => {
+      document.getElementById('forgot-password-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('forgot-email').value.trim();
     const msgEl = document.getElementById('forgot-msg');
     msgEl.textContent = '⏳ Invio email in corso...';
 
     try {
+        // URL completo generato dinamicamente
+        const REDIRECT_URL = window.location.origin + '/magazzino-app/index.html?type=recovery';
+
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            options: {
-                emailRedirectTo: "https://nin82.github.io/magazzino-app/index.html?type=recovery"
-            }
+            options: { emailRedirectTo: REDIRECT_URL }
         });
 
         if (error) {
@@ -444,7 +446,6 @@
         msgEl.textContent = '❌ Errore imprevisto: ' + err.message;
     }
 });
-
 
         // === GESTIONE CAMBIO PASSWORD DOPO REINDIRIZZAMENTO EMAIL ===
         document.getElementById('update-password-form').addEventListener('submit', async (e) => {
