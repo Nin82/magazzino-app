@@ -429,7 +429,7 @@
 
             // 🌟 PUNTO DI CORREZIONE CHIAVE: Inseriamo il redirectTo corretto!
             const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: CORRECT_REDIRECT_URL 
+                redirectTo: "https://nin82.github.io/magazzino-app/"
             });
 
             if (error) {
