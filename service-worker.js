@@ -1,11 +1,11 @@
 // service-worker.js
 const CACHE_NAME = "magazzino-cache-v1";
 const urlsToCache = [
-  "./",
-  "./index.html",
-  "./manifest.json",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png"
+  "/magazzino-app/",
+  "/magazzino-app/index.html",
+  "/magazzino-app/manifest.json",
+  "/magazzino-app/icons/icon-192.png",
+  "/magazzino-app/icons/icon-512.png"
 ];
 
 self.addEventListener("install", (event) => {
@@ -24,3 +24,4 @@ self.addEventListener("fetch", (event) => {
     })
   );
 });
+
