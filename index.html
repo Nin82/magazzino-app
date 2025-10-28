@@ -103,7 +103,7 @@
                     </p>
                 </form>
 
-                 <!-- Reimposta Password Request Panel (Nuovo) -->
+                 <!-- Reimposta Password Request Panel (Nuovo) --> 
                  <div id="forgot-password-panel" class="space-y-4 hidden">
                     <h2 class="text-2xl font-bold text-gray-700 mb-4">Reimposta Password</h2>
                     <p class="text-sm text-gray-600">Inserisci la tua email per ricevere il link di reimpostazione. Assicurati che il tuo browser reindirizzi a <code class="text-xs font-mono bg-yellow-100 p-0.5 rounded">https://nin82.github.io/magazzino-app/</code></p>
@@ -288,7 +288,7 @@
 
         // 💡 URL DI REINDIRIZZAMENTO CORRETTO PER SUPABASE
         // QUESTA È LA VARIABILE CHE RISOLVE IL TUO PROBLEMA:
-        const REDIRECT_URL = "https://nin82.github.io/magazzino-app/index.html?type=recovery";
+        const REDIRECT_URL = "https://nin82.github.io/magazzino-app/";
 
         // ================== STATO GLOBALE ==================
         let currentUserId = null;
@@ -427,18 +427,18 @@
     e.preventDefault();
     const email = document.getElementById('forgot-email').value.trim();
     const msgEl = document.getElementById('forgot-msg');
-    msgEl.textContent = '⏳ Invio email in corso...';
+    // ...
 
     try {
-        // URL completo generato dinamicamente
         const REDIRECT_URL = window.location.origin + '/magazzino-app/index.html?type=recovery';
-
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            options: { emailRedirectTo: REDIRECT_URL }
+        
+        // 🚀 CORREZIONE QUI: Passa il parametro corretto direttamente.
+        const { error } = await supabase.auth.resetPasswordForEmail(email, { 
+            redirectTo: REDIRECT_URL // ✅ Usa 'redirectTo' senza l'oggetto 'options'
         });
 
         if (error) {
-            msgEl.textContent = '❌ Errore: ' + error.message;
+            // ...
         } else {
             msgEl.textContent = '✅ Email inviata! Controlla la tua casella di posta per il link di reset.';
         }
