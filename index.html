@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestione Magazzino PWA</title>
+    <title>Gestione Magazzino Completo</title>
     <!-- ================= PWA & Tailwind CSS ================= -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#4f46e5">
@@ -35,1526 +35,1067 @@
         .notification {
             background-color: #333;
             color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
+            padding: 10px 15px;
+            border-radius: 5px;
             margin-bottom: 10px;
             opacity: 0;
-            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
-            transform: translateX(100%);
+            transition: opacity 0.5s ease-in-out;
         }
-        .notification.show {
-            opacity: 1;
-            transform: translateX(0);
+        .notification.show { opacity: 1; }
+        /* Stili per tab */
+        .tab-button.active {
+            border-color: #4f46e5;
+            color: #4f46e5;
+            font-weight: 600;
         }
-        .notification.success { background-color: #10b981; } /* Emerald-500 */
-        .notification.error { background-color: #ef4444; } /* Red-500 */
-        .notification.info { background-color: #3b82f6; }  /* Blue-500 */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
 
-        /* Stili QR Scanner */
-        #qr-video {
-            width: 100%;
-            max-width: 400px;
-            height: auto;
+        /* Stili per pulsanti speciali */
+        .primary-btn {
+            background-color: #4f46e5;
+            color: white;
+            padding: 8px 16px;
             border-radius: 8px;
-            transform: scaleX(-1); /* Specchio l'immagine della telecamera */
+            font-weight: 500;
+            transition: background-color 0.15s;
         }
-        #qr-video-container {
-            position: relative;
-            width: 100%;
-            max-width: 400px;
-            margin: 0 auto;
-        }
-        #qr-frame {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 80%;
-            height: 80%;
-            transform: translate(-50%, -50%);
-            border: 2px solid rgba(255, 255, 255, 0.5);
-            box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.4); /* Maschera l'esterno */
-            pointer-events: none; /* Rende la cornice non interattiva */
-            z-index: 10;
-        }
-
-        /* Stile per l'input di ricerca in Magazzino */
-        #inventory-search-input {
-            transition: all 0.3s ease;
-        }
-        #inventory-search-input:focus {
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.5);
-        }
+        .primary-btn:hover { background-color: #4338ca; }
     </style>
-    <!-- Libreria QR Code: usa l'ultima versione compatibile con la nostra implementazione -->
-    <script src="https://unpkg.com/qrcoder-wasm/dist/qrcoder.min.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
 
-<div id="app-container" class="max-w-4xl mx-auto p-4 md:p-8">
-    
-    <!-- Notifiche -->
+    <!-- Container Notifiche -->
     <div id="notification-container"></div>
+    
+    <!-- ================= Pagine Principali ================= -->
+    
+    <!-- 1. Pagina di Autenticazione (auth-page) -->
+    <div id="auth-page" class="flex flex-col items-center justify-center min-h-screen p-4">
+        <div class="w-full max-w-md bg-white p-8 rounded-xl shadow-2xl">
+            <h1 class="text-3xl font-extrabold text-center text-primary mb-6">Magazzino App</h1>
 
-    <!-- Pagina di Login/Registrazione -->
-    <div id="auth-page" class="flex flex-col items-center justify-center min-h-[50vh] transition-opacity duration-500">
-        <div class="bg-white p-6 md:p-10 rounded-xl shadow-2xl w-full max-w-md">
-            <h1 class="text-3xl font-bold text-center text-primary mb-6">Gestione Magazzino</h1>
-
-            <!-- Scheda di Login -->
-            <div id="login-card">
-                <h2 class="text-xl font-semibold mb-6 text-gray-700">Accedi al tuo magazzino</h2>
+            <!-- Pannello Login/Registrazione -->
+            <div id="auth-panel">
+                <!-- Login Form -->
                 <form id="login-form" class="space-y-4">
-                    <div>
-                        <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
-                        <input type="email" id="login-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
-                    </div>
-                    <div>
-                        <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
-                        <input type="password" id="login-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
-                    </div>
-                    <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out">
-                        Accedi
-                    </button>
-                    <p id="login-msg" class="text-center text-sm text-red-500 mt-2"></p>
+                    <h2 class="text-2xl font-bold text-gray-700 mb-4">Accedi</h2>
+                    <input type="email" id="login-email" placeholder="Email" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                    <input type="password" id="login-password" placeholder="Password" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                    <button type="submit" class="w-full primary-btn py-3">Accedi</button>
+                    <p class="text-center text-sm">
+                        Non hai un account? <a href="#" id="show-register" class="text-primary font-medium hover:underline">Registrati</a>
+                    </p>
+                    <p class="text-center text-sm">
+                        <a href="#" id="show-forgot-password" class="text-gray-500 hover:text-primary hover:underline">Password Dimenticata?</a>
+                    </p>
                 </form>
 
-                <p class="text-center text-sm mt-4">
-                    Non hai un account? <a href="#" id="show-signup" class="text-primary hover:text-indigo-700 font-medium">Registrati</a>
-                </p>
-                <p class="text-center text-sm mt-2">
-                    <a href="#" id="show-forgot-password" class="text-gray-500 hover:text-gray-700 font-medium">Password dimenticata?</a>
-                </p>
-            </div>
-
-            <!-- Scheda di Registrazione -->
-            <div id="signup-card" class="hidden">
-                <h2 class="text-xl font-semibold mb-6 text-gray-700">Crea il tuo account</h2>
-                <form id="signup-form" class="space-y-4">
-                    <div>
-                        <label for="signup-email" class="block text-sm font-medium text-gray-700">Email</label>
-                        <input type="email" id="signup-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
-                    </div>
-                    <div>
-                        <label for="signup-password" class="block text-sm font-medium text-gray-700">Password</label>
-                        <input type="password" id="signup-password" required minlength="6" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
-                    </div>
-                    <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out">
-                        Registrati
-                    </button>
-                    <p id="signup-msg" class="text-center text-sm text-red-500 mt-2"></p>
+                <!-- Register Form (Inizialmente nascosto) -->
+                <form id="register-form" class="space-y-4 hidden">
+                    <h2 class="text-2xl font-bold text-gray-700 mb-4">Registrati</h2>
+                    <input type="email" id="register-email" placeholder="Email" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                    <input type="password" id="register-password" placeholder="Password (min. 6 caratteri)" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                    <button type="submit" class="w-full primary-btn py-3">Registrati</button>
+                    <p class="text-center text-sm">
+                        Hai già un account? <a href="#" id="show-login" class="text-primary font-medium hover:underline">Accedi</a>
+                    </p>
                 </form>
 
-                <p class="text-center text-sm mt-4">
-                    Hai già un account? <a href="#" id="show-login" class="text-primary hover:text-indigo-700 font-medium">Accedi</a>
-                </p>
-            </div>
-            
-            <!-- Scheda Password Dimenticata -->
-            <div id="forgot-password-card" class="hidden">
-                <h2 class="text-xl font-semibold mb-6 text-gray-700">Recupera Password</h2>
-                <form id="forgot-password-form" class="space-y-4">
-                    <p class="text-sm text-gray-500">Inserisci la tua email per ricevere il link di ripristino.</p>
-                    <div>
-                        <label for="forgot-email" class="block text-sm font-medium text-gray-700">Email</label>
-                        <input type="email" id="forgot-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
-                    </div>
-                    <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out">
-                        Invia link
-                    </button>
-                    <p id="forgot-msg" class="text-center text-sm text-red-500 mt-2"></p>
-                </form>
-                <p class="text-center text-sm mt-4">
-                    <a href="#" id="back-to-login" class="text-primary hover:text-indigo-700 font-medium">Torna al Login</a>
-                </p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Pagina di Aggiornamento Password (dopo il click sull'email) -->
-    <div id="update-password-page" class="hidden flex flex-col items-center justify-center min-h-[50vh] transition-opacity duration-500">
-        <div class="bg-white p-6 md:p-10 rounded-xl shadow-2xl w-full max-w-md">
-            <h1 class="text-3xl font-bold text-center text-primary mb-6">Nuova Password</h1>
-            <h2 class="text-xl font-semibold mb-6 text-gray-700">Imposta una nuova password</h2>
-            <form id="update-password-form" class="space-y-4">
-                <div>
-                    <label for="new-password-input" class="block text-sm font-medium text-gray-700">Nuova Password</label>
-                    <input type="password" id="new-password-input" required minlength="6" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+                 <!-- Reimposta Password Request Panel (Nuovo) -->
+                 <div id="forgot-password-panel" class="space-y-4 hidden">
+                    <h2 class="text-2xl font-bold text-gray-700 mb-4">Reimposta Password</h2>
+                    <p class="text-sm text-gray-600">Inserisci la tua email per ricevere il link di reimpostazione. Assicurati che il tuo browser reindirizzi a <code class="text-xs font-mono bg-yellow-100 p-0.5 rounded">https://nin82.github.io/magazzino-app/</code></p>
+                    <form id="forgot-password-form" class="space-y-4">
+                        <input type="email" id="forgot-email" placeholder="La tua Email" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                        <button type="submit" class="w-full primary-btn py-3">Invia Link di Reset</button>
+                    </form>
+                    <p id="forgot-msg" class="text-center text-sm font-medium"></p>
+                    <button onclick="showAuthForm('login')" class="text-sm text-primary hover:text-indigo-700">← Torna al Login</button>
                 </div>
-                <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out">
-                    Aggiorna Password
-                </button>
-                <p id="reset-msg" class="text-center text-sm text-red-500 mt-2"></p>
-            </form>
+
+            </div>
+            <p id="auth-msg" class="mt-4 text-center text-red-500 font-medium"></p>
         </div>
     </div>
 
-    <!-- Pagina App Principale -->
-    <div id="main-app" class="hidden">
-        <header class="flex justify-between items-center py-4 border-b border-gray-200 mb-6">
-            <h1 class="text-2xl font-bold text-primary">Magazzino</h1>
+    <!-- 2. Pagina per Aggiornare Password (update-password-page) -->
+    <div id="update-password-page" class="flex flex-col items-center justify-center min-h-screen p-4 hidden">
+        <div class="w-full max-w-md bg-white p-8 rounded-xl shadow-2xl">
+            <h1 class="text-3xl font-extrabold text-center text-primary mb-6">Nuova Password</h1>
+            <p class="mb-4 text-gray-600 text-center">Inserisci la tua nuova password. Sarai automaticamente loggato dopo l'aggiornamento.</p>
+            <form id="update-password-form" class="space-y-4">
+                <input type="password" id="new-password-input" placeholder="Nuova Password (min. 6 caratteri)" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                <button type="submit" class="w-full primary-btn py-3">Aggiorna Password</button>
+            </form>
+            <p id="reset-msg" class="mt-4 text-center font-medium"></p>
+        </div>
+    </div>
+
+    <!-- 3. Pagina App Principale (app-page) -->
+    <div id="app-page" class="p-4 md:p-8 hidden">
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center pb-6 border-b border-gray-200 mb-6">
+            <div class="mb-4 md:mb-0">
+                <h1 class="text-3xl font-extrabold text-gray-900">Gestione Magazzino <span id="tenant-name-display" class="text-primary text-xl ml-2 bg-indigo-100 p-1 rounded-md"></span></h1>
+                <p class="text-sm text-gray-500 mt-1">Stato: <span id="online-status" class="font-medium text-green-600">Online</span></p>
+            </div>
             <div class="flex items-center space-x-4">
-                <span id="tenant-name-display" class="text-gray-600 text-sm font-medium"></span>
-                <button id="logout-button" class="px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition">
-                    Logout
-                </button>
+                <button id="change-tenant-btn" class="text-sm text-gray-600 hover:text-primary">Cambia Magazzino</button>
+                <button id="logout-btn" class="bg-red-500 text-white p-2 rounded-lg text-sm font-medium hover:bg-red-600 transition duration-150">Logout</button>
             </div>
         </header>
 
-        <!-- Selezione Tenant/Magazzino -->
-        <div id="tenant-selection" class="bg-white p-6 rounded-xl shadow-lg mb-8">
-            <h2 class="text-xl font-semibold mb-4 text-gray-700">Seleziona Magazzino</h2>
-            <div class="flex space-x-4 mb-4">
-                <select id="tenant-select" class="flex-grow px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
-                    <!-- Opzioni caricate via JS -->
-                </select>
-                <button id="switch-tenant-button" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-indigo-700 transition">
-                    Cambia
-                </button>
+        <!-- Selettore Magazzino (Tenant Switcher) -->
+        <div id="tenant-selector-container" class="mb-6 bg-white p-6 rounded-xl shadow-lg hidden">
+            <h2 class="text-2xl font-bold mb-4 text-gray-700">Scegli o Crea Magazzino</h2>
+            <div id="tenant-list" class="space-y-3 mb-6">
+                <!-- Tenants will be listed here -->
             </div>
-            <p id="tenant-message" class="text-sm text-gray-500"></p>
-
-            <h3 class="text-lg font-medium mt-6 mb-3 text-gray-700">Crea Nuovo Magazzino</h3>
-            <form id="create-tenant-form" class="flex space-x-2">
-                <input type="text" id="new-tenant-name" required placeholder="Nome nuovo magazzino" class="flex-grow px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
-                <button type="submit" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition">
-                    Crea
-                </button>
+            <h3 class="text-xl font-semibold mb-3 text-gray-700">Crea Nuovo Magazzino</h3>
+            <form id="create-tenant-form" class="flex space-x-3">
+                <input type="text" id="new-tenant-name" placeholder="Nome Nuovo Magazzino" required class="flex-grow p-2 border border-gray-300 rounded-lg">
+                <button type="submit" class="primary-btn px-4">Crea e Seleziona</button>
             </form>
-        </div>
-
-
-        <!-- Tabs di Navigazione -->
-        <div class="flex border-b border-gray-200 mb-6 sticky top-0 bg-gray-50 z-10">
-            <button data-tab="carico-tab" class="tab-button active px-4 py-3 text-sm font-medium text-gray-600 hover:text-primary transition duration-150 border-b-2 border-primary">
-                Carico
-            </button>
-            <button data-tab="scarico-tab" class="tab-button px-4 py-3 text-sm font-medium text-gray-600 hover:text-primary transition duration-150 border-b-2 border-transparent hover:border-gray-300">
-                Scarico
-            </button>
-            <button data-tab="storico-tab" class="tab-button px-4 py-3 text-sm font-medium text-gray-600 hover:text-primary transition duration-150 border-b-2 border-transparent hover:border-gray-300">
-                Magazzino
-            </button>
-            <button data-tab="qr-tab" class="tab-button px-4 py-3 text-sm font-medium text-gray-600 hover:text-primary transition duration-150 border-b-2 border-transparent hover:border-gray-300">
-                QR Scanner
-            </button>
-        </div>
-
-        <!-- Contenuto Tab Carico -->
-        <div id="carico-tab" class="tab-content active bg-white p-6 rounded-xl shadow-lg mb-8">
-            <h2 class="text-2xl font-semibold mb-6 text-gray-700">Carico Merce (Aggiungi/Aggiorna)</h2>
-            <form id="carico-form" class="space-y-4">
-                <div>
-                    <label for="carico-barcode" class="block text-sm font-medium text-gray-700">Codice Barcode/QR</label>
-                    <input type="text" id="carico-barcode" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
-                </div>
-                <p id="carico-giacenza-display" class="text-sm text-gray-500">Giacenza Attuale: 0 unità</p>
-
-                <div>
-                    <label for="carico-article" class="block text-sm font-medium text-gray-700">Nome Articolo</label>
-                    <input type="text" id="carico-article" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
-                </div>
-                <div>
-                    <label for="carico-qty" class="block text-sm font-medium text-gray-700">Quantità da Aggiungere</label>
-                    <input type="number" id="carico-qty" required min="1" value="1" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
-                </div>
-                <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out">
-                    Carica Merce
-                </button>
-                <p id="carico-msg" class="text-center text-sm text-red-500 mt-2"></p>
-            </form>
-        </div>
-
-        <!-- Contenuto Tab Scarico -->
-        <div id="scarico-tab" class="tab-content hidden bg-white p-6 rounded-xl shadow-lg mb-8">
-            <h2 class="text-2xl font-semibold mb-6 text-gray-700">Scarico Merce (Rimozione)</h2>
-            <form id="scarico-form" class="space-y-4">
-                <div>
-                    <label for="scarico-select" class="block text-sm font-medium text-gray-700">Seleziona Articolo</label>
-                    <select id="scarico-select" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
-                        <option value="" disabled selected>Caricamento articoli...</option>
-                    </select>
-                </div>
-                 <div>
-                    <label for="scarico-barcode" class="block text-sm font-medium text-gray-700">Barcode/QR Articolo (Opzionale)</label>
-                    <input type="text" id="scarico-barcode" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary" placeholder="Inserisci o scansiona Barcode">
-                </div>
-                <p id="scarico-giacenza-display" class="text-sm text-gray-500">Giacenza Selezionata: 0 unità</p>
-                <div>
-                    <label for="scarico-qty" class="block text-sm font-medium text-gray-700">Quantità da Scaricare</label>
-                    <input type="number" id="scarico-qty" required min="1" value="1" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
-                </div>
-                <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-500 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 ease-in-out">
-                    Scarica Merce
-                </button>
-                <p id="scarico-msg" class="text-center text-sm text-red-500 mt-2"></p>
-            </form>
-        </div>
-
-        <!-- Contenuto Tab Magazzino/Storico -->
-        <div id="storico-tab" class="tab-content hidden bg-white p-6 rounded-xl shadow-lg mb-8">
-            <h2 class="text-2xl font-semibold mb-6 text-gray-700">Articoli in Magazzino</h2>
-
-            <div class="mb-4 flex space-x-2">
-                <input type="text" id="inventory-search-input" placeholder="Cerca per Barcode o Articolo..." class="flex-grow px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
-                <button id="refresh-inventory-button" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition">
-                    Ricarica
-                </button>
-            </div>
-
-            <p id="inventory-status" class="text-sm text-gray-500 mb-4">Caricamento...</p>
-            
-            <div id="inventory-list" class="overflow-x-auto rounded-lg shadow-md">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Articolo</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barcode</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Giacenza</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Azioni</th>
-                        </tr>
-                    </thead>
-                    <tbody id="inventory-tbody" class="bg-white divide-y divide-gray-200">
-                        <!-- Righe caricate via JS -->
-                    </tbody>
-                </table>
-            </div>
-            
-            <p id="inventory-total" class="text-sm font-semibold text-gray-700 mt-4">Totale Articoli: 0</p>
         </div>
         
-        <!-- Contenuto Tab QR Scanner -->
-        <div id="qr-tab" class="tab-content hidden bg-white p-6 rounded-xl shadow-lg mb-8">
-            <h2 class="text-2xl font-semibold mb-6 text-gray-700">QR / Barcode Scanner</h2>
-            
-            <div id="qr-video-container" class="mb-4 bg-gray-900 rounded-lg">
-                <video id="qr-video" muted playsinline></video>
-                <div id="qr-frame"></div>
+        <!-- Tab Navigation -->
+        <div id="main-content" class="hidden">
+            <div class="flex border-b border-gray-200 mb-6 space-x-1">
+                <button data-tab="carico-tab" class="tab-button active py-2 px-4 border-b-2 border-transparent text-gray-600 hover:border-gray-300 transition duration-150">Carico</button>
+                <button data-tab="scarico-tab" class="tab-button py-2 px-4 border-b-2 border-transparent text-gray-600 hover:border-gray-300 transition duration-150">Scarico</button>
+                <button data-tab="storico-tab" class="tab-button py-2 px-4 border-b-2 border-transparent text-gray-600 hover:border-gray-300 transition duration-150">Giacenza & Storico</button>
             </div>
 
-            <p id="qr-loading-msg" class="text-center text-sm text-gray-500 mb-4">Inizializzazione telecamera...</p>
-            
-            <div class="flex space-x-3 mb-4">
-                <button id="start-qr" class="flex-grow py-2 px-4 bg-green-500 text-white rounded-lg hover:bg-green-600 transition">
-                    Avvia Scanner
-                </button>
-                <button id="stop-qr" class="flex-grow py-2 px-4 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition">
-                    Ferma Scanner
-                </button>
+            <!-- Tab 1: Carico -->
+            <div id="carico-tab" class="tab-content active bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold mb-4 text-gray-800">Registra Carico (Entrata)</h2>
+                
+                <div class="mb-6 space-y-4 md:space-y-0 md:flex md:space-x-4">
+                    <div class="flex-grow">
+                        <label for="carico-barcode" class="block text-sm font-medium text-gray-700 mb-1">Barcode / QR Code</label>
+                        <input type="text" id="carico-barcode" placeholder="Scansiona o digita il codice" class="w-full p-3 border border-gray-300 rounded-lg bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500">
+                    </div>
+                    <div>
+                        <button id="start-carico-qr" class="primary-btn py-3 px-4 w-full md:w-auto mt-auto">Avvia QR Scanner</button>
+                    </div>
+                </div>
+
+                <div class="mb-6 bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+                    <p id="carico-giacenza-display" class="font-semibold text-indigo-800">Giacenza Attuale: 0 unità</p>
+                </div>
+
+                <form id="carico-form" class="space-y-4">
+                    <div>
+                        <label for="carico-article" class="block text-sm font-medium text-gray-700 mb-1">Nome Articolo</label>
+                        <input type="text" id="carico-article" placeholder="Nome completo dell'articolo" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                    </div>
+                    <div>
+                        <label for="carico-qty" class="block text-sm font-medium text-gray-700 mb-1">Quantità in Entrata</label>
+                        <input type="number" id="carico-qty" placeholder="Quantità" required min="1" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                    </div>
+                    <button type="submit" class="w-full primary-btn py-3">Registra Carico</button>
+                </form>
             </div>
 
-            <div>
-                <label for="qr-result" class="block text-sm font-medium text-gray-700">Risultato Scansione</label>
-                <input type="text" id="qr-result" readonly class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-gray-100 rounded-lg shadow-sm">
+            <!-- Tab 2: Scarico -->
+            <div id="scarico-tab" class="tab-content bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold mb-4 text-gray-800">Registra Scarico (Uscita)</h2>
+                
+                <div class="mb-6 space-y-4 md:space-y-0 md:flex md:space-x-4">
+                    <div class="flex-grow">
+                        <label for="scarico-barcode" class="block text-sm font-medium text-gray-700 mb-1">Barcode / QR Code</label>
+                        <input type="text" id="scarico-barcode" placeholder="Scansiona o digita il codice" class="w-full p-3 border border-gray-300 rounded-lg bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500">
+                    </div>
+                    <div>
+                        <button id="start-scarico-qr" class="primary-btn py-3 px-4 w-full md:w-auto mt-auto">Avvia QR Scanner</button>
+                    </div>
+                </div>
+
+                <form id="scarico-form" class="space-y-4">
+                    <div>
+                        <label for="scarico-article-select" class="block text-sm font-medium text-gray-700 mb-1">Seleziona Articolo (Giacenza)</label>
+                        <select id="scarico-article-select" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                            <option value="">Caricamento articoli...</option>
+                        </select>
+                        <p id="scarico-giacenza-display" class="mt-2 text-sm text-indigo-700 font-medium">Giacenza Articolo Selezionato: 0 unità</p>
+                    </div>
+                    <div>
+                        <label for="scarico-qty" class="block text-sm font-medium text-gray-700 mb-1">Quantità in Uscita</label>
+                        <input type="number" id="scarico-qty" placeholder="Quantità" required min="1" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                    </div>
+                    <button type="submit" class="w-full bg-red-500 text-white py-3 rounded-lg font-medium hover:bg-red-600 transition duration-150">Registra Scarico</button>
+                </form>
             </div>
 
-            <div class="mt-6">
-                <label for="qr-target" class="block text-sm font-medium text-gray-700 mb-2">Target per il QR code scansionato:</label>
-                <div class="flex space-x-4">
-                    <label class="inline-flex items-center">
-                        <input type="radio" name="qr-target" value="carico" checked class="form-radio text-primary h-4 w-4">
-                        <span class="ml-2 text-gray-700">Carico</span>
-                    </label>
-                    <label class="inline-flex items-center">
-                        <input type="radio" name="qr-target" value="scarico" class="form-radio text-primary h-4 w-4">
-                        <span class="ml-2 text-gray-700">Scarico</span>
-                    </label>
+            <!-- Tab 3: Giacenza & Storico -->
+            <div id="storico-tab" class="tab-content bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold mb-4 text-gray-800">Riepilogo Giacenze</h2>
+                <div id="inventory-summary" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                    <!-- Summary cards will be injected here -->
+                </div>
+                
+                <h2 class="text-2xl font-bold mb-4 text-gray-800">Storico Movimenti</h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data/Ora</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Articolo</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barcode</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantità</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                            </tr>
+                        </thead>
+                        <tbody id="movements-table-body" class="bg-white divide-y divide-gray-200">
+                            <!-- Movements will be injected here -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
-        
-    </div>
-    
-    <!-- Modal di Modifica Articolo -->
-    <div id="edit-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6">
-            <h2 class="text-xl font-bold mb-4 text-primary">Modifica Articolo</h2>
-            <form id="edit-form" class="space-y-4">
-                <input type="hidden" id="edit-id">
-                <div>
-                    <label for="edit-barcode" class="block text-sm font-medium text-gray-700">Barcode</label>
-                    <input type="text" id="edit-barcode" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+
+        <!-- ================= QR SCANNER MODAL ================= -->
+        <div id="qr-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex items-center justify-center hidden">
+            <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-lg mx-4">
+                <h3 class="text-xl font-bold mb-4">Scanner QR/Barcode</h3>
+                <div id="qr-video-container" class="mb-4">
+                    <video id="qr-video" class="w-full rounded-lg border border-gray-300"></video>
                 </div>
-                <div>
-                    <label for="edit-article" class="block text-sm font-medium text-gray-700">Articolo</label>
-                    <input type="text" id="edit-article" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+                <div class="mb-4">
+                    <label for="qr-result" class="block text-sm font-medium text-gray-700">Risultato Scansione</label>
+                    <input type="text" id="qr-result" readonly class="w-full p-2 border border-gray-300 rounded-lg bg-gray-100 mt-1">
                 </div>
-                <div>
-                    <label for="edit-quantity" class="block text-sm font-medium text-gray-700">Giacenza</label>
-                    <input type="number" id="edit-quantity" required min="0" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+                <div class="flex justify-between space-x-3">
+                    <button id="stop-qr" class="w-full bg-red-500 text-white p-3 rounded-lg hover:bg-red-600 transition duration-150">Chiudi Scanner</button>
+                    <!-- Questo bottone sarà gestito dal codice JS per confermare l'uso del barcode -->
                 </div>
-                <div class="flex justify-end space-x-3 pt-4">
-                    <button type="button" id="close-edit-modal" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition">
-                        Annulla
-                    </button>
-                    <button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-indigo-700 transition">
-                        Salva Modifiche
-                    </button>
-                </div>
-                <p id="edit-msg" class="text-center text-sm text-red-500 mt-2"></p>
-            </form>
-        </div>
-    </div>
-    
-    <!-- Modal di Conferma Eliminazione -->
-    <div id="delete-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center">
-            <h2 class="text-xl font-bold mb-4 text-red-600">Conferma Eliminazione</h2>
-            <p class="mb-6 text-gray-700">Sei sicuro di voler eliminare l'articolo "<span id="delete-item-name" class="font-semibold"></span>" dal magazzino?</p>
-            <div class="flex justify-center space-x-4">
-                <button type="button" id="cancel-delete" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition">
-                    Annulla
-                </button>
-                <button type="button" id="confirm-delete" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition">
-                    Elimina Definitivamente
-                </button>
             </div>
-            <p id="delete-msg" class="text-center text-sm text-red-500 mt-2"></p>
         </div>
     </div>
 
-</div>
+    <!-- ================= JAVASCRIPT LOGIC ================= -->
+    <script type="module">
+        // ================== IMPORTS & CONFIG ==================
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+        import QrScanner from 'https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/qr-scanner.min.js';
 
-<!-- Codice JavaScript -->
-<script type="module">
-// ================== SUPABASE E CONFIGURAZIONE ==================
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+        // 💡 CONFIGURAZIONE SUPABASE
+        const supabaseUrl = 'https://eevwzkcesmfofpecuxwv.supabase.co'
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnd6a2Nlc21mb2ZwZWN1eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2ODkxOTAsImV4cCI6MjA3NjI2NTE5MH0.j7TQnwbw-gW2S6QBjyp4wsQJrXUVYmg3wwVWVPRe1b4'
+        const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Le variabili globali __app_id e __firebase_config sono definite nell'ambiente Canvas.
-const supabaseUrl = 'https://eevwzkcesmfofpecuxwv.supabase.co'
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnd6a2Nlc21mb2ZwZWN1eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2ODkxOTAsImV4cCI6MjA3NjI2NTE5MH0.j7TQnwbw-gW2S6QBjyp4wsQJrXUVYmg3wwVWVPRe1b4' // Chiave anon_key
-const supabase = createClient(supabaseUrl, supabaseKey)
+        // 💡 URL DI REINDIRIZZAMENTO CORRETTO PER SUPABASE
+        // QUESTA È LA VARIABILE CHE RISOLVE IL TUO PROBLEMA:
+        const CORRECT_REDIRECT_URL = 'https://nin82.github.io/magazzino-app/'; 
 
-let currentUserId = null;
-let currentTenantId = null; // ID del magazzino attualmente selezionato
-let tenants = []; // Lista dei magazzini dell'utente
+        // ================== STATO GLOBALE ==================
+        let currentUserId = null;
+        let currentTenantId = null;
+        let scanner = null;
+        let isCaricoMode = true; // true = Carico, false = Scarico
 
-// ================== UTILITY E INTERFACCIA ==================
+        // Elementi DOM Comuni
+        const authPage = document.getElementById('auth-page');
+        const appPage = document.getElementById('app-page');
+        const updatePasswordPage = document.getElementById('update-password-page');
+        const authMsg = document.getElementById('auth-msg');
+        const onlineStatusEl = document.getElementById('online-status');
+        const mainContent = document.getElementById('main-content');
+        const tenantSelectorContainer = document.getElementById('tenant-selector-container');
+        const tenantNameDisplay = document.getElementById('tenant-name-display');
 
-/**
- * 🔹 Funzione per riprodurre un breve suono 'beep' per il QR code.
- */
-function playBeep(duration = 100, frequency = 440, volume = 0.5) {
-    try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
+        // ================== UTILITY ==================
+        function showPage(pageId) {
+            authPage.classList.add('hidden');
+            appPage.classList.add('hidden');
+            updatePasswordPage.classList.add('hidden');
 
-        // Colleghiamo l'oscillatore al gainNode e poi all'uscita audio
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-
-        oscillator.type = 'square';
-        oscillator.frequency.value = frequency;
-        gainNode.gain.value = volume;
-
-        oscillator.start();
-        setTimeout(() => oscillator.stop(), duration);
-    } catch (e) {
-        console.error("Errore nella riproduzione del beep:", e);
-    }
-}
-
-/**
- * 🔹 Mostra notifiche temporanee.
- * @param {string} message - Il messaggio da mostrare.
- * @param {('success'|'error'|'info')} type - Il tipo di notifica.
- */
-function showNotification(message, type = 'info') {
-    const container = document.getElementById('notification-container');
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.textContent = message;
-    
-    container.appendChild(notification);
-
-    // Mostra con animazione
-    setTimeout(() => notification.classList.add('show'), 10);
-
-    // Nascondi e rimuovi dopo 3 secondi
-    setTimeout(() => {
-        notification.classList.remove('show');
-        setTimeout(() => notification.remove(), 500); // Rimuovi dopo la transizione
-    }, 3000);
-}
-
-
-/**
- * 🔹 Gestisce la navigazione tra le pagine.
- * @param {string} pageId - L'ID della pagina da mostrare ('auth-page', 'main-app', 'update-password-page').
- */
-function showPage(pageId) {
-    const pages = ['auth-page', 'main-app', 'update-password-page'];
-    pages.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.classList.add('hidden');
-            el.classList.remove('flex');
-        }
-    });
-
-    const activeEl = document.getElementById(pageId);
-    if (activeEl) {
-        activeEl.classList.remove('hidden');
-        if (pageId === 'auth-page' || pageId === 'update-password-page') {
-            activeEl.classList.add('flex');
-        }
-    }
-
-    // Ferma tutti gli scanner se si esce dalla main-app
-    if (pageId !== 'main-app') {
-        stopAllScanners();
-    }
-}
-
-/**
- * 🔹 Gestisce la visibilità delle schede (login, signup, forgot password).
- * @param {string} cardId - L'ID della scheda da mostrare.
- */
-function showAuthCard(cardId) {
-    ['login-card', 'signup-card', 'forgot-password-card'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.classList.add('hidden');
-        }
-    });
-
-    const activeEl = document.getElementById(cardId);
-    if (activeEl) {
-        activeEl.classList.remove('hidden');
-    }
-}
-
-// ================== LOGICA UTENTE/TENANT ==================
-
-/**
- * 🔹 Carica i magazzini (tenants) a cui l'utente appartiene.
- */
-async function loadTenants() {
-    if (!currentUserId) return;
-
-    // 1. Carica i record dell'utente dalla tabella 'tenant_members'
-    const { data: memberData, error: memberError } = await supabase
-        .from('tenant_members')
-        .select('tenant_id')
-        .eq('user_id', currentUserId);
-
-    if (memberError) {
-        console.error('Errore nel caricamento dei membri:', memberError);
-        document.getElementById('tenant-message').textContent = 'Errore nel caricamento dei magazzini.';
-        return;
-    }
-
-    const tenantIds = memberData.map(m => m.tenant_id);
-
-    if (tenantIds.length === 0) {
-        tenants = [];
-        currentTenantId = null;
-        document.getElementById('tenant-message').textContent = 'Nessun magazzino trovato. Creane uno nuovo.';
-        updateTenantSelect();
-        return;
-    }
-
-    // 2. Carica i dettagli dei magazzini dalla tabella 'tenants'
-    const { data: tenantData, error: tenantError } = await supabase
-        .from('tenants')
-        .select('id, name')
-        .in('id', tenantIds);
-
-    if (tenantError) {
-        console.error('Errore nel caricamento dei tenants:', tenantError);
-        document.getElementById('tenant-message').textContent = 'Errore nel caricamento dei dettagli dei magazzini.';
-        return;
-    }
-
-    tenants = tenantData || [];
-    
-    // 3. Seleziona il primo tenant come predefinito se non ce n'è uno corrente
-    if (tenants.length > 0 && (!currentTenantId || !tenants.some(t => t.id === currentTenantId))) {
-        currentTenantId = tenants[0].id;
-    } else if (tenants.length === 0) {
-        currentTenantId = null;
-    }
-
-    updateTenantSelect();
-    setupMainApp();
-}
-
-/**
- * 🔹 Aggiorna il menu a tendina e il display del nome del magazzino.
- */
-function updateTenantSelect() {
-    const select = document.getElementById('tenant-select');
-    const nameDisplay = document.getElementById('tenant-name-display');
-    select.innerHTML = '';
-    
-    if (tenants.length === 0) {
-        select.innerHTML = '<option value="" disabled selected>Nessun magazzino</option>';
-        nameDisplay.textContent = 'Nessun Magazzino Selezionato';
-        return;
-    }
-
-    tenants.forEach(tenant => {
-        const option = document.createElement('option');
-        option.value = tenant.id;
-        option.textContent = tenant.name;
-        if (tenant.id === currentTenantId) {
-            option.selected = true;
-            nameDisplay.textContent = `Magazzino: ${tenant.name}`;
-        }
-        select.appendChild(option);
-    });
-}
-
-/**
- * 🔹 Crea un nuovo magazzino (tenant).
- */
-document.getElementById('create-tenant-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const newTenantName = document.getElementById('new-tenant-name').value.trim();
-    const messageEl = document.getElementById('tenant-message');
-
-    if (!newTenantName) return;
-    if (!currentUserId) {
-        messageEl.textContent = 'Devi essere loggato per creare un magazzino.';
-        return;
-    }
-
-    messageEl.textContent = '⏳ Creazione in corso...';
-
-    // 1. Inserisci il nuovo tenant
-    const { data: newTenant, error: tenantError } = await supabase
-        .from('tenants')
-        .insert({ name: newTenantName })
-        .select()
-        .single();
-
-    if (tenantError) {
-        console.error('Errore nella creazione del tenant:', tenantError);
-        messageEl.textContent = '❌ Errore nella creazione del magazzino: ' + tenantError.message;
-        return;
-    }
-
-    // 2. Aggiungi l'utente come membro
-    const { error: memberError } = await supabase
-        .from('tenant_members')
-        .insert({ tenant_id: newTenant.id, user_id: currentUserId });
-
-    if (memberError) {
-        console.error('Errore nell\'aggiunta del membro:', memberError);
-        messageEl.textContent = '❌ Magazzino creato, ma errore nell\'aggiunta dell\'utente: ' + memberError.message;
-        // Considera di eliminare il tenant creato se il membro fallisce
-        return;
-    }
-
-    showNotification(`Magazzino '${newTenantName}' creato con successo!`, 'success');
-    document.getElementById('new-tenant-name').value = '';
-    await loadTenants(); // Ricarica la lista e seleziona il nuovo tenant
-});
-
-/**
- * 🔹 Cambia il magazzino selezionato.
- */
-document.getElementById('switch-tenant-button').addEventListener('click', () => {
-    const select = document.getElementById('tenant-select');
-    const newTenantId = select.value;
-
-    if (newTenantId && newTenantId !== currentTenantId) {
-        currentTenantId = newTenantId;
-        const selectedTenant = tenants.find(t => t.id === currentTenantId);
-        document.getElementById('tenant-name-display').textContent = `Magazzino: ${selectedTenant.name}`;
-        showNotification(`Magazzino cambiato a: ${selectedTenant.name}`, 'info');
-        
-        // Ricarica i dati per la nuova tab attiva
-        const activeTab = document.querySelector('.tab-button.active');
-        if (activeTab) {
-             if (activeTab.dataset.tab === 'scarico-tab') {
-                refreshScaricoSelect();
-            } else if (activeTab.dataset.tab === 'storico-tab') {
-                refreshInventoryTable();
+            if (pageId === 'auth-page') {
+                authPage.classList.remove('hidden');
+            } else if (pageId === 'app-page') {
+                appPage.classList.remove('hidden');
+            } else if (pageId === 'update-password-page') {
+                updatePasswordPage.classList.remove('hidden');
             }
         }
-    }
-});
-
-
-// ================== LOGICA APP PRINCIPALE ==================
-
-/**
- * 🔹 Logica da eseguire dopo il login e la selezione del tenant.
- */
-function setupMainApp() {
-    if (currentUserId && currentTenantId) {
-        showPage('main-app');
-        // Ricarica la tabella iniziale
-        refreshInventoryTable();
-        // Assicurati che le select di scarico siano aggiornate
-        refreshScaricoSelect();
-    } else if (currentUserId && tenants.length === 0) {
-        showPage('main-app');
-        document.getElementById('tenant-message').textContent = 'Per iniziare, crea un nuovo magazzino.';
-    } else {
-        showPage('auth-page'); // Torna al login se non ci sono dati essenziali
-    }
-}
-
-// ================== GESTIONE CARICO/SCARICO (CRUD) ==================
-
-/**
- * 🔹 Aggiorna la select degli articoli disponibili per lo scarico.
- * @param {string} [initialBarcode=null] - Barcode da selezionare inizialmente (opzionale).
- * @param {string} [tenantId=currentTenantId] - ID del tenant da cui prelevare i dati.
- */
-async function refreshScaricoSelect(initialBarcode = null, tenantId = currentTenantId) {
-    const select = document.getElementById('scarico-select');
-    const display = document.getElementById('scarico-giacenza-display');
-    const scaricoBarcode = document.getElementById('scarico-barcode');
-    
-    select.innerHTML = '<option value="" disabled selected>Caricamento articoli...</option>';
-    display.textContent = 'Giacenza Selezionata: 0 unità';
-    
-    if (!tenantId) {
-        select.innerHTML = '<option value="" disabled selected>Seleziona un magazzino</option>';
-        return;
-    }
-
-    const { data, error } = await supabase
-        .from('magazzino')
-        .select('id, article, quantity, barcode')
-        .eq('tenant_id', tenantId) // Filtro per tenant
-        .gt('quantity', 0)
-        .order('article', { ascending: true });
-
-    if (error) {
-        console.error('Errore nel caricamento degli articoli di magazzino:', error);
-        select.innerHTML = '<option value="" disabled selected>Errore di caricamento</option>';
-        return;
-    }
-
-    if (data.length === 0) {
-        select.innerHTML = '<option value="" disabled selected>Nessun articolo in magazzino</option>';
-        return;
-    }
-    
-    select.innerHTML = '<option value="" disabled selected>Seleziona un articolo</option>';
-
-    let foundItem = null;
-
-    data.forEach(item => {
-        const option = document.createElement('option');
-        option.value = item.id;
-        option.textContent = `${item.article} (${item.quantity} unità)`;
-        option.dataset.quantity = item.quantity;
         
-        if (initialBarcode && item.barcode === initialBarcode) {
-            foundItem = item;
-            option.selected = true;
-        }
-        
-        select.appendChild(option);
-    });
+        // Funzione per mostrare/nascondere i pannelli interni di auth-page
+        function showAuthForm(formId) {
+            document.getElementById('login-form').classList.add('hidden');
+            document.getElementById('register-form').classList.add('hidden');
+            document.getElementById('forgot-password-panel').classList.add('hidden'); // Nuovo pannello
 
-    if (foundItem) {
-        display.textContent = `Giacenza Selezionata: ${foundItem.quantity} unità`;
-        scaricoBarcode.value = foundItem.barcode;
-        document.getElementById('scarico-qty').focus();
-    } else if (initialBarcode) {
-        showNotification(`Barcode ${initialBarcode} non trovato in magazzino.`, 'error');
-        scaricoBarcode.value = initialBarcode; // Mantiene il barcode inserito
-    }
-    
-    // Aggiorna giacenza al cambio della selezione
-    select.onchange = (e) => {
-        const selectedOption = select.options[select.selectedIndex];
-        if (selectedOption && selectedOption.dataset.quantity) {
-             const quantity = parseInt(selectedOption.dataset.quantity);
-             display.textContent = `Giacenza Selezionata: ${quantity} unità`;
-        } else {
-             display.textContent = 'Giacenza Selezionata: 0 unità';
-        }
-        // Se si seleziona un articolo, pulisce il barcode box
-        scaricoBarcode.value = '';
-    };
-
-}
-
-/**
- * 🔹 Gestisce l'invio del form di Carico.
- */
-document.getElementById('carico-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const barcode = document.getElementById('carico-barcode').value.trim();
-    const article = document.getElementById('carico-article').value.trim();
-    const qty = parseInt(document.getElementById('carico-qty').value, 10);
-    const msgEl = document.getElementById('carico-msg');
-
-    if (!currentTenantId) {
-        msgEl.textContent = 'Seleziona un magazzino.';
-        return;
-    }
-
-    if (!barcode || !article || qty <= 0) {
-        msgEl.textContent = 'Per favore, compila tutti i campi correttamente.';
-        return;
-    }
-
-    msgEl.textContent = '⏳ Caricamento in corso...';
-    msgEl.classList.remove('text-red-500');
-    msgEl.classList.add('text-gray-500');
-
-    try {
-        // 1. Cerca l'articolo esistente per barcode nel tenant corrente
-        const { data: existing, error: selectError } = await supabase
-            .from('magazzino')
-            .select('id, quantity')
-            .eq('barcode', barcode)
-            .eq('tenant_id', currentTenantId) // Filtro multi-magazzino
-            .maybeSingle();
-
-        if (selectError) throw selectError;
-
-        let result;
-
-        if (existing) {
-            // Articolo esistente: Aggiorna quantità e nome (se è cambiato)
-            const newQty = existing.quantity + qty;
-            const { data, error } = await supabase
-                .from('magazzino')
-                .update({ 
-                    quantity: newQty,
-                    article: article, // Aggiorna il nome se è stato modificato
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', existing.id)
-                .select()
-                .single();
-
-            if (error) throw error;
-            result = data;
-            msgEl.textContent = `✅ Aggiornato! ${result.article} ora a ${result.quantity} unità.`;
-            showNotification('Carico aggiornato con successo!', 'success');
-
-        } else {
-            // Articolo nuovo: Inserisci
-            const { data, error } = await supabase
-                .from('magazzino')
-                .insert([{ 
-                    article: article, 
-                    barcode: barcode, 
-                    quantity: qty,
-                    tenant_id: currentTenantId // Associa al tenant corrente
-                }])
-                .select()
-                .single();
-            
-            if (error) throw error;
-            result = data;
-            msgEl.textContent = `✅ Inserito! ${result.article} a ${result.quantity} unità.`;
-            showNotification('Nuovo articolo caricato!', 'success');
+            if (formId === 'login') {
+                document.getElementById('login-form').classList.remove('hidden');
+                document.getElementById('auth-msg').textContent = '';
+            } else if (formId === 'register') {
+                document.getElementById('register-form').classList.remove('hidden');
+                document.getElementById('auth-msg').textContent = '';
+            } else if (formId === 'forgot') { // Nuovo case per reset password
+                document.getElementById('forgot-password-panel').classList.remove('hidden');
+                document.getElementById('forgot-msg').textContent = '';
+            }
         }
 
-        // Pulisci e aggiorna l'interfaccia
-        document.getElementById('carico-barcode').value = '';
-        document.getElementById('carico-article').value = '';
-        document.getElementById('carico-qty').value = '1';
-        document.getElementById('carico-giacenza-display').textContent = 'Giacenza Attuale: 0 unità';
-        refreshInventoryTable();
-        refreshScaricoSelect();
+        // Gestione Notifiche
+        function showNotification(message, type = 'info', duration = 3000) {
+            const container = document.getElementById('notification-container');
+            const notification = document.createElement('div');
+            notification.className = `notification show bg-opacity-90 transition duration-500 transform translate-x-0`;
+            notification.textContent = message;
 
-    } catch (error) {
-        console.error('Errore nel carico:', error);
-        msgEl.textContent = '❌ Errore nel carico: ' + error.message;
-        msgEl.classList.remove('text-gray-500');
-        msgEl.classList.add('text-red-500');
-    }
-});
+            if (type === 'success') {
+                notification.style.backgroundColor = '#10b981'; // green-500
+            } else if (type === 'error') {
+                notification.style.backgroundColor = '#ef4444'; // red-500
+            } else {
+                notification.style.backgroundColor = '#3b82f6'; // blue-500
+            }
 
+            container.appendChild(notification);
 
-/**
- * 🔹 Listener per l'input del Barcode nel Carico per pre-popolare i campi.
- */
-let ignoreCaricoBarcodeListener = false; // Flag per ignorare il listener quando il QR lo popola
-
-document.getElementById('carico-barcode').addEventListener('input', async (e) => {
-    const barcode = e.target.value.trim();
-    const caricoArticle = document.getElementById('carico-article');
-    const giacenzaDisplay = document.getElementById('carico-giacenza-display');
-    
-    if (ignoreCaricoBarcodeListener) {
-        ignoreCaricoBarcodeListener = false;
-        return;
-    }
-
-    if (barcode.length >= 6 && currentTenantId) {
-        // 🔹 Controlla barcode esistente SOLO nel magazzino/tenant corrente
-        const { data: existing } = await supabase
-            .from('magazzino')
-            .select('article, quantity')
-            .eq('barcode', barcode)
-            .eq('tenant_id', currentTenantId) // filtro multi-magazzino
-            .maybeSingle();
-
-        if (existing) {
-            caricoArticle.value = existing.article;
-            giacenzaDisplay.textContent = `Giacenza Attuale: ${existing.quantity} unità`;
-            showNotification(`Barcode agganciato: ${barcode}`, 'info');
-        } else {
-            caricoArticle.value = '';
-            giacenzaDisplay.textContent = 'Nuovo Articolo (Giacenza: 0)';
-        }
-    } else if (barcode.length < 6) {
-        caricoArticle.value = '';
-        giacenzaDisplay.textContent = 'Giacenza Attuale: 0 unità';
-    }
-});
-
-
-/**
- * 🔹 Listener per l'input del Barcode nello Scarico per pre-selezionare l'articolo.
- */
-document.getElementById('scarico-barcode').addEventListener('input', async (e) => {
-    const barcode = e.target.value.trim();
-    if (barcode.length >= 6 && currentTenantId) {
-         // Aggiorna select scarico e cerca l'articolo
-        await refreshScaricoSelect(barcode, currentTenantId);
-    }
-});
-
-
-/**
- * 🔹 Gestisce l'invio del form di Scarico.
- */
-document.getElementById('scarico-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const articleId = document.getElementById('scarico-select').value;
-    const qtyToSubtract = parseInt(document.getElementById('scarico-qty').value, 10);
-    const msgEl = document.getElementById('scarico-msg');
-    const select = document.getElementById('scarico-select');
-    const selectedOption = select.options[select.selectedIndex];
-    
-    if (!currentTenantId) {
-        msgEl.textContent = 'Seleziona un magazzino.';
-        return;
-    }
-
-    if (!articleId || qtyToSubtract <= 0) {
-        msgEl.textContent = 'Per favore, seleziona un articolo e una quantità valida.';
-        return;
-    }
-
-    const currentQty = parseInt(selectedOption.dataset.quantity, 10);
-
-    if (qtyToSubtract > currentQty) {
-        msgEl.textContent = `❌ Errore: Puoi scaricare al massimo ${currentQty} unità.`;
-        return;
-    }
-
-    msgEl.textContent = '⏳ Scarico in corso...';
-    msgEl.classList.remove('text-red-500');
-    msgEl.classList.add('text-gray-500');
-
-    try {
-        const newQty = currentQty - qtyToSubtract;
-        
-        const { data, error } = await supabase
-            .from('magazzino')
-            .update({ 
-                quantity: newQty,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', articleId)
-            .eq('tenant_id', currentTenantId) // Filtro multi-magazzino
-            .select('article, quantity')
-            .single();
-
-        if (error) throw error;
-        
-        msgEl.textContent = `✅ Scaricato! ${qtyToSubtract} unità di ${data.article}. Rimanenti: ${data.quantity}.`;
-        showNotification('Scarico effettuato!', 'success');
-
-        // Pulisci e aggiorna l'interfaccia
-        document.getElementById('scarico-qty').value = '1';
-        document.getElementById('scarico-barcode').value = '';
-        refreshInventoryTable();
-        refreshScaricoSelect(); // Ricarica per rimuovere l'articolo se la giacenza è a 0
-
-    } catch (error) {
-        console.error('Errore nello scarico:', error);
-        msgEl.textContent = '❌ Errore nello scarico: ' + error.message;
-        msgEl.classList.remove('text-gray-500');
-        msgEl.classList.add('text-red-500');
-    }
-});
-
-/**
- * 🔹 Carica e popola la tabella dell'inventario (Magazzino).
- */
-async function refreshInventoryTable(searchTerm = '') {
-    const tbody = document.getElementById('inventory-tbody');
-    const statusEl = document.getElementById('inventory-status');
-    const totalEl = document.getElementById('inventory-total');
-    
-    statusEl.textContent = 'Caricamento...';
-    tbody.innerHTML = '';
-    totalEl.textContent = 'Totale Articoli: 0';
-    
-    if (!currentTenantId) {
-        statusEl.textContent = 'Seleziona un magazzino.';
-        return;
-    }
-
-    let query = supabase
-        .from('magazzino')
-        .select('id, article, barcode, quantity, updated_at')
-        .eq('tenant_id', currentTenantId); // Filtro multi-magazzino
-
-    // Applica filtro di ricerca
-    if (searchTerm) {
-        const term = `%${searchTerm.toLowerCase()}%`;
-        // La sintassi OR è complessa in Supabase JS; usiamo `filter` per semplicità.
-        query = query.or(`article.ilike.${term},barcode.ilike.${term}`);
-    }
-    
-    query = query.order('article', { ascending: true });
-
-    const { data, error } = await query;
-
-    if (error) {
-        console.error('Errore nel caricamento dell\'inventario:', error);
-        statusEl.textContent = '❌ Errore nel caricamento dei dati.';
-        return;
-    }
-
-    if (data.length === 0) {
-        statusEl.textContent = searchTerm ? 'Nessun articolo trovato per la ricerca.' : 'Il magazzino è vuoto.';
-        return;
-    }
-
-    data.forEach(item => {
-        const tr = document.createElement('tr');
-        tr.className = 'hover:bg-gray-50 transition duration-150';
-        tr.innerHTML = `
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${item.article}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.barcode}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-700">${item.quantity}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <button data-id="${item.id}" data-barcode="${item.barcode}" data-article="${item.article}" data-qty="${item.quantity}" class="edit-btn text-indigo-600 hover:text-indigo-900 mr-3 transition">Modifica</button>
-                <button data-id="${item.id}" data-article="${item.article}" class="delete-btn text-red-600 hover:text-red-900 transition">Elimina</button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
-
-    statusEl.textContent = 'Dati caricati.';
-    totalEl.textContent = `Totale Articoli: ${data.length}`;
-}
-
-/**
- * 🔹 Gestisce la ricerca in tempo reale nella tabella Magazzino.
- */
-document.getElementById('inventory-search-input').addEventListener('input', (e) => {
-    refreshInventoryTable(e.target.value.trim());
-});
-
-/**
- * 🔹 Gestisce il ricaricamento manuale della tabella Magazzino.
- */
-document.getElementById('refresh-inventory-button').addEventListener('click', () => {
-    const searchTerm = document.getElementById('inventory-search-input').value.trim();
-    refreshInventoryTable(searchTerm);
-});
-
-
-// ================== MODAL DI MODIFICA ARTICOLO ==================
-
-/**
- * 🔹 Apre il modal di modifica.
- * @param {object} item - L'oggetto articolo con id, barcode, article, quantity.
- */
-function openEditModal(item) {
-    document.getElementById('edit-id').value = item.id;
-    document.getElementById('edit-barcode').value = item.barcode;
-    document.getElementById('edit-article').value = item.article;
-    document.getElementById('edit-quantity').value = item.quantity;
-    document.getElementById('edit-msg').textContent = '';
-    document.getElementById('edit-modal').classList.remove('hidden');
-}
-
-/**
- * 🔹 Chiude il modal di modifica.
- */
-function closeEditModal() {
-    document.getElementById('edit-modal').classList.add('hidden');
-}
-
-// Listener per aprire il modal (delegazione eventi)
-document.getElementById('inventory-tbody').addEventListener('click', (e) => {
-    if (e.target.classList.contains('edit-btn')) {
-        const btn = e.target;
-        openEditModal({
-            id: btn.dataset.id,
-            barcode: btn.dataset.barcode,
-            article: btn.dataset.article,
-            quantity: parseInt(btn.dataset.qty, 10),
-        });
-    }
-});
-
-document.getElementById('close-edit-modal').addEventListener('click', closeEditModal);
-
-/**
- * 🔹 Gestisce l'invio del form di Modifica.
- */
-document.getElementById('edit-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const id = document.getElementById('edit-id').value;
-    const barcode = document.getElementById('edit-barcode').value.trim();
-    const article = document.getElementById('edit-article').value.trim();
-    const quantity = parseInt(document.getElementById('edit-quantity').value, 10);
-    const msgEl = document.getElementById('edit-msg');
-
-    if (!barcode || !article || quantity < 0) {
-        msgEl.textContent = 'Per favore, compila tutti i campi correttamente (la giacenza non può essere negativa).';
-        return;
-    }
-
-    msgEl.textContent = '⏳ Salvataggio in corso...';
-    msgEl.classList.remove('text-red-500');
-    msgEl.classList.add('text-gray-500');
-
-    try {
-        const { error } = await supabase
-            .from('magazzino')
-            .update({ 
-                article: article, 
-                barcode: barcode, 
-                quantity: quantity,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', id)
-            .eq('tenant_id', currentTenantId); // Filtro di sicurezza per tenant
-
-        if (error) throw error;
-
-        msgEl.textContent = '✅ Articolo aggiornato con successo.';
-        showNotification('Articolo modificato!', 'success');
-        closeEditModal();
-        refreshInventoryTable();
-        refreshScaricoSelect();
-
-    } catch (error) {
-        console.error('Errore nell\'aggiornamento:', error);
-        msgEl.textContent = '❌ Errore: ' + error.message;
-        msgEl.classList.remove('text-gray-500');
-        msgEl.classList.add('text-red-500');
-    }
-});
-
-
-// ================== MODAL DI ELIMINAZIONE ARTICOLO ==================
-
-let itemIdToDelete = null;
-
-/**
- * 🔹 Apre il modal di eliminazione.
- * @param {string} id - ID dell'articolo da eliminare.
- * @param {string} name - Nome dell'articolo da eliminare.
- */
-function openDeleteModal(id, name) {
-    itemIdToDelete = id;
-    document.getElementById('delete-item-name').textContent = name;
-    document.getElementById('delete-msg').textContent = '';
-    document.getElementById('delete-modal').classList.remove('hidden');
-}
-
-/**
- * 🔹 Chiude il modal di eliminazione.
- */
-function closeDeleteModal() {
-    itemIdToDelete = null;
-    document.getElementById('delete-modal').classList.add('hidden');
-}
-
-// Listener per aprire il modal (delegazione eventi)
-document.getElementById('inventory-tbody').addEventListener('click', (e) => {
-    if (e.target.classList.contains('delete-btn')) {
-        const btn = e.target;
-        openDeleteModal(btn.dataset.id, btn.dataset.article);
-    }
-});
-
-document.getElementById('cancel-delete').addEventListener('click', closeDeleteModal);
-
-/**
- * 🔹 Gestisce la conferma dell'eliminazione.
- */
-document.getElementById('confirm-delete').addEventListener('click', async () => {
-    if (!itemIdToDelete) return;
-
-    const msgEl = document.getElementById('delete-msg');
-    msgEl.textContent = '⏳ Eliminazione in corso...';
-    msgEl.classList.remove('text-red-500');
-    msgEl.classList.add('text-gray-500');
-
-    try {
-        const { error } = await supabase
-            .from('magazzino')
-            .delete()
-            .eq('id', itemIdToDelete)
-            .eq('tenant_id', currentTenantId); // Filtro di sicurezza per tenant
-
-        if (error) throw error;
-
-        msgEl.textContent = '✅ Articolo eliminato con successo.';
-        showNotification('Articolo eliminato!', 'success');
-        
-        // Un piccolo ritardo per vedere il messaggio prima di chiudere
-        setTimeout(() => {
-            closeDeleteModal();
-            refreshInventoryTable();
-            refreshScaricoSelect();
-        }, 500);
-
-    } catch (error) {
-        console.error('Errore nell\'eliminazione:', error);
-        msgEl.textContent = '❌ Errore: ' + error.message;
-        msgEl.classList.remove('text-gray-500');
-        msgEl.classList.add('text-red-500');
-    }
-});
-
-
-// ================== QR CODE SCANNER ==================
-
-let qrScanner = null;
-let lastScanned = '';
-let qrVideo = document.getElementById('qr-video');
-let qrLoadingMsg = document.getElementById('qr-loading-msg');
-
-/**
- * 🔹 Ferma lo scanner QR code.
- */
-function stopQRScanner() {
-    if (qrScanner) {
-        qrScanner.stop();
-        qrScanner = null;
-        qrLoadingMsg.textContent = 'Scanner fermato.';
-        console.log('QR Scanner fermato.');
-    }
-}
-
-/**
- * 🔹 Ferma tutti gli scanner (chiamata quando si cambia tab o si esce dalla main-app).
- */
-function stopAllScanners() {
-    stopQRScanner();
-}
-
-/**
- * 🔹 Avvia lo scanner QR code.
- */
-document.getElementById('start-qr').addEventListener('click', async () => {
-    if (qrScanner) {
-        showNotification('Scanner già attivo.', 'info');
-        return;
-    }
-    
-    qrLoadingMsg.textContent = 'Inizializzazione telecamera... attendi la richiesta di permesso.';
-
-    try {
-        // Cerca la telecamera posteriore se disponibile
-        const devices = await QrCoder.getDevices();
-        const backCamera = devices.find(device => device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('posteriore')) || devices[0];
-
-        if (!backCamera) {
-            throw new Error("Nessuna telecamera trovata.");
+            setTimeout(() => {
+                notification.classList.remove('show');
+                notification.classList.add('translate-x-full');
+                setTimeout(() => notification.remove(), 500);
+            }, duration);
         }
 
-        // Avvia lo scanner
-        qrScanner = new QrCoder.Scanner({
-            video: qrVideo,
-            onDecode: onQrCodeScanned,
-            deviceId: backCamera.deviceId
+        // Suono Beep (riutilizzato da js.txt)
+        function playBeep(duration = 100, frequency = 440, volume = 0.5) {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.type = 'square';
+            oscillator.frequency.value = frequency;
+            gainNode.gain.value = volume;
+            oscillator.start();
+            setTimeout(() => oscillator.stop(), duration);
+        }
+
+        // ================== LOGICA AUTH ==================
+
+        // Funzione per gestire il Login
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            authMsg.textContent = '⏳ Accesso in corso...';
+
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+            if (error) {
+                authMsg.textContent = '❌ Errore di accesso: ' + error.message;
+            } else {
+                authMsg.textContent = ''; // onAuthStateChange gestirà il cambio pagina
+            }
         });
 
-        await qrScanner.start();
-        qrLoadingMsg.textContent = 'Scanner attivo. Inquadra un codice.';
-        console.log('QR Scanner avviato con successo.');
-        showNotification('Scanner QR avviato!', 'success');
+        // Funzione per gestire la Registrazione
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            authMsg.textContent = '⏳ Registrazione in corso...';
 
-    } catch (e) {
-        console.error('Errore avvio QR Scanner:', e);
-        qrLoadingMsg.textContent = `❌ Errore: ${e.message}. Permesso negato o nessun dispositivo video.`;
-        showNotification('Impossibile avviare lo scanner: ' + e.message, 'error');
-    }
-});
+            if (password.length < 6) {
+                authMsg.textContent = 'La password deve avere almeno 6 caratteri.';
+                return;
+            }
+
+            const { error } = await supabase.auth.signUp({ email, password });
+
+            if (error) {
+                authMsg.textContent = '❌ Errore di registrazione: ' + error.message;
+            } else {
+                authMsg.textContent = '✅ Registrazione completata! Controlla la tua email per la verifica.';
+                showAuthForm('login');
+            }
+        });
+
+        // === GESTIONE RICHIESTA REIMPOSTAZIONE PASSWORD ===
+        document.getElementById('show-forgot-password').addEventListener('click', (e) => {
+            e.preventDefault();
+            showAuthForm('forgot');
+        });
+
+        document.getElementById('forgot-password-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('forgot-email').value.trim();
+            const msgEl = document.getElementById('forgot-msg');
+            msgEl.textContent = '⏳ Invio email in corso...';
+
+            // 🌟 PUNTO DI CORREZIONE CHIAVE: Inseriamo il redirectTo corretto!
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: CORRECT_REDIRECT_URL 
+            });
+
+            if (error) {
+                msgEl.textContent = '❌ Errore: ' + error.message;
+            } else {
+                msgEl.textContent = '✅ Email inviata! Controlla la tua casella di posta per il link di reset.';
+            }
+        });
 
 
-/**
- * 🔹 Callback eseguita quando un QR code viene scansionato.
- * @param {string} qrCode - Il testo decodificato dal QR/Barcode.
- */
-async function onQrCodeScanned(qrCode) {
-    // 🔹 Evita scansioni multiple dello stesso codice in rapida successione
-    if (qrCode === lastScanned) return;
-    lastScanned = qrCode;
+        // === GESTIONE CAMBIO PASSWORD DOPO REINDIRIZZAMENTO EMAIL ===
+        document.getElementById('update-password-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newPassword = document.getElementById('new-password-input').value.trim();
+            const msgEl = document.getElementById('reset-msg');
 
-    // 🔹 Riproduci il suono e mostra il risultato
-    playBeep(50, 880); // Frequenza più alta per il successo
-    document.getElementById('qr-result').value = qrCode;
+            if (newPassword.length < 6) {
+                msgEl.textContent = 'La password deve avere almeno 6 caratteri.';
+                return;
+            }
 
-    const target = document.querySelector('input[name="qr-target"]:checked').value;
+            msgEl.textContent = '⏳ Aggiornamento in corso...';
 
-    if (target === 'carico') {
-        // CARICO
+            // Aggiorna la password dell'utente corrente (quello in sessione temporanea)
+            const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+            if (error) {
+                msgEl.textContent = '❌ Errore: ' + error.message;
+            } else {
+                msgEl.textContent = '✅ Password aggiornata! Accesso effettuato.';
+                // Dopo l'aggiornamento, la sessione è valida e showApp verrà chiamata
+            }
+        });
+
+        // Gestione Logout
+        document.getElementById('logout-btn').addEventListener('click', async () => {
+            stopAllScanners();
+            await supabase.auth.signOut();
+            showPage('auth-page');
+            showAuthForm('login');
+            currentTenantId = null;
+            currentUserId = null;
+            tenantNameDisplay.textContent = '';
+        });
+
+        // ================== LOGICA MAGGAZINO (CRUD) ==================
+
+        // Dichiarazioni elementi (solo quelli essenziali per le demo)
         const caricoBarcode = document.getElementById('carico-barcode');
         const caricoArticle = document.getElementById('carico-article');
         const caricoQty = document.getElementById('carico-qty');
-        const giacenzaDisplay = document.getElementById('carico-giacenza-display');
-
-        // Imposta il flag per ignorare il listener 'input' una tantum
-        ignoreCaricoBarcodeListener = true;
-        caricoBarcode.value = qrCode;
-
-        // 🔹 Controlla barcode esistente SOLO nel magazzino/tenant corrente
-        const { data: existing } = await supabase
-            .from('magazzino')
-            .select('article, quantity')
-            .eq('barcode', qrCode)
-            .eq('tenant_id', currentTenantId) // filtro multi-magazzino
-            .maybeSingle();
-
-        if (existing) {
-            caricoArticle.value = existing.article;
-            giacenzaDisplay.textContent = `Giacenza Attuale: ${existing.quantity} unità`;
-        } else {
-            caricoArticle.value = '';
-            giacenzaDisplay.textContent = 'Nuovo Articolo (Giacenza: 0)';
-        }
-
-        // Passa alla tab Carico
-        document.querySelector('.tab-button[data-tab="carico-tab"]').click();
-        caricoQty.focus();
-        showNotification(`Barcode inserito nel Carico: ${qrCode}`, 'success');
-
-    } else {
-        // SCARICO
         const scaricoBarcode = document.getElementById('scarico-barcode');
         const scaricoQty = document.getElementById('scarico-qty');
+        const scaricoSelect = document.getElementById('scarico-article-select');
+        const scaricoGiacenzaDisplay = document.getElementById('scarico-giacenza-display');
+        let giacenzeCache = []; // Cache locale per le giacenze
 
-        scaricoBarcode.value = qrCode;
+        /**
+         * Aggiorna la select degli articoli disponibili per lo scarico.
+         * @param {string} filterBarcode Barcode da filtrare (opzionale).
+         * @param {string} tenantId ID del magazzino corrente.
+         */
+        async function refreshScaricoSelect(filterBarcode = null) {
+            if (!currentTenantId) return;
 
-        // Aggiorna select scarico solo con articoli del tenant corrente e pre-seleziona il barcode
-        await refreshScaricoSelect(qrCode, currentTenantId);
+            // 1. Fetch di tutti gli articoli con giacenza > 0 del tenant corrente
+            const { data, error } = await supabase
+                .from('magazzino')
+                .select('article, barcode, quantity')
+                .eq('tenant_id', currentTenantId)
+                .gt('quantity', 0); // Solo articoli con giacenza positiva
 
-        // Passa alla tab Scarico
-        document.querySelector('.tab-button[data-tab="scarico-tab"]').click();
-        scaricoQty.focus();
-        showNotification(`Barcode inserito nello Scarico: ${qrCode}`, 'success');
-    }
+            if (error) {
+                showNotification(`Errore caricamento articoli: ${error.message}`, 'error');
+                return;
+            }
 
-    // 🔹 Pulisce il box QR
-    document.getElementById('qr-result').value = '';
-    lastScanned = '';
-}
+            giacenzeCache = data; // Aggiorna la cache
 
-document.getElementById('stop-qr').addEventListener('click', stopQRScanner);
+            // 2. Popola la select
+            scaricoSelect.innerHTML = '<option value="">-- Seleziona Articolo --</option>';
+            let filteredFound = false;
+            let selectedValue = null;
 
+            data.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.barcode;
+                option.textContent = `${item.article} (Giacenza: ${item.quantity})`;
+                
+                // Se c'è un filtro barcode e corrisponde, selezionalo e segna come trovato
+                if (filterBarcode && item.barcode === filterBarcode) {
+                    option.selected = true;
+                    selectedValue = item.barcode;
+                    filteredFound = true;
+                }
+                scaricoSelect.appendChild(option);
+            });
 
-// ================== GESTIONE AUTENTICAZIONE E STATO INIZIALE ==================
+            // 3. Gestione caso filtro (Scanner QR)
+            if (filterBarcode) {
+                scaricoBarcode.value = filterBarcode; // Imposta il barcode nel campo input
 
-/**
- * 🔹 Gestisce il logout.
- */
-document.getElementById('logout-button').addEventListener('click', async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-        showNotification('Errore nel logout: ' + error.message, 'error');
-    } else {
-        showNotification('Logout effettuato!', 'info');
-    }
-});
-
-/**
- * 🔹 Listener per cambio stato di autenticazione.
- */
-supabase.auth.onAuthStateChange(async (event, session) => {
-    if (session) {
-        currentUserId = session.user.id;
-        console.log('Utente loggato:', currentUserId);
-        
-        // Se si è appena loggati, carica i tenants
-        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-            // Dopo il reset password (link email), l'evento è 'SIGNED_IN' o 'USER_UPDATED'. 
-            // La pagina di reset password è già mostrata dal controllo in fondo al file.
-            // Se l'utente arriva qui con una sessione valida, mostra l'app.
-            if (document.getElementById('update-password-page').classList.contains('hidden')) {
-                 await loadTenants();
+                if (!filteredFound) {
+                    scaricoSelect.innerHTML = '<option value="">-- Articolo non in magazzino --</option>';
+                    scaricoGiacenzaDisplay.textContent = 'Giacenza Articolo Selezionato: 0 unità';
+                    scaricoQty.value = '';
+                    showNotification(`Barcode ${filterBarcode} non trovato in giacenza.`, 'error');
+                } else {
+                    // Se l'articolo è stato trovato, aggiorna la giacenza
+                    updateScaricoGiacenza(selectedValue);
+                }
+            } else {
+                // Se non c'è filtro, resetta il display giacenza
+                 updateScaricoGiacenza(null);
             }
         }
-    } else {
-        currentUserId = null;
-        currentTenantId = null;
-        tenants = [];
-        console.log('Nessun utente loggato.');
-        showPage('auth-page');
-    }
-});
 
-
-// === GESTIONE CAMBIO PASSWORD DOPO REINDIRIZZAMENTO EMAIL ===
-document.getElementById('update-password-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const newPassword = document.getElementById('new-password-input').value.trim();
-    const msgEl = document.getElementById('reset-msg');
-
-    if (newPassword.length < 6) {
-        msgEl.textContent = 'La password deve avere almeno 6 caratteri.';
-        return;
-    }
-
-    msgEl.textContent = '⏳ Aggiornamento in corso...';
-
-    // Aggiorna la password dell'utente corrente (quello in sessione temporanea)
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-
-    if (error) {
-        msgEl.textContent = '❌ Errore: ' + error.message;
-    } else {
-        msgEl.textContent = '✅ Password aggiornata! Accesso effettuato.';
-        showNotification('Password aggiornata con successo! Accesso effettuato.', 'success');
-        // Dopo l'aggiornamento, la sessione è valida e si può procedere all'app
-        await loadTenants(); // Carica i magazzini e mostra la main-app
-    }
-});
-
-// === GESTIONE FORM DI AUTENTICAZIONE ===
-
-// Listener per mostrare i diversi form
-document.getElementById('show-signup').addEventListener('click', (e) => { e.preventDefault(); showAuthCard('signup-card'); });
-document.getElementById('show-login').addEventListener('click', (e) => { e.preventDefault(); showAuthCard('login-card'); });
-document.getElementById('show-forgot-password').addEventListener('click', (e) => { e.preventDefault(); showAuthCard('forgot-password-card'); });
-document.getElementById('back-to-login').addEventListener('click', (e) => { e.preventDefault(); showAuthCard('login-card'); });
-
-// Form Login
-document.getElementById('login-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('login-email').value.trim();
-    const password = document.getElementById('login-password').value.trim();
-    const msgEl = document.getElementById('login-msg');
-    msgEl.textContent = '⏳ Accesso in corso...';
-
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-    if (error) {
-        msgEl.textContent = '❌ Errore: ' + error.message;
-    } else {
-        msgEl.textContent = '✅ Accesso riuscito.';
-        // onAuthStateChange gestirà il reindirizzamento
-    }
-});
-
-// Form Registrazione
-document.getElementById('signup-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('signup-email').value.trim();
-    const password = document.getElementById('signup-password').value.trim();
-    const msgEl = document.getElementById('signup-msg');
-    
-    // URL di reindirizzamento CORRETTO per GitHub Pages. Assumiamo che il tuo repo si chiami 'magazzino'.
-    // QUESTO È IL PUNTO CRITICO DOVE DEVI AGGIORNARE IL PERCORSO.
-    const REDIRECT_URL = 'https://nin82.github.io/magazzino/'; 
-
-    msgEl.textContent = '⏳ Registrazione in corso...';
-
-    const { error } = await supabase.auth.signUp({ 
-        email, 
-        password,
-        options: {
-            emailRedirectTo: REDIRECT_URL // Usa l'URL completo del tuo progetto
+        // Funzione per aggiornare il display della giacenza dello Scarico
+        function updateScaricoGiacenza(barcode) {
+            const selectedItem = giacenzeCache.find(item => item.barcode === barcode);
+            const giacenza = selectedItem ? selectedItem.quantity : 0;
+            scaricoGiacenzaDisplay.textContent = `Giacenza Articolo Selezionato: ${giacenza} unità`;
+            // Imposta il max per l'input quantità
+            scaricoQty.setAttribute('max', giacenza);
+            scaricoQty.value = ''; // Resetta la quantità
         }
-    });
 
-    if (error) {
-        msgEl.textContent = '❌ Errore: ' + error.message;
-    } else {
-        msgEl.textContent = `✅ Registrazione avvenuta! Controlla la tua email (${email}) per il link di verifica.`;
-        showAuthCard('login-card'); // Torna al login in attesa di verifica
-        showNotification('Verifica email inviata!', 'info');
-    }
-});
+        // Listener per la selezione di un articolo nello Scarico
+        scaricoSelect.addEventListener('change', () => {
+            const selectedBarcode = scaricoSelect.value;
+            scaricoBarcode.value = selectedBarcode; // Sincronizza il campo barcode con la selezione
+            updateScaricoGiacenza(selectedBarcode);
+        });
 
-// Form Password Dimenticata
-document.getElementById('forgot-password-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('forgot-email').value.trim();
-    const msgEl = document.getElementById('forgot-msg');
-    
-    // URL di reindirizzamento CORRETTO per GitHub Pages. 
-    // QUESTO È IL PUNTO CRITICO DOVE DEVI AGGIORNARE IL PERCORSO.
-    const REDIRECT_URL = 'https://nin82.github.io/magazzino/'; 
-
-    msgEl.textContent = '⏳ Invio link in corso...';
-
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: REDIRECT_URL // Usa l'URL completo del tuo progetto
-    });
-
-    if (error) {
-        msgEl.textContent = '❌ Errore: ' + error.message;
-    } else {
-        msgEl.textContent = `✅ Link di ripristino inviato a ${email}. Controlla la tua casella di posta.`;
-    }
-});
+        // Listener per l'input manuale del barcode nello Scarico
+        scaricoBarcode.addEventListener('change', () => {
+             const manualBarcode = scaricoBarcode.value.trim();
+             // Cerco se l'articolo è in giacenza e lo seleziono
+             const selectedItem = giacenzeCache.find(item => item.barcode === manualBarcode);
+             if (selectedItem) {
+                 // Aggiorna la select per mostrare l'elemento selezionato
+                 scaricoSelect.value = manualBarcode;
+                 updateScaricoGiacenza(manualBarcode);
+                 showNotification(`Barcode riconosciuto: ${selectedItem.article}`, 'info');
+             } else {
+                 scaricoSelect.value = ""; // Nessuna selezione
+                 updateScaricoGiacenza(null);
+                 showNotification(`Barcode non trovato in giacenza.`, 'error');
+             }
+        });
 
 
-// === GESTIONE INIZIALIZZAZIONE E TAB ===
+        /**
+         * Aggiorna lo storico e il riepilogo di giacenza
+         */
+        async function refreshInventoryTable() {
+            if (!currentTenantId) return;
+            // Esempio: Query per i 50 movimenti più recenti del tenant corrente
+            const { data: movements, error: movError } = await supabase
+                .from('movimenti')
+                .select('created_at, article, barcode, quantity, type')
+                .eq('tenant_id', currentTenantId)
+                .order('created_at', { ascending: false })
+                .limit(50);
 
-// Listener per il cambio Tab
-document.querySelectorAll('.tab-button').forEach(btn => {
-    btn.addEventListener('click', () => {
-        // Nascondi tutti i contenuti e disattiva tutti i pulsanti
-        document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active', 'border-primary'));
-        document.querySelectorAll('.tab-button').forEach(b => b.classList.add('border-transparent'));
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-        stopAllScanners(); // Ferma tutti gli scanner quando cambi tab
+            if (movError) {
+                showNotification(`Errore caricamento movimenti: ${movError.message}`, 'error');
+                return;
+            }
 
-        // Attiva il tab selezionato
-        btn.classList.add('active', 'border-primary');
-        btn.classList.remove('border-transparent');
-        document.getElementById(btn.dataset.tab).classList.remove('hidden');
-        
-        // Inizializza o ricarica i dati specifici della tab 
-        if (btn.dataset.tab === 'scarico-tab') {
-            refreshScaricoSelect();
-        } else if (btn.dataset.tab === 'storico-tab') {
-            refreshInventoryTable(document.getElementById('inventory-search-input').value.trim());
+            const tableBody = document.getElementById('movements-table-body');
+            tableBody.innerHTML = '';
+            
+            // Inserimento movimenti nella tabella
+            movements.forEach(m => {
+                const row = tableBody.insertRow();
+                const date = new Date(m.created_at).toLocaleString('it-IT');
+                const typeClass = m.type === 'CARICO' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+                
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${date}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${m.article}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${m.barcode || '-'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-right">
+                        <span class="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-medium ${typeClass}">
+                            ${m.type === 'CARICO' ? '+' : '-'} ${m.quantity}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${m.type}</td>
+                `;
+            });
+
+            // 2. Riepilogo Giacenze
+            const { data: inventory, error: invError } = await supabase
+                .from('magazzino')
+                .select('article, quantity')
+                .eq('tenant_id', currentTenantId)
+                .gt('quantity', 0);
+
+            if (invError) {
+                showNotification(`Errore caricamento giacenze: ${invError.message}`, 'error');
+                return;
+            }
+
+            const summaryContainer = document.getElementById('inventory-summary');
+            summaryContainer.innerHTML = '';
+
+            inventory.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'bg-indigo-50 p-4 rounded-lg shadow-inner';
+                card.innerHTML = `
+                    <p class="text-sm font-medium text-indigo-700">${item.article}</p>
+                    <p class="text-2xl font-bold text-indigo-900">${item.quantity} unità</p>
+                `;
+                summaryContainer.appendChild(card);
+            });
+
+            if (inventory.length === 0) {
+                 summaryContainer.innerHTML = '<p class="text-gray-500 italic">Nessun articolo in giacenza.</p>';
+            }
         }
-    });
-});
 
-// Controlla l'URL per il reset password o la conferma signup all'avvio
-document.addEventListener('DOMContentLoaded', async () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const type = urlParams.get('type');
 
-    if (type === 'recovery' || type === 'signup') {
-        // Supabase imposta una sessione temporanea in questi casi.
-        // Mostriamo la pagina di aggiornamento password.
-        showPage('update-password-page');
-        // Rimuove i parametri dall'URL per evitare che l'utente ricarichi la pagina
-        // e tenti un secondo reset con un token scaduto/usato.
-        window.history.replaceState({}, document.title, window.location.pathname);
-    } else {
-        // Tenta di caricare lo stato iniziale (gestito da onAuthStateChange)
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (!session) {
-                showPage('auth-page');
+        // Gestione Carico (Insert/Update)
+        document.getElementById('carico-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const barcode = caricoBarcode.value.trim();
+            const article = caricoArticle.value.trim();
+            const quantity = parseInt(caricoQty.value, 10);
+
+            if (!barcode || !article || quantity <= 0 || !currentTenantId) {
+                showNotification('Compila tutti i campi correttamente.', 'error');
+                return;
+            }
+
+            try {
+                // 1. Inserisci o Aggiorna in `magazzino`
+                const { data: existingItem } = await supabase
+                    .from('magazzino')
+                    .select('quantity')
+                    .eq('barcode', barcode)
+                    .eq('tenant_id', currentTenantId)
+                    .maybeSingle();
+
+                if (existingItem) {
+                    // Articolo esistente: aggiorna la quantità
+                    const newQuantity = existingItem.quantity + quantity;
+                    const { error: updateError } = await supabase
+                        .from('magazzino')
+                        .update({ quantity: newQuantity, article: article }) // Aggiorna anche il nome, se cambiato
+                        .eq('barcode', barcode)
+                        .eq('tenant_id', currentTenantId);
+
+                    if (updateError) throw updateError;
+                    showNotification(`Carico di ${quantity} unità per ${article} registrato. Nuova giacenza: ${newQuantity}`, 'success');
+
+                } else {
+                    // Nuovo articolo: inserisci
+                    const { error: insertError } = await supabase
+                        .from('magazzino')
+                        .insert({ 
+                            article: article, 
+                            barcode: barcode, 
+                            quantity: quantity, 
+                            user_id: currentUserId,
+                            tenant_id: currentTenantId 
+                        });
+
+                    if (insertError) throw insertError;
+                    showNotification(`Nuovo articolo ${article} registrato con quantità ${quantity}.`, 'success');
+                }
+
+                // 2. Registra il movimento in `movimenti`
+                await supabase.from('movimenti').insert({ 
+                    article: article, 
+                    barcode: barcode, 
+                    quantity: quantity, 
+                    type: 'CARICO', 
+                    user_id: currentUserId,
+                    tenant_id: currentTenantId
+                });
+
+                // 3. Pulisci e Aggiorna l'interfaccia
+                caricoBarcode.value = '';
+                caricoArticle.value = '';
+                caricoQty.value = '';
+                document.getElementById('carico-giacenza-display').textContent = 'Giacenza Attuale: 0 unità';
+
+            } catch (error) {
+                showNotification(`Errore nel Carico: ${error.message}`, 'error');
             }
         });
-    }
-});
 
-// ================== FINE LOGICA APPLICATIVA ==================
-</script>
+
+        // Gestione Scarico (Decremento)
+        document.getElementById('scarico-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const barcode = scaricoBarcode.value.trim();
+            const quantity = parseInt(scaricoQty.value, 10);
+            const selectedItem = giacenzeCache.find(item => item.barcode === barcode);
+
+            if (!barcode || !selectedItem || quantity <= 0 || !currentTenantId) {
+                showNotification('Seleziona un articolo e inserisci una quantità valida.', 'error');
+                return;
+            }
+
+            const giacenzaAttuale = selectedItem.quantity;
+
+            if (quantity > giacenzaAttuale) {
+                showNotification(`Errore: Quantità in uscita (${quantity}) supera la giacenza attuale (${giacenzaAttuale}).`, 'error');
+                return;
+            }
+
+            try {
+                const newQuantity = giacenzaAttuale - quantity;
+                const articleName = selectedItem.article;
+
+                // 1. Aggiorna in `magazzino`
+                const { error: updateError } = await supabase
+                    .from('magazzino')
+                    .update({ quantity: newQuantity })
+                    .eq('barcode', barcode)
+                    .eq('tenant_id', currentTenantId);
+
+                if (updateError) throw updateError;
+                
+                // 2. Registra il movimento in `movimenti`
+                await supabase.from('movimenti').insert({ 
+                    article: articleName, 
+                    barcode: barcode, 
+                    quantity: quantity, 
+                    type: 'SCARICO', 
+                    user_id: currentUserId,
+                    tenant_id: currentTenantId 
+                });
+
+                showNotification(`Scarico di ${quantity} unità per ${articleName} registrato. Nuova giacenza: ${newQuantity}`, 'success');
+
+                // 3. Pulisci e Aggiorna l'interfaccia
+                scaricoBarcode.value = '';
+                scaricoQty.value = '';
+                // Ricarica la select e la giacenza
+                refreshScaricoSelect();
+
+            } catch (error) {
+                showNotification(`Errore nello Scarico: ${error.message}`, 'error');
+            }
+        });
+
+        // ================== LOGICA TENANT (MAGAZZINO MULTI-UTENTE) ==================
+
+        // Funzione per caricare la lista dei Magazzini
+        async function loadTenants() {
+            if (!currentUserId) return;
+            tenantSelectorContainer.classList.remove('hidden');
+            mainContent.classList.add('hidden');
+
+            const { data, error } = await supabase
+                .from('tenants')
+                .select('*')
+                .eq('owner_id', currentUserId)
+                .order('name', { ascending: true });
+
+            if (error) {
+                showNotification(`Errore caricamento magazzini: ${error.message}`, 'error');
+                return;
+            }
+
+            const tenantList = document.getElementById('tenant-list');
+            tenantList.innerHTML = '';
+
+            data.forEach(tenant => {
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center p-3 bg-gray-100 rounded-lg';
+                div.innerHTML = `
+                    <span class="font-medium text-gray-800">${tenant.name}</span>
+                    <button data-id="${tenant.id}" data-name="${tenant.name}" class="select-tenant-btn primary-btn px-3 py-1 text-sm">Seleziona</button>
+                `;
+                tenantList.appendChild(div);
+            });
+
+            // Aggiungi listener per la selezione del magazzino
+            document.querySelectorAll('.select-tenant-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    currentTenantId = e.target.dataset.id;
+                    tenantNameDisplay.textContent = e.target.dataset.name;
+                    // Salva in localStorage per le sessioni future
+                    localStorage.setItem('currentTenantId', currentTenantId);
+                    localStorage.setItem('currentTenantName', e.target.dataset.name);
+                    showApp(); // Nascondi selettore e mostra l'app
+                });
+            });
+        }
+
+        // Gestione Creazione Nuovo Magazzino
+        document.getElementById('create-tenant-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newName = document.getElementById('new-tenant-name').value.trim();
+            if (!newName) return;
+
+            const { data, error } = await supabase
+                .from('tenants')
+                .insert({ name: newName, owner_id: currentUserId })
+                .select()
+                .single();
+
+            if (error) {
+                showNotification(`Errore creazione magazzino: ${error.message}`, 'error');
+            } else {
+                showNotification(`Magazzino '${newName}' creato con successo.`, 'success');
+                document.getElementById('new-tenant-name').value = '';
+                // Seleziona automaticamente il nuovo magazzino
+                currentTenantId = data.id;
+                tenantNameDisplay.textContent = data.name;
+                localStorage.setItem('currentTenantId', currentTenantId);
+                localStorage.setItem('currentTenantName', data.name);
+                showApp();
+            }
+        });
+
+        // Bottone per tornare al selettore magazzino
+        document.getElementById('change-tenant-btn').addEventListener('click', () => {
+            currentTenantId = null;
+            tenantNameDisplay.textContent = '';
+            localStorage.removeItem('currentTenantId');
+            localStorage.removeItem('currentTenantName');
+            loadTenants();
+        });
+
+
+        // Funzione per mostrare l'app dopo l'autenticazione/selezione tenant
+        function showApp() {
+            showPage('app-page');
+            tenantSelectorContainer.classList.add('hidden');
+            mainContent.classList.remove('hidden');
+
+            // Avvia il caricamento iniziale dei dati
+            refreshScaricoSelect();
+            // Assicurati che il tab attivo sia inizializzato (default: Carico)
+            document.querySelector('.tab-button[data-tab="carico-tab"]').click();
+            
+            // Nascondi il pannello update password se è visualizzato
+            if (!updatePasswordPage.classList.contains('hidden')) {
+                 updatePasswordPage.classList.add('hidden');
+            }
+        }
+
+        // ================== LOGICA PWA & OFFLINE ==================
+
+        // Gestione stato online/offline
+        function updateOnlineStatus() {
+            if (navigator.onLine) {
+                onlineStatusEl.textContent = 'Online';
+                onlineStatusEl.className = 'font-medium text-green-600';
+            } else {
+                onlineStatusEl.textContent = 'Offline (Sola Lettura)';
+                onlineStatusEl.className = 'font-medium text-red-600';
+            }
+        }
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        updateOnlineStatus(); // Chiama al caricamento iniziale
+
+        // Registrazione Service Worker (se non è già nel tag <script> in head)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js')
+            .then(reg => console.log('✅ Service Worker registrato correttamente:', reg.scope))
+            .catch(err => console.error('❌ Errore registrazione Service Worker:', err));
+        }
+
+        // ================== LOGICA QR SCANNER ==================
+
+        const qrModal = document.getElementById('qr-modal');
+        const qrVideo = document.getElementById('qr-video');
+        const qrResult = document.getElementById('qr-result');
+        let lastScanned = ''; // Variabile per evitare scansioni multiple identiche
+
+        function startQRScanner(mode) {
+            isCaricoMode = mode === 'carico';
+            qrModal.classList.remove('hidden');
+            
+            // Inizializza QrScanner
+            if (scanner) {
+                scanner.stop(); // Ferma la precedente se esiste
+                scanner = null;
+            }
+
+            scanner = new QrScanner(
+                qrVideo,
+                async result => {
+                    const qrCode = result.data.trim();
+                    if (qrCode && qrCode !== lastScanned) {
+                        playBeep(100, 600, 0.7); // Beep più alto per successo
+                        lastScanned = qrCode;
+                        qrResult.value = qrCode;
+                        
+                        // Chiama la funzione di gestione specifica
+                        handleScanResult(qrCode);
+                        stopQRScanner(); // Chiudi scanner dopo la scansione valida
+                    }
+                },
+                {
+                    onDecodeError: error => {
+                        // console.log('Errore scansione: ', error); // Log per debug
+                    },
+                    highlightScanRegion: true,
+                    highlightCodeOutline: true,
+                }
+            );
+
+            scanner.start();
+        }
+
+        function stopQRScanner() {
+            if (scanner) {
+                scanner.stop();
+                scanner = null;
+            }
+            qrModal.classList.add('hidden');
+            qrResult.value = '';
+            lastScanned = '';
+        }
+        
+        // Listener per avviare lo scanner nel tab Carico
+        document.getElementById('start-carico-qr').addEventListener('click', () => startQRScanner('carico'));
+
+        // Listener per avviare lo scanner nel tab Scarico
+        document.getElementById('start-scarico-qr').addEventListener('click', () => startQRScanner('scarico'));
+
+        // Listener per chiudere la modale
+        document.getElementById('stop-qr').addEventListener('click', stopQRScanner);
+
+        /**
+         * Funzione che gestisce il risultato dello scanner e popola i campi.
+         * @param {string} qrCode Il valore scansionato.
+         */
+        async function handleScanResult(qrCode) {
+            if (!currentTenantId) return; // Protezione
+
+            // 1. Logica specifica per Carico/Scarico
+            if (isCaricoMode) {
+                const giacenzaDisplay = document.getElementById('carico-giacenza-display');
+                caricoBarcode.value = qrCode;
+
+                // 🔹 Controlla barcode esistente SOLO nel magazzino/tenant corrente
+                const { data: existing } = await supabase
+                    .from('magazzino')
+                    .select('article, quantity')
+                    .eq('barcode', qrCode)
+                    .eq('tenant_id', currentTenantId) 
+                    .maybeSingle();
+
+                if (existing) {
+                    caricoArticle.value = existing.article;
+                    giacenzaDisplay.textContent = `Giacenza Attuale: ${existing.quantity} unità`;
+                    showNotification(`Barcode agganciato: ${qrCode}`, 'success');
+                } else {
+                    caricoArticle.value = '';
+                    giacenzaDisplay.textContent = 'Nuovo Articolo (Giacenza: 0)';
+                    showNotification('Nuovo articolo, inserisci il nome', 'success');
+                }
+
+                caricoQty.focus();
+
+            } else {
+                // SCARICO
+                scaricoBarcode.value = qrCode;
+                // Aggiorna select scarico solo con articoli del tenant corrente e seleziona quello scansionato
+                await refreshScaricoSelect(qrCode); 
+
+                scaricoQty.focus();
+                showNotification(`Barcode inserito nello Scarico: ${qrCode}`, 'success');
+            }
+
+            // 🔹 Pulisce il box QR
+            document.getElementById('qr-result').value = '';
+            lastScanned = '';
+        }
+
+
+        // ================== INIZIALIZZAZIONE ==================
+
+        // Listener per i bottoni dei tab
+        document.querySelectorAll('.tab-button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                stopAllScanners(); // Ferma tutti gli scanner quando cambi tab
+
+                // Attiva il tab selezionato
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.tab).classList.add('active');
+                
+                // Inizializza o ricarica i dati specifici della tab
+                if (btn.dataset.tab === 'scarico-tab') {
+                    refreshScaricoSelect();
+                } else if (btn.dataset.tab === 'storico-tab') {
+                    refreshInventoryTable();
+                }
+            });
+        });
+
+        // Controlla l'URL per il reset password all'avvio
+        const urlParams = new URLSearchParams(window.location.search);
+
+        if (urlParams.get('type') === 'recovery') {
+            showPage('update-password-page');
+        } else {
+            // Tenta di caricare lo stato iniziale (gestito da onAuthStateChange)
+            supabase.auth.getSession().then(({ data: { session } }) => {
+                if (session) {
+                    currentUserId = session.user.id;
+                    // Tenta di caricare il tenant dalla cache
+                    currentTenantId = localStorage.getItem('currentTenantId');
+                    tenantNameDisplay.textContent = localStorage.getItem('currentTenantName') || '';
+
+                    if (currentTenantId) {
+                        showApp();
+                    } else {
+                        loadTenants(); // Se non c'è un tenant selezionato, mostra il selettore
+                    }
+                } else {
+                    showPage('auth-page');
+                }
+            }).catch(console.error);
+        }
+        
+        // Listener per i cambiamenti di stato dell'autenticazione
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (session) {
+                currentUserId = session.user.id;
+                // Se non siamo nella pagina di reset password
+                if (urlParams.get('type') !== 'recovery') {
+                    // Tenta di caricare il tenant dalla cache
+                    currentTenantId = localStorage.getItem('currentTenantId');
+                    tenantNameDisplay.textContent = localStorage.getItem('currentTenantName') || '';
+
+                    if (currentTenantId) {
+                        showApp();
+                    } else {
+                        loadTenants(); // Se non c'è un tenant selezionato, mostra il selettore
+                    }
+                } else {
+                    // Se siamo nella pagina di reset, non fare nulla (la pagina update-password-page è già mostrata)
+                }
+
+            } else {
+                currentUserId = null;
+                showPage('auth-page');
+                showAuthForm('login');
+            }
+        });
+
+        // Helper per fermare tutti gli scanner (utile quando si cambia tab o si fa logout)
+        function stopAllScanners() {
+            if (scanner) {
+                scanner.stop();
+                scanner = null;
+            }
+            qrModal.classList.add('hidden');
+        }
+
+        // Gestione link login/register
+        document.getElementById('show-register').addEventListener('click', (e) => { e.preventDefault(); showAuthForm('register'); });
+        document.getElementById('show-login').addEventListener('click', (e) => { e.preventDefault(); showAuthForm('login'); });
+
+    </script>
 </body>
 </html>
