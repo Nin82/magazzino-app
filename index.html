@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <base href="/magazzino-app/">
     <title>Gestione Magazzino Completo</title>
-    <!-- ================= PWA & Tailwind CSS ================= -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#4f46e5">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -66,47 +65,42 @@
 </head>
 <body class="bg-gray-50 min-h-screen">
 
-    <!-- Container Notifiche -->
     <div id="notification-container"></div>
     
-    <!-- ================= Pagine Principali ================= -->
-    
-    <!-- 1. Pagina di Autenticazione (auth-page) -->
     <div id="auth-page" class="flex flex-col items-center justify-center min-h-screen p-4">
         <div class="w-full max-w-md bg-white p-8 rounded-xl shadow-2xl">
             <h1 class="text-3xl font-extrabold text-center text-primary mb-6">Magazzino App</h1>
 
-            <!-- Pannello Login/Registrazione -->
             <div id="auth-panel">
-                <!-- Login Form -->
                 <form id="login-form" class="space-y-4">
                     <h2 class="text-2xl font-bold text-gray-700 mb-4">Accedi</h2>
                     <input type="email" id="login-email" placeholder="Email" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
                     <input type="password" id="login-password" placeholder="Password" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
                     <button type="submit" class="w-full primary-btn py-3">Accedi</button>
                     <p class="text-center text-sm">
-                        Non hai un account? <a href="#" id="show-register" class="text-primary font-medium hover:underline">Registrati</a>
+                        Non hai un account?
+                        <a href="#" id="show-register" class="text-primary font-medium hover:underline">Registrati</a>
                     </p>
                     <p class="text-center text-sm">
                         <a href="#" id="show-forgot-password" class="text-gray-500 hover:text-primary hover:underline">Password Dimenticata?</a>
                     </p>
                 </form>
 
-                <!-- Register Form (Inizialmente nascosto) -->
                 <form id="register-form" class="space-y-4 hidden">
                     <h2 class="text-2xl font-bold text-gray-700 mb-4">Registrati</h2>
                     <input type="email" id="register-email" placeholder="Email" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
                     <input type="password" id="register-password" placeholder="Password (min. 6 caratteri)" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
                     <button type="submit" class="w-full primary-btn py-3">Registrati</button>
                     <p class="text-center text-sm">
-                        Hai già un account? <a href="#" id="show-login" class="text-primary font-medium hover:underline">Accedi</a>
+                        Hai già un account?
+                        <a href="#" id="show-login" class="text-primary font-medium hover:underline">Accedi</a>
                     </p>
                 </form>
 
-                 <!-- Reimposta Password Request Panel (Nuovo) --> 
                  <div id="forgot-password-panel" class="space-y-4 hidden">
                     <h2 class="text-2xl font-bold text-gray-700 mb-4">Reimposta Password</h2>
-                    <p class="text-sm text-gray-600">Inserisci la tua email per ricevere il link di reimpostazione. Assicurati che il tuo browser reindirizzi a <code class="text-xs font-mono bg-yellow-100 p-0.5 rounded">https://nin82.github.io/magazzino-app/</code></p>
+                    <p class="text-sm text-gray-600">Inserisci la tua email per ricevere il link di reimpostazione.
+                        Assicurati che il tuo browser reindirizzi a <code class="text-xs font-mono bg-yellow-100 p-0.5 rounded">https://nin82.github.io/magazzino-app/</code></p>
                     <form id="forgot-password-form" class="space-y-4">
                         <input type="email" id="forgot-email" placeholder="La tua Email" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
                         <button type="submit" class="w-full primary-btn py-3">Invia Link di Reset</button>
@@ -114,13 +108,11 @@
                     <p id="forgot-msg" class="text-center text-sm font-medium"></p>
                     <button onclick="showAuthForm('login')" class="text-sm text-primary hover:text-indigo-700">← Torna al Login</button>
                 </div>
-
             </div>
             <p id="auth-msg" class="mt-4 text-center text-red-500 font-medium"></p>
         </div>
     </div>
 
-    <!-- 2. Pagina per Aggiornare Password (update-password-page) -->
     <div id="update-password-page" class="flex flex-col items-center justify-center min-h-screen p-4 hidden">
         <div class="w-full max-w-md bg-white p-8 rounded-xl shadow-2xl">
             <h1 class="text-3xl font-extrabold text-center text-primary mb-6">Nuova Password</h1>
@@ -133,7 +125,6 @@
         </div>
     </div>
 
-    <!-- 3. Pagina App Principale (app-page) -->
     <div id="app-page" class="p-4 md:p-8 hidden">
         <header class="flex flex-col md:flex-row justify-between items-start md:items-center pb-6 border-b border-gray-200 mb-6">
             <div class="mb-4 md:mb-0">
@@ -146,12 +137,10 @@
             </div>
         </header>
 
-        <!-- Selettore Magazzino (Tenant Switcher) -->
         <div id="tenant-selector-container" class="mb-6 bg-white p-6 rounded-xl shadow-lg hidden">
             <h2 class="text-2xl font-bold mb-4 text-gray-700">Scegli o Crea Magazzino</h2>
             <div id="tenant-list" class="space-y-3 mb-6">
-                <!-- Tenants will be listed here -->
-            </div>
+                </div>
             <h3 class="text-xl font-semibold mb-3 text-gray-700">Crea Nuovo Magazzino</h3>
             <form id="create-tenant-form" class="flex space-x-3">
                 <input type="text" id="new-tenant-name" placeholder="Nome Nuovo Magazzino" required class="flex-grow p-2 border border-gray-300 rounded-lg">
@@ -159,7 +148,6 @@
             </form>
         </div>
         
-        <!-- Tab Navigation -->
         <div id="main-content" class="hidden">
             <div class="flex border-b border-gray-200 mb-6 space-x-1">
                 <button data-tab="carico-tab" class="tab-button active py-2 px-4 border-b-2 border-transparent text-gray-600 hover:border-gray-300 transition duration-150">Carico</button>
@@ -167,7 +155,6 @@
                 <button data-tab="storico-tab" class="tab-button py-2 px-4 border-b-2 border-transparent text-gray-600 hover:border-gray-300 transition duration-150">Giacenza & Storico</button>
             </div>
 
-            <!-- Tab 1: Carico -->
             <div id="carico-tab" class="tab-content active bg-white p-6 rounded-xl shadow-lg">
                 <h2 class="text-2xl font-bold mb-4 text-gray-800">Registra Carico (Entrata)</h2>
                 
@@ -198,7 +185,6 @@
                 </form>
             </div>
 
-            <!-- Tab 2: Scarico -->
             <div id="scarico-tab" class="tab-content bg-white p-6 rounded-xl shadow-lg">
                 <h2 class="text-2xl font-bold mb-4 text-gray-800">Registra Scarico (Uscita)</h2>
                 
@@ -228,12 +214,10 @@
                 </form>
             </div>
 
-            <!-- Tab 3: Giacenza & Storico -->
             <div id="storico-tab" class="tab-content bg-white p-6 rounded-xl shadow-lg">
                 <h2 class="text-2xl font-bold mb-4 text-gray-800">Riepilogo Giacenze</h2>
                 <div id="inventory-summary" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-                    <!-- Summary cards will be injected here -->
-                </div>
+                    </div>
                 
                 <h2 class="text-2xl font-bold mb-4 text-gray-800">Storico Movimenti</h2>
                 <div class="overflow-x-auto">
@@ -248,14 +232,12 @@
                             </tr>
                         </thead>
                         <tbody id="movements-table-body" class="bg-white divide-y divide-gray-200">
-                            <!-- Movements will be injected here -->
-                        </tbody>
+                            </tbody>
                     </table>
                 </div>
             </div>
         </div>
 
-        <!-- ================= QR SCANNER MODAL ================= -->
         <div id="qr-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex items-center justify-center hidden">
             <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-lg mx-4">
                 <h3 class="text-xl font-bold mb-4">Scanner QR/Barcode</h3>
@@ -268,13 +250,11 @@
                 </div>
                 <div class="flex justify-between space-x-3">
                     <button id="stop-qr" class="w-full bg-red-500 text-white p-3 rounded-lg hover:bg-red-600 transition duration-150">Chiudi Scanner</button>
-                    <!-- Questo bottone sarà gestito dal codice JS per confermare l'uso del barcode -->
-                </div>
+                    </div>
             </div>
         </div>
     </div>
 
-    <!-- ================= JAVASCRIPT LOGIC ================= -->
     <script type="module">
         // ================== IMPORTS & CONFIG ==================
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
@@ -285,10 +265,9 @@
 			    
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnd6a2Nlc21mb2ZwZWN1eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2ODkxOTAsImV4cCI6MjA3NjI2NTE5MH0.j7TQnwbw-gW2S6QBjyp4wsQJrXUVYmg3wwVWVPRe1b4'
         const supabase = createClient(supabaseUrl, supabaseKey);
-
         // 💡 URL DI REINDIRIZZAMENTO CORRETTO PER SUPABASE
-        // QUESTA È LA VARIABILE CHE RISOLVE IL TUO PROBLEMA:
-        const REDIRECT_URL = "https://nin82.github.io/magazzino-app/";
+        // La variabile è stata commentata/rimossa perché l'URL viene generato dinamicamente.
+        // const REDIRECT_URL = "https://nin82.github.io/magazzino-app/index.html?type=recovery"; 
 
         // ================== STATO GLOBALE ==================
         let currentUserId = null;
@@ -345,7 +324,6 @@
             const notification = document.createElement('div');
             notification.className = `notification show bg-opacity-90 transition duration-500 transform translate-x-0`;
             notification.textContent = message;
-
             if (type === 'success') {
                 notification.style.backgroundColor = '#10b981'; // green-500
             } else if (type === 'error') {
@@ -355,7 +333,6 @@
             }
 
             container.appendChild(notification);
-
             setTimeout(() => {
                 notification.classList.remove('show');
                 notification.classList.add('translate-x-full');
@@ -407,7 +384,16 @@
                 return;
             }
 
-            const { error } = await supabase.auth.signUp({ email, password });
+            // URL di reindirizzamento per l'email di verifica
+            const BASE_REDIRECT_URL = window.location.origin + '/magazzino-app/index.html';
+
+            const { error } = await supabase.auth.signUp({ 
+                email, 
+                password,
+                options: {
+                    emailRedirectTo: BASE_REDIRECT_URL // ✅ CORREZIONE: Aggiunto per fixare il reindirizzamento
+                }
+            });
 
             if (error) {
                 authMsg.textContent = '❌ Errore di registrazione: ' + error.message;
@@ -423,29 +409,29 @@
             showAuthForm('forgot');
         });
 
-      document.getElementById('forgot-password-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('forgot-email').value.trim();
-    const msgEl = document.getElementById('forgot-msg');
-    // ...
+        document.getElementById('forgot-password-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('forgot-email').value.trim();
+            const msgEl = document.getElementById('forgot-msg');
+            msgEl.textContent = '⏳ Invio email in corso...';
 
-    try {
-        const REDIRECT_URL = window.location.origin + '/magazzino-app/index.html?type=recovery';
-        
-        // 🚀 CORREZIONE QUI: Passa il parametro corretto direttamente.
-        const { error } = await supabase.auth.resetPasswordForEmail(email, { 
-            redirectTo: REDIRECT_URL // ✅ Usa 'redirectTo' senza l'oggetto 'options'
+            try {
+                // URL completo generato dinamicamente con il flag 'recovery'
+                const REDIRECT_URL = window.location.origin + '/magazzino-app/index.html?type=recovery';
+
+                const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                    redirectTo: REDIRECT_URL // ✅ CORREZIONE: usa redirectTo a livello superiore
+                });
+
+                if (error) {
+                    msgEl.textContent = '❌ Errore: ' + error.message;
+                } else {
+                    msgEl.textContent = '✅ Email inviata! Controlla la tua casella di posta per il link di reset.';
+                }
+            } catch (err) {
+                msgEl.textContent = '❌ Errore imprevisto: ' + err.message;
+            }
         });
-
-        if (error) {
-            // ...
-        } else {
-            msgEl.textContent = '✅ Email inviata! Controlla la tua casella di posta per il link di reset.';
-        }
-    } catch (err) {
-        msgEl.textContent = '❌ Errore imprevisto: ' + err.message;
-    }
-});
 
         // === GESTIONE CAMBIO PASSWORD DOPO REINDIRIZZAMENTO EMAIL ===
         document.getElementById('update-password-form').addEventListener('submit', async (e) => {
@@ -588,12 +574,12 @@
              }
         });
 
-
         /**
          * Aggiorna lo storico e il riepilogo di giacenza
          */
         async function refreshInventoryTable() {
             if (!currentTenantId) return;
+
             // Esempio: Query per i 50 movimenti più recenti del tenant corrente
             const { data: movements, error: movError } = await supabase
                 .from('movimenti')
@@ -609,8 +595,8 @@
 
             const tableBody = document.getElementById('movements-table-body');
             tableBody.innerHTML = '';
-            
-            // Inserimento movimenti nella tabella
+
+            // 1. Inserimento movimenti nella tabella
             movements.forEach(m => {
                 const row = tableBody.insertRow();
                 const date = new Date(m.created_at).toLocaleString('it-IT');
@@ -643,7 +629,6 @@
 
             const summaryContainer = document.getElementById('inventory-summary');
             summaryContainer.innerHTML = '';
-
             inventory.forEach(item => {
                 const card = document.createElement('div');
                 card.className = 'bg-indigo-50 p-4 rounded-lg shadow-inner';
@@ -653,7 +638,6 @@
                 `;
                 summaryContainer.appendChild(card);
             });
-
             if (inventory.length === 0) {
                  summaryContainer.innerHTML = '<p class="text-gray-500 italic">Nessun articolo in giacenza.</p>';
             }
@@ -692,7 +676,6 @@
 
                     if (updateError) throw updateError;
                     showNotification(`Carico di ${quantity} unità per ${article} registrato. Nuova giacenza: ${newQuantity}`, 'success');
-
                 } else {
                     // Nuovo articolo: inserisci
                     const { error: insertError } = await supabase
@@ -724,7 +707,6 @@
                 caricoArticle.value = '';
                 caricoQty.value = '';
                 document.getElementById('carico-giacenza-display').textContent = 'Giacenza Attuale: 0 unità';
-
             } catch (error) {
                 showNotification(`Errore nel Carico: ${error.message}`, 'error');
             }
@@ -762,7 +744,7 @@
                     .eq('tenant_id', currentTenantId);
 
                 if (updateError) throw updateError;
-                
+
                 // 2. Registra il movimento in `movimenti`
                 await supabase.from('movimenti').insert({ 
                     article: articleName, 
@@ -780,7 +762,6 @@
                 scaricoQty.value = '';
                 // Ricarica la select e la giacenza
                 refreshScaricoSelect();
-
             } catch (error) {
                 showNotification(`Errore nello Scarico: ${error.message}`, 'error');
             }
@@ -791,6 +772,7 @@
         // Funzione per caricare la lista dei Magazzini
         async function loadTenants() {
             if (!currentUserId) return;
+
             tenantSelectorContainer.classList.remove('hidden');
             mainContent.classList.add('hidden');
 
@@ -807,7 +789,6 @@
 
             const tenantList = document.getElementById('tenant-list');
             tenantList.innerHTML = '';
-
             data.forEach(tenant => {
                 const div = document.createElement('div');
                 div.className = 'flex justify-between items-center p-3 bg-gray-100 rounded-lg';
@@ -866,7 +847,6 @@
             loadTenants();
         });
 
-
         // Funzione per mostrare l'app dopo l'autenticazione/selezione tenant
         function showApp() {
             showPage('app-page');
@@ -877,7 +857,6 @@
             refreshScaricoSelect();
             // Assicurati che il tab attivo sia inizializzato (default: Carico)
             document.querySelector('.tab-button[data-tab="carico-tab"]').click();
-            
             // Nascondi il pannello update password se è visualizzato
             if (!updatePasswordPage.classList.contains('hidden')) {
                  updatePasswordPage.classList.add('hidden');
@@ -932,10 +911,11 @@
                         playBeep(100, 600, 0.7); // Beep più alto per successo
                         lastScanned = qrCode;
                         qrResult.value = qrCode;
-                        
+                 
                         // Chiama la funzione di gestione specifica
                         handleScanResult(qrCode);
                         stopQRScanner(); // Chiudi scanner dopo la scansione valida
+        
                     }
                 },
                 {
@@ -946,7 +926,6 @@
                     highlightCodeOutline: true,
                 }
             );
-
             scanner.start();
         }
 
@@ -1000,13 +979,11 @@
                 }
 
                 caricoQty.focus();
-
             } else {
                 // SCARICO
                 scaricoBarcode.value = qrCode;
                 // Aggiorna select scarico solo con articoli del tenant corrente e seleziona quello scansionato
-                await refreshScaricoSelect(qrCode); 
-
+                await refreshScaricoSelect(qrCode);
                 scaricoQty.focus();
                 showNotification(`Barcode inserito nello Scarico: ${qrCode}`, 'success');
             }
