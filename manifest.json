@@ -1,7 +1,7 @@
 {
   "name": "Gestione Magazzino",
   "short_name": "Magazzino",
-  "start_url": "./index.html",
+  "start_url": "/magazzino-app/index.html",
   "display": "standalone",
   "background_color": "#f8fafc",
   "theme_color": "#4f46e5",
@@ -11,5 +11,6 @@
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
   ]
 }
+
 
 
