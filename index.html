@@ -281,12 +281,13 @@
 
         // 💡 CONFIGURAZIONE SUPABASE
         const supabaseUrl = 'https://eevwzkcesmfofpecuxwv.supabase.co'
+			    
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnd6a2Nlc21mb2ZwZWN1eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2ODkxOTAsImV4cCI6MjA3NjI2NTE5MH0.j7TQnwbw-gW2S6QBjyp4wsQJrXUVYmg3wwVWVPRe1b4'
         const supabase = createClient(supabaseUrl, supabaseKey);
 
         // 💡 URL DI REINDIRIZZAMENTO CORRETTO PER SUPABASE
         // QUESTA È LA VARIABILE CHE RISOLVE IL TUO PROBLEMA:
-        const CORRECT_REDIRECT_URL = 'https://nin82.github.io/magazzino-app/'; 
+        const REDIRECT_URL = "https://nin82.github.io/magazzino-app/index.html?type=recovery";
 
         // ================== STATO GLOBALE ==================
         let currentUserId = null;
@@ -422,22 +423,27 @@
         });
 
         document.getElementById('forgot-password-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('forgot-email').value.trim();
-            const msgEl = document.getElementById('forgot-msg');
-            msgEl.textContent = '⏳ Invio email in corso...';
+    e.preventDefault();
+    const email = document.getElementById('forgot-email').value.trim();
+    const msgEl = document.getElementById('forgot-msg');
+    msgEl.textContent = '⏳ Invio email in corso...';
 
-            // 🌟 PUNTO DI CORREZIONE CHIAVE: Inseriamo il redirectTo corretto!
-            const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: "https://nin82.github.io/magazzino-app/index.html?type=recovery"
-            });
-
-            if (error) {
-                msgEl.textContent = '❌ Errore: ' + error.message;
-            } else {
-                msgEl.textContent = '✅ Email inviata! Controlla la tua casella di posta per il link di reset.';
+    try {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            options: {
+                emailRedirectTo: "https://nin82.github.io/magazzino-app/index.html?type=recovery"
             }
         });
+
+        if (error) {
+            msgEl.textContent = '❌ Errore: ' + error.message;
+        } else {
+            msgEl.textContent = '✅ Email inviata! Controlla la tua casella di posta per il link di reset.';
+        }
+    } catch (err) {
+        msgEl.textContent = '❌ Errore imprevisto: ' + err.message;
+    }
+});
 
 
         // === GESTIONE CAMBIO PASSWORD DOPO REINDIRIZZAMENTO EMAIL ===
