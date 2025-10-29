@@ -83,16 +83,18 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
     <!-- ================= CONFIGURAZIONE E INIZIALIZZAZIONE ================= -->
     <script>
         // SOSTITUISCI CON LE TUE CREDENZIALI BACKENDLESS
+        // ATTENZIONE: Se non le hai ancora sostituite, l'app mostrerà un errore di configurazione.
         const BACKENDLESS_APP_ID = 'AA895053-C960-45EC-BFBE-FCBAFD9D7D0B'; 
-        const BACKENDLESS_API_KEY = '1F4341D8-CAB8-44F6-97D6-203322D8D245';
+        const BACKENDLESS_API_KEY = 'YOUR_API_KEY';
         
         let currentUser = null;
         let html5QrcodeScanner = null;
         let lastScanned = '';
         let isCaricoMode = true; // True per Carico, False per Scarico
+        let currentAuthTab = 'login'; // 'login' o 'register'
 
         // Classe Backendless per il magazzino
-        const BACKENDLESS_TABLE_NAME = 'Magazzino'; // Assicurati che il nome della classe sia questo
+        const BACKENDLESS_TABLE_NAME = 'Magazzino'; // Assicurati che il nome della classe su Backendless sia ESATTAMENTE 'Magazzino'
 
         // =========================================================================
         // UTILITY E UI MANAGEMENT
@@ -128,6 +130,14 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                 view.classList.add('hidden');
             });
             document.getElementById(viewId).classList.remove('hidden');
+        }
+        
+        function showModal(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
         }
         
         // =========================================================================
@@ -167,12 +177,14 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                     currentUser = null;
                     updateAuthUI(null);
                     showView('login-view');
+                    switchAuthTab('login'); // Mostra la tab di login di default
                     stopQrScanner();
                 }
             } catch (error) {
                 currentUser = null;
                 updateAuthUI(null);
                 showView('login-view');
+                switchAuthTab('login');
                 stopQrScanner();
                 console.error("Errore checkAuth:", error);
             } finally {
@@ -186,6 +198,7 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
             const logoutBtn = document.getElementById('logout-btn');
 
             if (user) {
+                // Backendless usa 'email' per l'identificativo principale dopo il login, o 'objectId'
                 const nameToShow = user.email || user.name || user.objectId;
                 userDisplay.textContent = `Benvenuto, ${nameToShow}`;
                 logoutBtn.classList.remove('hidden');
@@ -195,6 +208,16 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                 logoutBtn.classList.add('hidden');
                 authStatus.classList.add('hidden');
             }
+        }
+        
+        function switchAuthTab(tab) {
+            currentAuthTab = tab;
+            
+            document.getElementById('auth-tab-login').classList.toggle('tab-active', tab === 'login');
+            document.getElementById('auth-tab-register').classList.toggle('tab-active', tab === 'register');
+            
+            document.getElementById('auth-content-login').classList.toggle('hidden', tab !== 'login');
+            document.getElementById('auth-content-register').classList.toggle('hidden', tab !== 'register');
         }
 
         async function login() {
@@ -210,7 +233,46 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                 await loadDashboardData();
                 showNotification('Login effettuato con successo.', 'success');
             } catch (error) {
-                showNotification(`Errore di Login: ${error.message || error.code}`, 'error');
+                showNotification(`Errore di Login: ${error.message || error.code || 'Verifica email e password.'}`, 'error');
+            } finally {
+                toggleLoading(false);
+            }
+        }
+        
+        async function registerUser() {
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            const passwordConfirm = document.getElementById('register-password-confirm').value;
+
+            if (!email || !password || !passwordConfirm) {
+                 showNotification('Compila tutti i campi richiesti.', 'error');
+                 return;
+            }
+            if (password !== passwordConfirm) {
+                showNotification('Le password non corrispondono.', 'error');
+                return;
+            }
+            
+            toggleLoading(true);
+            try {
+                const user = { 
+                    email: email, 
+                    password: password 
+                    // Aggiungi qui altri campi utente se necessari (es. name)
+                };
+                
+                // Crea l'utente. Backendless invia automaticamente un'email di verifica
+                await Backendless.UserService.register(user);
+                
+                showNotification(`Registrazione completata! Controlla la tua email (${email}) per la verifica.`, 'success', 8000);
+                
+                // Reindirizza al login
+                switchAuthTab('login');
+                document.getElementById('login-email').value = email;
+                document.getElementById('login-password').value = '';
+                
+            } catch (error) {
+                showNotification(`Errore di Registrazione: ${error.message || error.code || 'Email già esistente o formato non valido.'}`, 'error');
             } finally {
                 toggleLoading(false);
             }
@@ -278,19 +340,12 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                 await Backendless.UserService.resetPassword(token, newPassword);
                 showNotification('Password resettata con successo! Ora puoi accedere.', 'success', 5000);
                 closeModal('reset-password-modal');
+                switchAuthTab('login'); // Torna alla tab di login
             } catch (error) {
                 showNotification(`Errore nel completamento del reset: ${error.message || error.code}`, 'error');
             } finally {
                 toggleLoading(false);
             }
-        }
-        
-        function showModal(modalId) {
-            document.getElementById(modalId).classList.remove('hidden');
-        }
-
-        function closeModal(modalId) {
-            document.getElementById(modalId).classList.add('hidden');
         }
         
         // =========================================================================
@@ -364,8 +419,8 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
             const scaricoBarcode = document.getElementById('scarico-barcode');
             const scaricoQty = document.getElementById('scarico-qty');
 
-            // 🔹 Pulisce il box QR
-            document.getElementById('qr-result').value = qrCode; // Mostra il codice
+            // 🔹 Mostra il codice
+            document.getElementById('qr-result').value = qrCode; 
             
             toggleLoading(true);
             try {
@@ -408,7 +463,8 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                     scaricoQty.focus();
                 }
             } catch (error) {
-                showNotification(`Errore di ricerca: ${error.message || error.code}`, 'error');
+                showNotification(`Errore di ricerca: ${error.message || error.code}. Assicurati che la classe '${BACKENDLESS_TABLE_NAME}' esista nel tuo database Backendless.`, 'error');
+                console.error("Errore di Backendless:", error);
             } finally {
                  toggleLoading(false);
                  setTimeout(() => lastScanned = '', 500); // Permette la scansione successiva
@@ -482,6 +538,7 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                 
             } catch (error) {
                 showNotification(`Errore durante il Carico: ${error.message || error.code}`, 'error');
+                console.error("Errore di Backendless Carico:", error);
             } finally {
                 toggleLoading(false);
                 await loadDashboardData(); // Ricarica la dashboard
@@ -490,12 +547,13 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
         
         async function refreshScaricoSelect(filterBarcode = '') {
             const selectElement = document.getElementById('scarico-select');
-            const inputElement = document.getElementById('scarico-barcode');
             
             let whereClause = `quantity > 0`;
             if (filterBarcode) {
                  // Filtra per barcode esatto o article contenente la stringa (usando LIKE)
-                 whereClause += ` AND (barcode = '${filterBarcode}' OR article LIKE '%${filterBarcode}%')`;
+                 // NOTA: Backendless usa 'LIKE' con %. Verificare la sintassi esatta nel Data Query language di BL se necessario.
+                 // Qui usiamo una clausola semplice per codice esatto
+                 whereClause = `quantity > 0 AND (barcode = '${filterBarcode}')`; 
             }
 
             // Query per tutti gli articoli in magazzino con giacenza > 0
@@ -530,6 +588,7 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                 
             } catch (error) {
                 showNotification(`Errore nel caricamento lista Scarico: ${error.message || error.code}`, 'error');
+                console.error("Errore di Backendless Scarico:", error);
             } finally {
                 toggleLoading(false);
             }
@@ -589,6 +648,7 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                 
             } catch (error) {
                 showNotification(`Errore durante lo Scarico: ${error.message || error.code}`, 'error');
+                console.error("Errore di Backendless Scarico:", error);
             } finally {
                 toggleLoading(false);
                 await loadDashboardData(); // Ricarica la dashboard
@@ -611,7 +671,11 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                 renderInventoryList(data);
                 refreshScaricoSelect(); // Aggiorna anche la lista per lo Scarico
             } catch (error) {
-                showNotification(`Errore nel caricamento della lista magazzino: ${error.message || error.code}`, 'error');
+                // Notifica l'errore solo se non è dovuto a "Table not found" che verrà gestito nell'initApp
+                if (error.code !== 1000) { 
+                    showNotification(`Errore nel caricamento della lista magazzino: ${error.message || error.code}`, 'error');
+                }
+                console.error("Errore di Backendless Dashboard:", error);
             } finally {
                 toggleLoading(false);
             }
@@ -692,14 +756,25 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
 
     <main id="view-container" class="flex-grow p-4 md:p-8">
         
-        <!-- Vista Login -->
+        <!-- Vista Login & Register -->
         <div id="login-view" class="view-content hidden">
-            <div class="max-w-md mx-auto my-12 p-8 bg-white rounded-xl card space-y-8">
-                <h2 class="text-3xl font-extrabold text-gray-900 text-center">Accedi</h2>
-
-                <div class="space-y-4">
+            <div class="max-w-md mx-auto my-12 p-8 bg-white rounded-xl card space-y-4">
+                <h2 class="text-3xl font-extrabold text-gray-900 text-center">Autenticazione</h2>
+                
+                <!-- Tab Selector -->
+                <div class="flex border-b border-gray-200 mb-6">
+                    <button id="auth-tab-login" onclick="switchAuthTab('login')" class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150 tab-active">
+                        Accedi
+                    </button>
+                    <button id="auth-tab-register" onclick="switchAuthTab('register')" class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150">
+                        Registrati
+                    </button>
+                </div>
+                
+                <!-- Contenuto Tab Login -->
+                <div id="auth-content-login" class="space-y-4">
                     <input type="email" id="login-email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                    <input type="password" id="login-password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                    <input type="password" id="login-password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded-lg input-focus" onkeydown="if(event.key==='Enter') login()">
                     
                     <button onclick="login()" class="w-full btn-primary bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center">
                         <i data-lucide="log-in" class="h-5 w-5 mr-2"></i>
@@ -708,6 +783,19 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                     
                     <button onclick="handlePasswordResetRequest()" class="w-full text-indigo-600 text-sm py-2 hover:underline">
                         Password dimenticata?
+                    </button>
+                </div>
+
+                <!-- Contenuto Tab Registrazione -->
+                <div id="auth-content-register" class="space-y-4 hidden">
+                    <p class="text-sm text-gray-600 text-center">Crea un nuovo account per accedere al magazzino.</p>
+                    <input type="email" id="register-email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                    <input type="password" id="register-password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                    <input type="password" id="register-password-confirm" placeholder="Conferma Password" class="w-full p-3 border border-gray-300 rounded-lg input-focus" onkeydown="if(event.key==='Enter') registerUser()">
+                    
+                    <button onclick="registerUser()" class="w-full btn-primary bg-green-600 text-white p-3 rounded-lg font-bold hover:bg-green-700 flex items-center justify-center">
+                        <i data-lucide="user-plus" class="h-5 w-5 mr-2"></i>
+                        Registrati
                     </button>
                 </div>
             </div>
