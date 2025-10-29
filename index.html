@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gestione Magazzino Completo (Backendless)</title>
-<!-- ================= PWA SETTINGS (Mantenute le note) ================= -->
-<!-- Ho rimosso i riferimenti PWA non inclusi nel file (manifest.json, service-worker.js) per garantire la compilazione singola. -->
 
 <!-- Tailwind CSS CDN -->
 <script src="https://cdn.tailwindcss.com"></script>
@@ -18,6 +16,8 @@
 <script src="https://unpkg.com/backendless@latest/dist/backendless.min.js"></script>
 <!-- Libreria QR Code -->
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.9/html5-qrcode.min.js"></script>
+<!-- Libreria Chart.js per i grafici -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 
 <style>
 /* ================= STILE ================= */
@@ -56,7 +56,7 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
     overflow: hidden;
 }
 
-/* Stile per il popup di recupero password */
+/* Stile per i modal */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -73,8 +73,10 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
     background-color: white;
     padding: 24px;
     border-radius: 12px;
-    max-width: 400px;
+    max-width: 450px;
     width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
 }
 </style>
 
@@ -83,18 +85,18 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
     <!-- ================= CONFIGURAZIONE E INIZIALIZZAZIONE ================= -->
     <script>
         // SOSTITUISCI CON LE TUE CREDENZIALI BACKENDLESS
-        // ATTENZIONE: Se non le hai ancora sostituite, l'app mostrerà un errore di configurazione.
         const BACKENDLESS_APP_ID = 'AA895053-C960-45EC-BFBE-FCBAFD9D7D0B'; 
-        const BACKENDLESS_API_KEY = 'YOUR_API_KEY';
+        const BACKENDLESS_API_KEY = '1F4341D8-CAB8-44F6-97D6-203322D8D245';
         
         let currentUser = null;
         let html5QrcodeScanner = null;
         let lastScanned = '';
         let isCaricoMode = true; // True per Carico, False per Scarico
         let currentAuthTab = 'login'; // 'login' o 'register'
+        let chartInstance = null; // Per Chart.js
 
         // Classe Backendless per il magazzino
-        const BACKENDLESS_TABLE_NAME = 'Magazzino'; // Assicurati che il nome della classe su Backendless sia ESATTAMENTE 'Magazzino'
+        const BACKENDLESS_TABLE_NAME = 'Magazzino'; 
 
         // =========================================================================
         // UTILITY E UI MANAGEMENT
@@ -109,14 +111,12 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
             notification.innerHTML = `<strong>${type.toUpperCase()}:</strong> ${message}`;
             container.appendChild(notification);
 
-            // Rimuovi dopo 'duration'
             setTimeout(() => {
                 notification.style.opacity = '0';
                 notification.addEventListener('transitionend', () => notification.remove());
             }, duration);
         }
 
-        // Funzione per mostrare e nascondere il loader
         function toggleLoading(show) {
             const loader = document.getElementById('loading-overlay');
             if (loader) {
@@ -124,7 +124,6 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
             }
         }
 
-        // Funzione per mostrare le diverse viste
         function showView(viewId) {
             document.querySelectorAll('.view-content').forEach(view => {
                 view.classList.add('hidden');
@@ -155,17 +154,13 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                 return;
             }
             Backendless.initApp(BACKENDLESS_APP_ID, BACKENDLESS_API_KEY);
-            
-            // Gestisce la seconda fase del reset se ci sono i parametri URL
             handlePasswordRecovery(); 
-            
             checkAuth();
         }
         
         async function checkAuth() {
             toggleLoading(true);
             try {
-                // Controlla se l'utente è autenticato e se la sessione è valida
                 const isValid = await Backendless.UserService.isValidLogin();
                 if (isValid) {
                     currentUser = await Backendless.UserService.getCurrentUser();
@@ -177,7 +172,7 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                     currentUser = null;
                     updateAuthUI(null);
                     showView('login-view');
-                    switchAuthTab('login'); // Mostra la tab di login di default
+                    switchAuthTab('login');
                     stopQrScanner();
                 }
             } catch (error) {
@@ -198,7 +193,6 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
             const logoutBtn = document.getElementById('logout-btn');
 
             if (user) {
-                // Backendless usa 'email' per l'identificativo principale dopo il login, o 'objectId'
                 const nameToShow = user.email || user.name || user.objectId;
                 userDisplay.textContent = `Benvenuto, ${nameToShow}`;
                 logoutBtn.classList.remove('hidden');
@@ -258,18 +252,14 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                 const user = { 
                     email: email, 
                     password: password 
-                    // Aggiungi qui altri campi utente se necessari (es. name)
                 };
                 
-                // Crea l'utente. Backendless invia automaticamente un'email di verifica
                 await Backendless.UserService.register(user);
                 
                 showNotification(`Registrazione completata! Controlla la tua email (${email}) per la verifica.`, 'success', 8000);
                 
-                // Reindirizza al login
                 switchAuthTab('login');
                 document.getElementById('login-email').value = email;
-                document.getElementById('login-password').value = '';
                 
             } catch (error) {
                 showNotification(`Errore di Registrazione: ${error.message || error.code || 'Email già esistente o formato non valido.'}`, 'error');
@@ -311,7 +301,6 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
             }
         }
         
-        // Logica per gestire il link di recupero password (es. quando l'utente clicca il link nella mail)
         function handlePasswordRecovery() {
              const urlParams = new URLSearchParams(window.location.search);
              const token = urlParams.get('token');
@@ -319,7 +308,6 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
              if (token) {
                  showModal('reset-password-modal');
                  document.getElementById('reset-token').value = token;
-                 // Rimuove i parametri dall'URL per pulizia
                  history.pushState(null, '', window.location.pathname);
              }
         }
@@ -336,11 +324,10 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
             
             toggleLoading(true);
             try {
-                // Il metodo di Backendless per completare il reset
                 await Backendless.UserService.resetPassword(token, newPassword);
                 showNotification('Password resettata con successo! Ora puoi accedere.', 'success', 5000);
                 closeModal('reset-password-modal');
-                switchAuthTab('login'); // Torna alla tab di login
+                switchAuthTab('login');
             } catch (error) {
                 showNotification(`Errore nel completamento del reset: ${error.message || error.code}`, 'error');
             } finally {
@@ -353,7 +340,7 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
         // =========================================================================
         
         function initializeQrScanner() {
-            if (html5QrcodeScanner) return; // Già inizializzato
+            if (html5QrcodeScanner) return;
             
             html5QrcodeScanner = new Html5QrcodeScanner(
                 "qr-reader", 
@@ -364,67 +351,51 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
         }
 
         function stopQrScanner() {
-            if (html5QrcodeScanner && html5QrcodeScanner.getState() !== 0) { // 0 = NOT_STARTED
+            if (html5QrcodeScanner && html5QrcodeScanner.getState() !== 0) {
                 html5QrcodeScanner.stop().catch(err => console.error("Errore nello stop dello scanner:", err));
-                html5QrcodeScanner = null; // Forza la ri-inizializzazione al prossimo login
+                html5QrcodeScanner = null;
             }
         }
         
         function onScanSuccess(decodedText, decodedResult) {
-            // Impedisce scansioni multiple dello stesso codice in un breve lasso di tempo
             if (decodedText === lastScanned) return; 
-            
             lastScanned = decodedText;
-            
-            // Chiama la funzione principale di gestione dati
             handleQrData(decodedText);
-            
-            // Pulisce il risultato dopo un breve delay per permettere una nuova scansione
             setTimeout(() => lastScanned = '', 500);
         }
         
         function onScanFailure(error) {
-            // Ignora gli errori comuni (es. "No se pudo iniciar la cámara")
+            // Ignora gli errori comuni
         }
         
-        // Switch tra le modalità Carico/Scarico e aggiorna lo stato isCaricoMode
         function switchMode(mode) {
             isCaricoMode = (mode === 'carico');
             
-            // Aggiorna classi per le tab
             document.getElementById('tab-carico').classList.toggle('tab-active', isCaricoMode);
             document.getElementById('tab-scarico').classList.toggle('tab-active', !isCaricoMode);
             
-            // Mostra il modulo corretto
             document.getElementById('form-carico').classList.toggle('hidden', !isCaricoMode);
             document.getElementById('form-scarico').classList.toggle('hidden', isCaricoMode);
 
-            // Svuota il campo di input QR e resetta il focus
             document.getElementById('qr-result').value = '';
             
             showNotification(`Modalità cambiata in: ${isCaricoMode ? 'Carico' : 'Scarico'}`, 'info');
             
-            // Se si passa a Scarico, ricarica la select
             if (!isCaricoMode) {
                 refreshScaricoSelect();
             }
         }
         
-        // Funzione per gestire i dati del QR scannerizzati
         async function handleQrData(qrCode) {
             const caricoBarcode = document.getElementById('carico-barcode');
             const caricoArticle = document.getElementById('carico-article');
             const giacenzaDisplay = document.getElementById('giacenza-display');
-            const caricoQty = document.getElementById('carico-qty');
             const scaricoBarcode = document.getElementById('scarico-barcode');
-            const scaricoQty = document.getElementById('scarico-qty');
-
-            // 🔹 Mostra il codice
+            
             document.getElementById('qr-result').value = qrCode; 
             
             toggleLoading(true);
             try {
-                // Query per cercare il barcode in Backendless
                 const queryBuilder = Backendless.Data.QueryBuilder.create()
                     .setWhereClause(`barcode = '${qrCode}'`);
                 
@@ -433,51 +404,40 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                 const existing = results.length > 0 ? results[0] : null;
 
                 if (isCaricoMode) {
-                    // CARICO
                     caricoBarcode.value = qrCode;
                     
                     if (existing) {
-                        // Barcode esistente → aggancia articolo e giacenza
                         caricoArticle.value = existing.article;
                         giacenzaDisplay.textContent = `Giacenza Attuale: ${existing.quantity || 0} unità`;
                         showNotification(`Barcode agganciato: ${qrCode}`, 'success');
                     } else {
-                        // Barcode nuovo → lascia articolo libero
                         caricoArticle.value = '';
                         giacenzaDisplay.textContent = 'Nuovo Articolo (Giacenza: 0)';
                         showNotification('Nuovo articolo, inserisci il nome', 'success');
                     }
                     
-                    // Mantiene il focus sul campo quantità
-                    caricoQty.focus();
+                    document.getElementById('carico-qty').focus();
                     
                 } else {
-                    // SCARICO
-                    // Imposta il barcode nel campo input (che agisce da filtro)
                     scaricoBarcode.value = qrCode; 
-                    
-                    // Ricarica la select filtrando per il barcode
                     await refreshScaricoSelect(qrCode);
-                    
                     showNotification(`Barcode inserito nello Scarico: ${qrCode}`, 'success');
-                    scaricoQty.focus();
+                    document.getElementById('scarico-qty').focus();
                 }
             } catch (error) {
                 showNotification(`Errore di ricerca: ${error.message || error.code}. Assicurati che la classe '${BACKENDLESS_TABLE_NAME}' esista nel tuo database Backendless.`, 'error');
                 console.error("Errore di Backendless:", error);
             } finally {
                  toggleLoading(false);
-                 setTimeout(() => lastScanned = '', 500); // Permette la scansione successiva
+                 setTimeout(() => lastScanned = '', 500);
             }
         }
         
-        // Event listener per l'input manuale (es. lettore di barcode cablato)
         function handleBarcodeInput(event) {
             if (event.key === 'Enter') {
-                event.preventDefault(); // Previene il submit del form
+                event.preventDefault();
                 const barcode = event.target.value.trim();
                 if (barcode) {
-                    // Tratta l'input manuale come una scansione
                     handleQrData(barcode);
                 }
             }
@@ -501,28 +461,24 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
             try {
                 const dataStore = Backendless.Data.of(BACKENDLESS_TABLE_NAME);
                 
-                // 1. Cerca l'articolo esistente (Barcode come filtro univoco)
                 const queryBuilder = Backendless.Data.QueryBuilder.create()
                     .setWhereClause(`barcode = '${barcode}'`);
                 const results = await dataStore.find(queryBuilder);
                 const existing = results.length > 0 ? results[0] : null;
 
                 if (existing) {
-                    // 2. AGGIORNA: Articolo esistente, somma la quantità
                     const newQuantity = (existing.quantity || 0) + quantity;
                     existing.quantity = newQuantity;
-                    existing.article = article; // Aggiorna anche il nome se cambiato
+                    existing.article = article; 
                     
                     await dataStore.save(existing);
                     
                     showNotification(`Carico Riuscito: Aggiunte ${quantity} unità di ${article}. Nuova giacenza: ${newQuantity}.`, 'success');
                 } else {
-                    // 3. INSERISCI: Nuovo articolo
                     const newItem = { 
                         barcode: barcode, 
                         article: article, 
                         quantity: quantity
-                        // L'utente loggato è implicitamente associato tramite le ACL predefinite di Backendless
                     };
                         
                     await dataStore.save(newItem);
@@ -541,7 +497,7 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                 console.error("Errore di Backendless Carico:", error);
             } finally {
                 toggleLoading(false);
-                await loadDashboardData(); // Ricarica la dashboard
+                await loadDashboardData(); 
             }
         }
         
@@ -550,13 +506,9 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
             
             let whereClause = `quantity > 0`;
             if (filterBarcode) {
-                 // Filtra per barcode esatto o article contenente la stringa (usando LIKE)
-                 // NOTA: Backendless usa 'LIKE' con %. Verificare la sintassi esatta nel Data Query language di BL se necessario.
-                 // Qui usiamo una clausola semplice per codice esatto
                  whereClause = `quantity > 0 AND (barcode = '${filterBarcode}')`; 
             }
 
-            // Query per tutti gli articoli in magazzino con giacenza > 0
             const queryBuilder = Backendless.Data.QueryBuilder.create()
                 .setWhereClause(whereClause)
                 .setSortBy(['article ASC']);
@@ -569,21 +521,19 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                 selectElement.innerHTML = '<option value="">-- Seleziona Articolo --</option>';
                 data.forEach(item => {
                     const option = document.createElement('option');
-                    option.value = item.objectId; // Usiamo objectId come valore
+                    option.value = item.objectId; 
                     option.setAttribute('data-barcode', item.barcode);
                     option.setAttribute('data-quantity', item.quantity || 0);
                     option.textContent = `${item.article} (${item.barcode}) - Stock: ${item.quantity || 0}`;
                     selectElement.appendChild(option);
                 });
                 
-                // Se c'è un filtro e il risultato è univoco, pre-seleziona
                 if (filterBarcode && data.length === 1 && data[0].barcode === filterBarcode) {
                      selectElement.value = data[0].objectId;
                 } else {
                      selectElement.value = '';
                 }
 
-                // Aggiorna la giacenza per l'articolo selezionato
                 updateScaricoGiacenza();
                 
             } catch (error) {
@@ -620,7 +570,6 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
             try {
                 const dataStore = Backendless.Data.of(BACKENDLESS_TABLE_NAME);
                 
-                // 1. Cerca l'articolo per objectId
                 const existing = await dataStore.findById(objectId);
 
                 if (!existing) {
@@ -632,7 +581,6 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                     throw new Error(`Stock insufficiente. Disponibili: ${currentQuantity}.`);
                 }
 
-                // 2. AGGIORNA: Sottrai la quantità
                 const newQuantity = currentQuantity - quantity;
                 existing.quantity = newQuantity;
                 
@@ -640,7 +588,6 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                 
                 showNotification(`Scarico Riuscito: Rimosse ${quantity} unità di ${existing.article}. Nuova giacenza: ${newQuantity}.`, 'success');
 
-                // Pulisci e aggiorna l'UI
                 document.getElementById('scarico-barcode').value = '';
                 document.getElementById('scarico-select').value = '';
                 document.getElementById('scarico-qty').value = 1;
@@ -651,7 +598,83 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                 console.error("Errore di Backendless Scarico:", error);
             } finally {
                 toggleLoading(false);
-                await loadDashboardData(); // Ricarica la dashboard
+                await loadDashboardData(); 
+            }
+        }
+        
+        // =========================================================================
+        // MODIFICA ARTICOLO (CRUD Management)
+        // =========================================================================
+        
+        // Prepara il modal di modifica con i dati dell'articolo
+        function openEditModal(objectId, article, barcode, quantity) {
+            document.getElementById('edit-objectId').value = objectId;
+            document.getElementById('edit-article').value = article;
+            document.getElementById('edit-barcode').value = barcode;
+            document.getElementById('edit-quantity').value = quantity;
+            showModal('edit-modal');
+        }
+
+        async function saveEdit() {
+            const objectId = document.getElementById('edit-objectId').value;
+            const article = document.getElementById('edit-article').value.trim();
+            const barcode = document.getElementById('edit-barcode').value.trim();
+            const quantity = parseInt(document.getElementById('edit-quantity').value, 10);
+
+            if (!objectId || !article || !barcode || isNaN(quantity) || quantity < 0) {
+                showNotification('Compila tutti i campi in modo valido.', 'error');
+                return;
+            }
+
+            toggleLoading(true);
+            try {
+                const dataStore = Backendless.Data.of(BACKENDLESS_TABLE_NAME);
+                
+                const itemToUpdate = {
+                    objectId: objectId,
+                    article: article,
+                    barcode: barcode,
+                    quantity: quantity
+                };
+
+                await dataStore.save(itemToUpdate);
+                
+                showNotification(`Articolo "${article}" aggiornato con successo.`, 'success');
+                closeModal('edit-modal');
+                
+            } catch (error) {
+                showNotification(`Errore durante l'aggiornamento: ${error.message || error.code}`, 'error');
+                console.error("Errore di Backendless Edit:", error);
+            } finally {
+                toggleLoading(false);
+                await loadDashboardData();
+            }
+        }
+
+        async function deleteItem() {
+            const objectId = document.getElementById('edit-objectId').value;
+            const article = document.getElementById('edit-article').value.trim();
+
+            if (!confirm(`Sei sicuro di voler eliminare definitivamente l'articolo "${article}"?`)) {
+                return;
+            }
+
+            toggleLoading(true);
+            try {
+                const dataStore = Backendless.Data.of(BACKENDLESS_TABLE_NAME);
+                
+                // Backendless usa il metodo remove con l'objectId
+                await dataStore.remove({ objectId: objectId });
+                
+                showNotification(`Articolo "${article}" eliminato con successo.`, 'success');
+                closeModal('edit-modal');
+                
+            } catch (error) {
+                showNotification(`Errore durante l'eliminazione: ${error.message || error.code}`, 'error');
+                console.error("Errore di Backendless Delete:", error);
+            } finally {
+                toggleLoading(false);
+                await loadDashboardData();
             }
         }
         
@@ -668,10 +691,10 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                 
                 const data = await dataStore.find(queryBuilder);
 
+                renderDashboardStats(data);
                 renderInventoryList(data);
-                refreshScaricoSelect(); // Aggiorna anche la lista per lo Scarico
+                refreshScaricoSelect();
             } catch (error) {
-                // Notifica l'errore solo se non è dovuto a "Table not found" che verrà gestito nell'initApp
                 if (error.code !== 1000) { 
                     showNotification(`Errore nel caricamento della lista magazzino: ${error.message || error.code}`, 'error');
                 }
@@ -680,6 +703,74 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                 toggleLoading(false);
             }
         }
+        
+        function renderDashboardStats(inventoryData) {
+            let totalItems = inventoryData.length;
+            let totalQuantity = inventoryData.reduce((sum, item) => sum + (item.quantity || 0), 0);
+            
+            document.getElementById('stat-total-items').textContent = totalItems;
+            document.getElementById('stat-total-qty').textContent = totalQuantity;
+            
+            // Ordina per quantità per i report
+            const sortedByQuantity = [...inventoryData]
+                .filter(item => (item.quantity || 0) > 0)
+                .sort((a, b) => (b.quantity || 0) - (a.quantity || 0));
+
+            const top5 = sortedByQuantity.slice(0, 5);
+            const low5 = sortedByQuantity.slice(-5).reverse(); // Ultimi 5, ma invertiti per ordine crescente
+
+            // Prepara i dati per Chart.js
+            const chartLabels = [...top5.map(i => i.article), ...low5.map(i => i.article)];
+            const chartData = [...top5.map(i => i.quantity), ...low5.map(i => i.quantity)];
+            const chartColors = [
+                '#10b981', '#10b981', '#10b981', '#10b981', '#10b981', // Top 5 (Verde)
+                '#f59e0b', '#f59e0b', '#f59e0b', '#f59e0b', '#f59e0b'  // Low 5 (Giallo/Arancio)
+            ];
+
+            const ctx = document.getElementById('inventory-chart').getContext('2d');
+            
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            if (chartData.length > 0) {
+                 chartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: chartLabels,
+                        datasets: [{
+                            label: 'Giacenza (Quantità)',
+                            data: chartData,
+                            backgroundColor: chartColors,
+                            borderColor: chartColors.map(c => c.replace('10b981', '059669').replace('f59e0b', 'b45309')), // Bordi più scuri
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y', // Grafico a barre orizzontali
+                        plugins: {
+                            legend: { display: false },
+                            title: {
+                                display: true,
+                                text: 'Top 5 e Low 5 Articoli per Stock',
+                                font: { size: 16 }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            } else {
+                // Nasconde il canvas se non ci sono dati
+                ctx.canvas.parentNode.innerHTML = '<p class="text-gray-500 text-center py-8">Nessun dato di giacenza da mostrare.</p>';
+            }
+        }
+
         
         function renderInventoryList(inventoryData) {
             const listContainer = document.getElementById('magazzino-list');
@@ -704,15 +795,20 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                         <!-- Dettagli Prodotto -->
                         <div class="mb-2 md:mb-0 md:w-1/2">
                             <div class="font-semibold text-gray-900">${item.article} <span class="text-xs text-gray-500 ml-2">(${item.barcode})</span></div>
-                            <p class="text-xs text-gray-600">ID DB: ${item.objectId}</p>
+                            <p class="text-xs text-gray-600">ID: ${item.objectId}</p>
                         </div>
                         
                         <!-- Stock e Controlli -->
-                        <div class="flex items-center space-x-3 w-full md:w-auto">
+                        <div class="flex items-center space-x-3 w-full md:w-auto mt-2 md:mt-0">
                             <!-- Display Stock -->
                             <div class="flex items-center px-3 py-1 rounded-full font-bold ${stockClass} min-w-[70px] justify-center text-sm">
                                 ${quantity}
                             </div>
+                            <!-- Pulsante Modifica -->
+                            <button onclick="openEditModal('${item.objectId}', '${item.article.replace(/'/g, "\\'")}', '${item.barcode.replace(/'/g, "\\'")}', ${quantity})" 
+                                    class="p-2 bg-indigo-500 text-white rounded-full hover:bg-indigo-600 transition-colors">
+                                <i data-lucide="edit-3" class="h-4 w-4"></i>
+                            </button>
                         </div>
                     </div>
                 `;
@@ -729,14 +825,11 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
         window.onload = function() {
             initApp();
             
-            // Inizializza gli event listener per l'input manuale (lettore barcode)
             document.getElementById('carico-barcode').addEventListener('keydown', handleBarcodeInput);
             document.getElementById('scarico-barcode').addEventListener('keydown', handleBarcodeInput);
             
-            // Listener per aggiornare giacenza Scarico quando cambia l'articolo selezionato
             document.getElementById('scarico-select').addEventListener('change', updateScaricoGiacenza);
             
-            // Inizializza la modalità predefinita
             switchMode('carico');
         };
         
@@ -816,10 +909,79 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
             </div>
         </div>
         
+        <!-- Modal di Modifica Articolo -->
+        <div id="edit-modal" class="modal-overlay hidden">
+            <div class="modal-content space-y-4">
+                <h3 class="text-xl font-bold text-gray-900 flex items-center"><i data-lucide="edit" class="h-5 w-5 mr-2 text-indigo-600"></i> Modifica Articolo</h3>
+                <input type="hidden" id="edit-objectId">
+                
+                <label class="block text-sm font-medium text-gray-700">Nome Articolo</label>
+                <input type="text" id="edit-article" placeholder="Nome Articolo" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                
+                <label class="block text-sm font-medium text-gray-700">Barcode</label>
+                <input type="text" id="edit-barcode" placeholder="Barcode" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                
+                <label class="block text-sm font-medium text-gray-700">Quantità in Stock</label>
+                <input type="number" id="edit-quantity" placeholder="Quantità" min="0" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                
+                <button onclick="saveEdit()" class="w-full btn-primary bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center">
+                    <i data-lucide="save" class="h-5 w-5 mr-2"></i>
+                    Salva Modifiche
+                </button>
+                
+                <button onclick="deleteItem()" class="w-full btn-primary bg-red-500 text-white p-3 rounded-lg font-bold hover:bg-red-600 flex items-center justify-center">
+                    <i data-lucide="trash-2" class="h-5 w-5 mr-2"></i>
+                    Elimina Articolo
+                </button>
+                
+                <button onclick="closeModal('edit-modal')" class="w-full text-sm py-2 text-gray-600 hover:text-gray-800">Annulla</button>
+            </div>
+        </div>
+        
+        
         <!-- Vista Dashboard -->
         <div id="dashboard-view" class="view-content hidden space-y-8">
-            <div class="max-w-4xl mx-auto">
+            <div class="max-w-6xl mx-auto">
                 
+                <!-- STATISTICHE E REPORT -->
+                <div class="bg-white p-6 rounded-xl card mb-8">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i data-lucide="pie-chart" class="h-5 w-5 mr-2 text-indigo-600"></i>
+                        Statistiche di Magazzino
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <!-- Stat 1: Totale Articoli -->
+                        <div class="bg-indigo-50 p-4 rounded-lg flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-indigo-700 font-medium">Articoli Unici</p>
+                                <p id="stat-total-items" class="text-3xl font-bold text-indigo-800">0</p>
+                            </div>
+                            <i data-lucide="boxes" class="h-8 w-8 text-indigo-400"></i>
+                        </div>
+                        <!-- Stat 2: Totale Quantità -->
+                        <div class="bg-green-50 p-4 rounded-lg flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-green-700 font-medium">Unità Totali in Stock</p>
+                                <p id="stat-total-qty" class="text-3xl font-bold text-green-800">0</p>
+                            </div>
+                            <i data-lucide="package" class="h-8 w-8 text-green-400"></i>
+                        </div>
+                        <!-- Stat 3: Articoli Basso Stock (Non implementato in questa versione, ma utile per il futuro) -->
+                         <div class="bg-yellow-50 p-4 rounded-lg flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-yellow-700 font-medium">Articoli Sotto Soglia</p>
+                                <p class="text-3xl font-bold text-yellow-800">N/D</p>
+                            </div>
+                            <i data-lucide="alert-triangle" class="h-8 w-8 text-yellow-400"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="h-96">
+                        <canvas id="inventory-chart"></canvas>
+                    </div>
+                </div>
+
+
                 <!-- Scanner QR -->
                 <div class="p-6 bg-white rounded-xl card mb-8">
                     <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
@@ -832,11 +994,11 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
 
                 <!-- CARICO / SCARICO TAB -->
                 <div class="flex border-b border-gray-200 mb-6">
-                    <button id="tab-carico" onclick="switchMode('carico')" class="px-4 py-2 text-gray-700 transition-colors duration-150 tab-active">
+                    <button id="tab-carico" onclick="switchMode('carico')" class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150 tab-active">
                         <i data-lucide="package-plus" class="h-5 w-5 inline-block mr-1"></i>
                         Carico (Entrata)
                     </button>
-                    <button id="tab-scarico" onclick="switchMode('scarico')" class="px-4 py-2 text-gray-700 transition-colors duration-150">
+                    <button id="tab-scarico" onclick="switchMode('scarico')" class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150">
                         <i data-lucide="package-minus" class="h-5 w-5 inline-block mr-1"></i>
                         Scarico (Uscita)
                     </button>
@@ -846,7 +1008,7 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                 <div id="form-carico" class="bg-white p-6 rounded-xl card space-y-4">
                     <h3 class="text-lg font-semibold">Modulo di Carico</h3>
                     
-                    <!-- Campo Barcode (gestito da handleBarcodeInput/handleQrData) -->
+                    <!-- Campo Barcode -->
                     <input type="text" id="carico-barcode" placeholder="Barcode (Scannerizza o Inserisci)" 
                            class="w-full p-3 border border-gray-300 rounded-lg input-focus">
                            
