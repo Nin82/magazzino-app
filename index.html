@@ -1,174 +1,199 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventario Magazzino Backendless</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Icone Lucide -->
-    <script type="module">
-        import { createIcons } from 'https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.js';
-        window.addEventListener('load', () => createIcons());
-    </script>
-    <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f7f9fc; }
-        .card { box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.05); }
-        .btn-primary { transition: all 0.2s; }
-        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2); }
-        .dashboard-grid { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
-    </style>
-</head>
-<body class="min-h-screen flex flex-col">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestione Magazzino Completo (Backendless)</title>
+<!-- ================= PWA SETTINGS (Mantenute le note) ================= -->
+<!-- Ho rimosso i riferimenti PWA non inclusi nel file (manifest.json, service-worker.js) per garantire la compilazione singola. -->
 
-    <!-- SDK Backendless -->
-    <script src="https://cdn.jsdelivr.net/npm/backendless@7.0.0/dist/backendless.min.js"></script>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Icone Lucide -->
+<script type="module">
+    import { createIcons } from 'https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.js';
+    window.addEventListener('load', () => createIcons());
+</script>
+<!-- Libreria Backendless -->
+<script src="https://unpkg.com/backendless@latest/dist/backendless.min.js"></script>
+<!-- Libreria QR Code -->
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.9/html5-qrcode.min.js"></script>
 
-    <div id="app" class="flex-grow flex flex-col">
-        
-        <!-- Loader e Messaggi (Mantenuti) -->
-        <div id="loading-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
-            <div class="bg-white p-6 rounded-lg flex items-center">
-                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span id="loading-message">Caricamento...</span>
-            </div>
-        </div>
+<style>
+/* ================= STILE ================= */
+body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif; margin: 0; padding: 0; background: #f8fafc; color: #1f2937; }
+.hidden { display: none; }
+.card { box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.05); }
+.tab-active { border-bottom: 3px solid #4f46e5; color: #4f46e5; font-weight: 600; }
+.input-focus:focus { border-color: #4f46e5; box-shadow: 0 0 0 1px #4f46e5; }
 
-        <!-- Modale per Messaggi/Errori (Mantenuto) -->
-        <div id="modal-container" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-40 hidden">
-            <div id="modal-content" class="bg-white p-6 rounded-lg card max-w-sm mx-4" role="alert">
-                <h3 id="modal-title" class="font-bold text-lg mb-2 text-gray-800">Messaggio</h3>
-                <p id="modal-body" class="text-sm text-gray-600"></p>
-                <div class="mt-4 text-right">
-                    <button onclick="hideModal()" class="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700">Chiudi</button>
-                </div>
-            </div>
-        </div>
+/* Stile per la notifica */
+#notification-box {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    width: 300px;
+}
+.notification {
+    margin-bottom: 10px;
+    padding: 12px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: opacity 0.5s ease-in-out;
+}
+.success { background-color: #ecfdf5; border: 1px solid #10b981; color: #065f46; }
+.error { background-color: #fef2f2; border: 1px solid #ef4444; color: #991b1b; }
+.info { background-color: #eff6ff; border: 1px solid #3b82f6; color: #1e40af; }
 
-        <!-- Header (Mantenuto) -->
-        <header class="bg-white shadow-md p-4 flex justify-between items-center z-10">
-            <h1 class="text-2xl font-bold text-indigo-600">App Magazzino (Backendless)</h1>
-            <div id="auth-status" class="flex items-center space-x-4">
-                <span id="user-display" class="text-sm font-medium text-gray-700 hidden"></span>
-                <button id="logout-btn" onclick="logout()" class="px-3 py-1 bg-red-500 text-white text-sm font-semibold rounded-lg hover:bg-red-600 hidden">
-                    <i data-lucide="log-out" class="h-4 w-4 inline-block mr-1"></i>
-                    Logout
-                </button>
-            </div>
-        </header>
+/* Stile per l'area QR (webcam) */
+#qr-reader {
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    overflow: hidden;
+}
 
-        <!-- Contenuto principale gestito dalla vista -->
-        <main class="flex-grow p-4 md:p-8">
-            <div id="view-container">
-                <!-- Contenuto dinamico (Login, Dashboard, Gestione Tenant) -->
-            </div>
-        </main>
-    </div>
+/* Stile per il popup di recupero password */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+.modal-content {
+    background-color: white;
+    padding: 24px;
+    border-radius: 12px;
+    max-width: 400px;
+    width: 90%;
+}
+</style>
 
+<div id="app" class="min-h-screen flex flex-col">
+
+    <!-- ================= CONFIGURAZIONE E INIZIALIZZAZIONE ================= -->
     <script>
-        // =========================================================================
-        // CONFIGURAZIONE BACKENDLESS (MODIFICARE I VALORI QUI)
-        // =========================================================================
+        // SOSTITUISCI CON LE TUE CREDENZIALI BACKENDLESS
         const BACKENDLESS_APP_ID = 'AA895053-C960-45EC-BFBE-FCBAFD9D7D0B'; 
-        const BACKENDLESS_API_KEY = '1F4341D8-CAB8-44F6-97D6-203322D8D245';     
+        const BACKENDLESS_API_KEY = '1F4341D8-CAB8-44F6-97D6-203322D8D245';
         
-        // Nomi esatti delle tabelle (Collections) create nel pannello di Backendless
-        const TABLE_NAMES = {
-            TENANTS: 'Tenant',
-            ITEMS: 'Item',
-            INVENTORY: 'StockData', // *** AGGIORNATO: Ora usa StockData ***
-        };
-        const USER_TABLE = 'Users'; // Nome tabella utente predefinito in Backendless
-
-        // =========================================================================
-        // INIZIALIZZAZIONE GLOBALE BACKENDLESS
-        // =========================================================================
         let currentUser = null;
-        let currentTenantId = null;
-        let currentTenantName = '';
-        let tenantsCache = [];
+        let html5QrcodeScanner = null;
+        let lastScanned = '';
+        let isCaricoMode = true; // True per Carico, False per Scarico
 
-        // Inizializza Backendless
-        function initializeBackendless() {
-             if (BACKENDLESS_APP_ID.startsWith('YOUR_')) {
+        // Classe Backendless per il magazzino
+        const BACKENDLESS_TABLE_NAME = 'Magazzino'; // Assicurati che il nome della classe sia questo
+
+        // =========================================================================
+        // UTILITY E UI MANAGEMENT
+        // =========================================================================
+
+        function showNotification(message, type = 'info', duration = 3000) {
+            const container = document.getElementById('notification-box');
+            if (!container) return;
+
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `<strong>${type.toUpperCase()}:</strong> ${message}`;
+            container.appendChild(notification);
+
+            // Rimuovi dopo 'duration'
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.addEventListener('transitionend', () => notification.remove());
+            }, duration);
+        }
+
+        // Funzione per mostrare e nascondere il loader
+        function toggleLoading(show) {
+            const loader = document.getElementById('loading-overlay');
+            if (loader) {
+                loader.classList.toggle('hidden', !show);
+            }
+        }
+
+        // Funzione per mostrare le diverse viste
+        function showView(viewId) {
+            document.querySelectorAll('.view-content').forEach(view => {
+                view.classList.add('hidden');
+            });
+            document.getElementById(viewId).classList.remove('hidden');
+        }
+        
+        // =========================================================================
+        // GESTIONE AUTENTICAZIONE (Backendless)
+        // =========================================================================
+
+        async function initApp() {
+            if (BACKENDLESS_APP_ID.startsWith('YOUR_')) {
                 document.getElementById('view-container').innerHTML = `
                     <div class="max-w-xl mx-auto my-12 p-8 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-xl card">
                         <h2 class="text-2xl font-bold mb-4">Errore di Configurazione Backendless</h2>
-                        <p>Per favore, modifica il file index.html e sostituisci <code>YOUR_APP_ID</code> e <code>YOUR_JS_API_KEY</code> con le credenziali reali del tuo progetto Backendless.</p>
+                        <p>Per favore, modifica il codice e sostituisci <code>YOUR_APP_ID</code> e <code>YOUR_API_KEY</code> con le credenziali reali del tuo progetto Backendless.</p>
                     </div>
                 `;
-                return false;
+                return;
             }
             Backendless.initApp(BACKENDLESS_APP_ID, BACKENDLESS_API_KEY);
-            return true;
+            
+            // Gestisce la seconda fase del reset se ci sono i parametri URL
+            handlePasswordRecovery(); 
+            
+            checkAuth();
         }
-
-        // =========================================================================
-        // UTILITY E UI MANAGEMENT (Mantenute)
-        // =========================================================================
-
-        function showLoading(message = 'Caricamento...') {
-            document.getElementById('loading-message').textContent = message;
-            document.getElementById('loading-overlay').classList.remove('hidden');
-        }
-
-        function hideLoading() {
-            document.getElementById('loading-overlay').classList.add('hidden');
-        }
-
-        function showModal(title, body) {
-            document.getElementById('modal-title').textContent = title;
-            document.getElementById('modal-body').innerHTML = body;
-            document.getElementById('modal-container').classList.remove('hidden');
-        }
-
-        function hideModal() {
-            document.getElementById('modal-container').classList.add('hidden');
+        
+        async function checkAuth() {
+            toggleLoading(true);
+            try {
+                // Controlla se l'utente è autenticato e se la sessione è valida
+                const isValid = await Backendless.UserService.isValidLogin();
+                if (isValid) {
+                    currentUser = await Backendless.UserService.getCurrentUser();
+                    updateAuthUI(currentUser);
+                    showView('dashboard-view');
+                    initializeQrScanner();
+                    await loadDashboardData();
+                } else {
+                    currentUser = null;
+                    updateAuthUI(null);
+                    showView('login-view');
+                    stopQrScanner();
+                }
+            } catch (error) {
+                currentUser = null;
+                updateAuthUI(null);
+                showView('login-view');
+                stopQrScanner();
+                console.error("Errore checkAuth:", error);
+            } finally {
+                toggleLoading(false);
+            }
         }
 
         function updateAuthUI(user) {
+            const authStatus = document.getElementById('auth-status');
             const userDisplay = document.getElementById('user-display');
             const logoutBtn = document.getElementById('logout-btn');
 
             if (user) {
-                // Backendless usa 'name' e 'email'
-                const nameToShow = user.name || user.email;
+                const nameToShow = user.email || user.name || user.objectId;
                 userDisplay.textContent = `Benvenuto, ${nameToShow}`;
-                userDisplay.classList.remove('hidden');
                 logoutBtn.classList.remove('hidden');
+                authStatus.classList.remove('hidden');
             } else {
-                userDisplay.classList.add('hidden');
+                userDisplay.textContent = '';
                 logoutBtn.classList.add('hidden');
-            }
-        }
-
-        // =========================================================================
-        // GESTIONE AUTENTICAZIONE (Backendless Logic)
-        // =========================================================================
-
-        async function checkAuth() {
-            showLoading('Verifica sessione...');
-            try {
-                // Backendless verifica se l'utente è loggato in base al token locale
-                currentUser = await Backendless.UserService.getCurrentUser();
-                
-                if (currentUser && currentUser.objectId) {
-                    // L'utente è loggato, aggiorna l'UI e fetch tenants
-                    await fetchTenants();
-                } else {
-                    currentUser = null;
-                    renderLoginView();
-                }
-            } catch (error) {
-                // Errore generico (es. token scaduto o non valido)
-                currentUser = null;
-                renderLoginView();
-            } finally {
-                hideLoading();
-                updateAuthUI(currentUser);
+                authStatus.classList.add('hidden');
             }
         }
 
@@ -176,504 +201,453 @@
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
 
-            showLoading('Accesso in corso...');
+            toggleLoading(true);
             try {
-                // Login con email/password
-                const user = await Backendless.UserService.login(email, password, true);
-                currentUser = user;
-                
-                showModal('Accesso Riuscito', `Benvenuto, ${user.name || user.email}!`);
-                await checkAuth(); 
+                currentUser = await Backendless.UserService.login(email, password, true);
+                updateAuthUI(currentUser);
+                showView('dashboard-view');
+                initializeQrScanner();
+                await loadDashboardData();
+                showNotification('Login effettuato con successo.', 'success');
             } catch (error) {
-                showModal('Errore di Accesso', `Verifica email e password. Errore: ${error.message}`);
+                showNotification(`Errore di Login: ${error.message || error.code}`, 'error');
             } finally {
-                hideLoading();
-            }
-        }
-
-        async function register() {
-            const email = document.getElementById('register-email').value;
-            const password = document.getElementById('register-password').value;
-            const displayName = document.getElementById('register-name').value;
-            
-            showLoading('Registrazione in corso...');
-            try {
-                // Oggetto utente Backendless
-                const newUser = {
-                    email: email,
-                    password: password,
-                    name: displayName // Campo 'name' usato come display name
-                };
-
-                // 1. Registra l'utente
-                await Backendless.UserService.register(newUser);
-                
-                // 2. EFFETTUA IL LOGIN AUTOMATICAMENTE SUBITO DOPO
-                await Backendless.UserService.login(email, password, true);
-                
-                showModal('Registrazione Riuscita', `Benvenuto ${displayName}! Ora puoi accedere.`);
-                
-                // 3. Controlla e carica la dashboard
-                await checkAuth(); 
-            } catch (error) {
-                showModal('Errore di Registrazione', `Impossibile completare la registrazione. Errore: ${error.message}`);
-            } finally {
-                hideLoading();
+                toggleLoading(false);
             }
         }
 
         async function logout() {
-            showLoading('Uscita...');
+            toggleLoading(true);
             try {
                 await Backendless.UserService.logout();
                 currentUser = null;
-                currentTenantId = null;
-                currentTenantName = '';
-                tenantsCache = [];
-            } catch (error) {
-                console.error("Errore durante il logout:", error);
-            } finally {
                 updateAuthUI(null);
-                renderLoginView();
-                hideLoading();
+                showView('login-view');
+                stopQrScanner();
+                showNotification('Logout effettuato con successo.', 'info');
+            } catch (error) {
+                showNotification(`Errore di Logout: ${error.message || error.code}`, 'error');
+            } finally {
+                toggleLoading(false);
             }
         }
         
-        // Il recupero password è complesso in Backendless (richiede una configurazione specifica), 
-        // quindi manteniamo la vista di recupero base per non bloccare l'app
-        function renderRecoveryView() {
-            const container = document.getElementById('view-container');
-            container.innerHTML = `
-                <div class="max-w-md mx-auto my-12 p-8 bg-white rounded-xl card space-y-8">
-                    <h2 class="text-3xl font-extrabold text-gray-900 text-center">Recupero Password</h2>
-                    <p class="text-center text-gray-600">Inserisci l'indirizzo email. Riceverai un link per reimpostare la password (richiede configurazione email nel pannello Backendless).</p>
-
-                    <div class="space-y-4">
-                        <input type="email" id="recovery-email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
-                        <button onclick="requestPasswordRecovery()" class="w-full btn-primary bg-yellow-500 text-white p-3 rounded-lg font-bold hover:bg-yellow-600 flex items-center justify-center">
-                            <i data-lucide="mail-search" class="h-5 w-5 mr-2"></i>
-                            Invia Link di Recupero
-                        </button>
-                        <button onclick="renderLoginView()" class="w-full text-sm text-gray-500 hover:text-indigo-600 mt-2">Torna al Login</button>
-                    </div>
-                </div>
-            `;
-            window.requestAnimationFrame(() => createIcons());
-        }
-
-        async function requestPasswordRecovery() {
-            const email = document.getElementById('recovery-email').value.trim();
+        async function handlePasswordResetRequest() {
+            const email = document.getElementById('login-email').value;
             if (!email) {
-                showModal('Attenzione', 'Inserisci l\'indirizzo email per il recupero.');
+                showNotification("Inserisci l'email per il recupero password.", 'error');
                 return;
             }
-
-            showLoading('Invio email di recupero...');
+            toggleLoading(true);
             try {
-                // Metodo specifico Backendless per il recupero password
                 await Backendless.UserService.restorePassword(email);
-
-                showModal('Email Inviata', `Se l'indirizzo email è corretto, riceverai un link per il reset della password.`);
-                renderLoginView(); 
+                showNotification(`Istruzioni per il reset password inviate a ${email}. Controlla la tua casella email.`, 'success', 10000);
             } catch (error) {
-                showModal('Richiesta Fallita', `Si è verificato un errore: ${error.message}. Assicurati che il servizio email sia configurato in Backendless.`);
+                showNotification(`Errore nel reset: ${error.message || error.code}. Assicurati che l'email sia corretta.`, 'error');
             } finally {
-                hideLoading();
+                toggleLoading(false);
             }
         }
         
-        // =========================================================================
-        // GESTIONE DEI TENANTS (MAGAZZINI) - Backendless Logic
-        // =========================================================================
-
-        async function fetchTenants() {
-            showLoading('Caricamento magazzini...');
+        // Logica per gestire il link di recupero password (es. quando l'utente clicca il link nella mail)
+        function handlePasswordRecovery() {
+             const urlParams = new URLSearchParams(window.location.search);
+             const token = urlParams.get('token');
+             
+             if (token) {
+                 showModal('reset-password-modal');
+                 document.getElementById('reset-token').value = token;
+                 // Rimuove i parametri dall'URL per pulizia
+                 history.pushState(null, '', window.location.pathname);
+             }
+        }
+        
+        async function completePasswordReset() {
+            const token = document.getElementById('reset-token').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            
+            if (newPassword !== confirmPassword) {
+                showNotification("Le password non corrispondono.", 'error');
+                return;
+            }
+            
+            toggleLoading(true);
             try {
-                const queryBuilder = Backendless.DataQueryBuilder.create()
-                    .setWhereClause(`ownerId = '${currentUser.objectId}'`); // Usa ownerId come STRINGA
+                // Il metodo di Backendless per completare il reset
+                await Backendless.UserService.resetPassword(token, newPassword);
+                showNotification('Password resettata con successo! Ora puoi accedere.', 'success', 5000);
+                closeModal('reset-password-modal');
+            } catch (error) {
+                showNotification(`Errore nel completamento del reset: ${error.message || error.code}`, 'error');
+            } finally {
+                toggleLoading(false);
+            }
+        }
+        
+        function showModal(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+        }
 
-                const response = await Backendless.Data.of(TABLE_NAMES.TENANTS).find(queryBuilder);
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+        
+        // =========================================================================
+        // GESTIONE SCANNER QR/BARCODE
+        // =========================================================================
+        
+        function initializeQrScanner() {
+            if (html5QrcodeScanner) return; // Già inizializzato
+            
+            html5QrcodeScanner = new Html5QrcodeScanner(
+                "qr-reader", 
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                /* verbose= */ false
+            );
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        }
+
+        function stopQrScanner() {
+            if (html5QrcodeScanner && html5QrcodeScanner.getState() !== 0) { // 0 = NOT_STARTED
+                html5QrcodeScanner.stop().catch(err => console.error("Errore nello stop dello scanner:", err));
+                html5QrcodeScanner = null; // Forza la ri-inizializzazione al prossimo login
+            }
+        }
+        
+        function onScanSuccess(decodedText, decodedResult) {
+            // Impedisce scansioni multiple dello stesso codice in un breve lasso di tempo
+            if (decodedText === lastScanned) return; 
+            
+            lastScanned = decodedText;
+            
+            // Chiama la funzione principale di gestione dati
+            handleQrData(decodedText);
+            
+            // Pulisce il risultato dopo un breve delay per permettere una nuova scansione
+            setTimeout(() => lastScanned = '', 500);
+        }
+        
+        function onScanFailure(error) {
+            // Ignora gli errori comuni (es. "No se pudo iniciar la cámara")
+        }
+        
+        // Switch tra le modalità Carico/Scarico e aggiorna lo stato isCaricoMode
+        function switchMode(mode) {
+            isCaricoMode = (mode === 'carico');
+            
+            // Aggiorna classi per le tab
+            document.getElementById('tab-carico').classList.toggle('tab-active', isCaricoMode);
+            document.getElementById('tab-scarico').classList.toggle('tab-active', !isCaricoMode);
+            
+            // Mostra il modulo corretto
+            document.getElementById('form-carico').classList.toggle('hidden', !isCaricoMode);
+            document.getElementById('form-scarico').classList.toggle('hidden', isCaricoMode);
+
+            // Svuota il campo di input QR e resetta il focus
+            document.getElementById('qr-result').value = '';
+            
+            showNotification(`Modalità cambiata in: ${isCaricoMode ? 'Carico' : 'Scarico'}`, 'info');
+            
+            // Se si passa a Scarico, ricarica la select
+            if (!isCaricoMode) {
+                refreshScaricoSelect();
+            }
+        }
+        
+        // Funzione per gestire i dati del QR scannerizzati
+        async function handleQrData(qrCode) {
+            const caricoBarcode = document.getElementById('carico-barcode');
+            const caricoArticle = document.getElementById('carico-article');
+            const giacenzaDisplay = document.getElementById('giacenza-display');
+            const caricoQty = document.getElementById('carico-qty');
+            const scaricoBarcode = document.getElementById('scarico-barcode');
+            const scaricoQty = document.getElementById('scarico-qty');
+
+            // 🔹 Pulisce il box QR
+            document.getElementById('qr-result').value = qrCode; // Mostra il codice
+            
+            toggleLoading(true);
+            try {
+                // Query per cercare il barcode in Backendless
+                const queryBuilder = Backendless.Data.QueryBuilder.create()
+                    .setWhereClause(`barcode = '${qrCode}'`);
                 
-                // Backendless usa 'objectId' come ID
-                tenantsCache = response.map(t => ({ 
-                    ...t, 
-                    $id: t.objectId, 
-                    owner_id: t.ownerId || currentUser.objectId 
-                }));
+                const dataStore = Backendless.Data.of(BACKENDLESS_TABLE_NAME);
+                const results = await dataStore.find(queryBuilder);
+                const existing = results.length > 0 ? results[0] : null;
 
-                if (tenantsCache.length === 0) {
-                    renderTenantManagementView();
-                } else {
-                    if (!currentTenantId || !tenantsCache.some(t => t.$id === currentTenantId)) {
-                        // Seleziona il primo tenant come predefinito se non ce n'è uno valido
-                        currentTenantId = tenantsCache[0].$id;
-                        currentTenantName = tenantsCache[0].name;
+                if (isCaricoMode) {
+                    // CARICO
+                    caricoBarcode.value = qrCode;
+                    
+                    if (existing) {
+                        // Barcode esistente → aggancia articolo e giacenza
+                        caricoArticle.value = existing.article;
+                        giacenzaDisplay.textContent = `Giacenza Attuale: ${existing.quantity || 0} unità`;
+                        showNotification(`Barcode agganciato: ${qrCode}`, 'success');
                     } else {
-                         const current = tenantsCache.find(t => t.$id === currentTenantId);
-                         currentTenantName = current ? current.name : '';
+                        // Barcode nuovo → lascia articolo libero
+                        caricoArticle.value = '';
+                        giacenzaDisplay.textContent = 'Nuovo Articolo (Giacenza: 0)';
+                        showNotification('Nuovo articolo, inserisci il nome', 'success');
                     }
-                    renderDashboard();
+                    
+                    // Mantiene il focus sul campo quantità
+                    caricoQty.focus();
+                    
+                } else {
+                    // SCARICO
+                    // Imposta il barcode nel campo input (che agisce da filtro)
+                    scaricoBarcode.value = qrCode; 
+                    
+                    // Ricarica la select filtrando per il barcode
+                    await refreshScaricoSelect(qrCode);
+                    
+                    showNotification(`Barcode inserito nello Scarico: ${qrCode}`, 'success');
+                    scaricoQty.focus();
                 }
-                
-                updateAuthUI(currentUser); 
             } catch (error) {
-                console.error("Errore nel recupero tenants:", error);
-                showModal('Errore Database', `Impossibile caricare i magazzini. Errore: ${error.message}`);
-                // In caso di errore grave, torna alla dashboard per non bloccare la UI
-                renderDashboard(); 
+                showNotification(`Errore di ricerca: ${error.message || error.code}`, 'error');
             } finally {
-                hideLoading();
+                 toggleLoading(false);
+                 setTimeout(() => lastScanned = '', 500); // Permette la scansione successiva
             }
-        }
-
-        async function createTenant() {
-            const name = prompt("Inserisci il nome del nuovo magazzino:");
-            if (!name || name.trim() === "") return;
-
-            showLoading('Creazione magazzino...');
-            try {
-                // Crea il record in Backendless
-                const newTenant = { 
-                    name: name.trim(), 
-                    // Memorizziamo l'objectId dell'utente loggato come ownerId Stringa
-                    ownerId: currentUser.objectId 
-                };
-
-                await Backendless.Data.of(TABLE_NAMES.TENANTS).save(newTenant);
-                
-                showModal('Successo', `Magazzino "${name}" creato!`);
-                await fetchTenants(); 
-            } catch (error) {
-                showModal('Errore', `Impossibile creare il magazzino. Errore: ${error.message}`);
-            } finally {
-                hideLoading();
-            }
-        }
-
-        function switchTenant(tenantId) {
-            currentTenantId = tenantId;
-            const tenant = tenantsCache.find(t => t.$id === tenantId);
-            currentTenantName = tenant ? tenant.name : '';
-            renderDashboard();
-        }
-
-        // =========================================================================
-        // GESTIONE PRODOTTI E INVENTARIO (CRUD) - Backendless Logic
-        // =========================================================================
-        let itemsCache = [];
-        let inventoryCache = {}; 
-
-        async function loadInventoryData() {
-            if (!currentTenantId) return;
-
-            showLoading(`Caricamento inventario di ${currentTenantName}...`);
-            try {
-                // Query per Items
-                const itemsQuery = Backendless.DataQueryBuilder.create()
-                    .setWhereClause(`tenantId = '${currentTenantId}'`);
-
-                // Query per StockData (precedentemente Inventory)
-                const inventoryQuery = Backendless.DataQueryBuilder.create()
-                    .setWhereClause(`tenantId = '${currentTenantId}'`);
-
-                // 1. Carica gli Items per il tenant
-                const itemsResponse = await Backendless.Data.of(TABLE_NAMES.ITEMS).find(itemsQuery);
-                
-                // Mappa gli oggetti per usare $id come chiave (come in Appwrite)
-                itemsCache = itemsResponse.map(i => ({
-                    ...i,
-                    $id: i.objectId,
-                    tenant_id: i.tenantId
-                }));
-
-                // 2. Carica lo Stock (StockData) per il tenant
-                const inventoryResponse = await Backendless.Data.of(TABLE_NAMES.INVENTORY).find(inventoryQuery);
-                
-                // Mappa l'inventario per accesso rapido
-                inventoryCache = {};
-                inventoryResponse.forEach(doc => {
-                    inventoryCache[doc.itemId] = { // Usa itemId come chiave, che è l'objectId dell'Item
-                        stock: doc.stock,
-                        docId: doc.objectId // Backendless objectId del record StockData
-                    };
-                });
-                
-            } catch (error) {
-                console.error("Errore nel caricamento dati inventario:", error);
-                showModal('Errore Database', `Impossibile caricare i dati di ${currentTenantName}. Errore: ${error.message}`);
-            } finally {
-                renderInventoryList();
-                hideLoading();
-            }
-        }
-
-        async function createItem() {
-            const name = document.getElementById('new-item-name').value.trim();
-            const sku = document.getElementById('new-item-sku').value.trim();
-            const description = document.getElementById('new-item-description').value.trim();
-            const initialStock = parseInt(document.getElementById('new-item-stock').value, 10) || 0;
-
-            if (!name || !sku) {
-                showModal('Attenzione', 'Nome e SKU sono obbligatori.');
-                return;
-            }
-
-            showLoading('Aggiunta prodotto...');
-            try {
-                // 1. Crea l'Item
-                const newItem = { 
-                    name, 
-                    sku, 
-                    description, 
-                    tenantId: currentTenantId // ID del Tenant
-                };
-                const itemDoc = await Backendless.Data.of(TABLE_NAMES.ITEMS).save(newItem);
-
-                // 2. Crea il record di StockData
-                const newStockData = {
-                    itemId: itemDoc.objectId, // ID dell'Item appena creato
-                    tenantId: currentTenantId,
-                    stock: initialStock
-                };
-                await Backendless.Data.of(TABLE_NAMES.INVENTORY).save(newStockData);
-
-                // Pulisce i campi e ricarica i dati
-                document.getElementById('new-item-name').value = '';
-                document.getElementById('new-item-sku').value = '';
-                document.getElementById('new-item-description').value = '';
-                document.getElementById('new-item-stock').value = 0;
-                
-                showModal('Successo', `Prodotto "${name}" aggiunto con stock iniziale ${initialStock}.`);
-                loadInventoryData();
-            } catch (error) {
-                showModal('Errore', `Impossibile aggiungere il prodotto. Errore: ${error.message}`);
-            } finally {
-                hideLoading();
-            }
-        }
-
-        async function updateStock(itemId, delta) {
-            const stockData = inventoryCache[itemId];
-            
-            if (!stockData) {
-                showModal('Errore', 'Record di inventario non trovato.');
-                return;
-            }
-            
-            const currentStock = stockData.stock || 0;
-            const inventoryDocId = stockData.docId;
-            const newStock = Math.max(0, currentStock + delta); 
-
-            showLoading('Aggiornamento stock...');
-            try {
-                // Aggiorna il record di StockData con l'objectId
-                await Backendless.Data.of(TABLE_NAMES.INVENTORY).save({
-                    objectId: inventoryDocId,
-                    stock: newStock
-                });
-
-                // Aggiorna la cache e la UI in modo ottimistico
-                inventoryCache[itemId].stock = newStock;
-                renderInventoryList();
-                
-                showModal('Aggiornamento Riuscito', `Stock per l'articolo aggiornato a ${newStock}.`);
-            } catch (error) {
-                showModal('Errore', `Impossibile aggiornare lo stock. Errore: ${error.message}`);
-            } finally {
-                hideLoading();
-            }
-        }
-
-        async function deleteItem(itemId) {
-            const item = itemsCache.find(i => i.$id === itemId);
-            const inventoryDocId = inventoryCache[itemId]?.docId;
-
-            if (!confirm(`Sei sicuro di voler eliminare il prodotto "${item.name}"? Verranno rimossi anche i dati di stock.`)) {
-                return;
-            }
-
-            showLoading('Eliminazione prodotto...');
-            try {
-                // 1. Elimina il record di StockData
-                if (inventoryDocId) {
-                    await Backendless.Data.of(TABLE_NAMES.INVENTORY).remove({ objectId: inventoryDocId });
-                }
-
-                // 2. Elimina l'Item
-                await Backendless.Data.of(TABLE_NAMES.ITEMS).remove({ objectId: itemId });
-
-                showModal('Successo', `Prodotto "${item.name}" eliminato.`);
-                loadInventoryData();
-            } catch (error) {
-                showModal('Errore', `Impossibile eliminare il prodotto. Errore: ${error.message}`);
-            } finally {
-                hideLoading();
-            }
-        }
-
-
-        // =========================================================================
-        // RENDERING DELLE VISTE (VIEW RENDERING) (Mantenute)
-        // =========================================================================
-
-        function renderLoginView() {
-            const container = document.getElementById('view-container');
-            container.innerHTML = `
-                <div class="max-w-md mx-auto my-12 p-8 bg-white rounded-xl card space-y-8">
-                    <h2 class="text-3xl font-extrabold text-gray-900 text-center">Accedi o Registrati</h2>
-
-                    <!-- Sezione Login -->
-                    <div class="space-y-4">
-                        <h3 class="text-xl font-semibold text-gray-800 border-b pb-2">Login</h3>
-                        <input type="email" id="login-email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" value="demo@magazzino.it">
-                        <input type="password" id="login-password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" value="password123">
-                        <button onclick="login()" class="w-full btn-primary bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center">
-                            <i data-lucide="log-in" class="h-5 w-5 mr-2"></i>
-                            Accedi
-                        </button>
-                        <button onclick="renderRecoveryView()" class="w-full text-sm text-indigo-600 hover:text-indigo-800 font-medium">Password dimenticata?</button>
-                    </div>
-
-                    <!-- Sezione Registrazione -->
-                    <div class="space-y-4 pt-4 border-t border-gray-200">
-                        <h3 class="text-xl font-semibold text-gray-800 border-b pb-2">Registrati</h3>
-                        <input type="text" id="register-name" placeholder="Nome Visibile" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
-                        <input type="email" id="register-email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
-                        <input type="password" id="register-password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
-                        <button onclick="register()" class="w-full btn-primary bg-green-500 text-white p-3 rounded-lg font-bold hover:bg-green-600 flex items-center justify-center">
-                             <i data-lucide="user-plus" class="h-5 w-5 mr-2"></i>
-                            Registrati (Prima Volta)
-                        </button>
-                    </div>
-                </div>
-            `;
-             window.requestAnimationFrame(() => createIcons());
-        }
-
-        function renderTenantManagementView() {
-            const container = document.getElementById('view-container');
-            const tenantListHtml = tenantsCache.length > 0
-                ? tenantsCache.map(t => `
-                    <li class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                        <span class="font-semibold text-gray-800">${t.name}</span>
-                        <button onclick="switchTenant('${t.$id}')" class="px-3 py-1 bg-indigo-500 text-white text-sm rounded-lg hover:bg-indigo-600">Seleziona</button>
-                    </li>
-                `).join('')
-                : `<p class="text-gray-500 text-center">Nessun magazzino trovato. Creane uno per iniziare.</p>`;
-
-            container.innerHTML = `
-                <div class="max-w-2xl mx-auto my-8 p-8 bg-white rounded-xl card space-y-6">
-                    <h2 class="text-3xl font-bold text-gray-900 text-center">Gestione Magazzini</h2>
-                    <p class="text-center text-gray-600">Devi selezionare o creare un magazzino per accedere all'inventario.</p>
-
-                    <div class="space-y-4">
-                        <button onclick="createTenant()" class="w-full btn-primary bg-green-600 text-white p-3 rounded-lg font-bold hover:bg-green-700 flex items-center justify-center">
-                            <i data-lucide="factory" class="h-5 w-5 mr-2"></i>
-                            Crea Nuovo Magazzino
-                        </button>
-                    </div>
-
-                    <div class="space-y-4 pt-4 border-t border-gray-200">
-                        <h3 class="text-xl font-semibold text-gray-800">Magazzini Esistenti</h3>
-                        <ul class="space-y-3">
-                            ${tenantListHtml}
-                        </ul>
-                    </div>
-                </div>
-            `;
-            window.requestAnimationFrame(() => createIcons());
-        }
-
-        function renderDashboard() {
-            const container = document.getElementById('view-container');
-            container.innerHTML = `
-                <div class="space-y-8">
-                    <div class="flex flex-col md:flex-row md:justify-between md:items-center bg-indigo-50 p-4 rounded-xl card">
-                        <h2 class="text-2xl font-bold text-indigo-700">Inventario di: ${currentTenantName}</h2>
-                        <button onclick="renderTenantManagementView()" class="mt-2 md:mt-0 px-4 py-2 bg-indigo-500 text-white font-semibold rounded-lg hover:bg-indigo-600 text-sm flex items-center justify-center">
-                             <i data-lucide="switch-camera" class="h-4 w-4 mr-1"></i>
-                            Cambia Magazzino
-                        </button>
-                    </div>
-
-                    <!-- Griglia Dashboard: Aggiunta Prodotto e Lista -->
-                    <div class="dashboard-grid grid gap-8">
-                        
-                        <!-- Colonna Aggiungi Prodotto -->
-                        <div class="bg-white p-6 rounded-xl card h-fit">
-                            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-                                <i data-lucide="package-plus" class="h-5 w-5 mr-2 text-green-600"></i>
-                                Aggiungi Nuovo Prodotto
-                            </h3>
-                            <div class="space-y-3">
-                                <input type="text" id="new-item-name" placeholder="Nome Prodotto (es. Bullone M8)" class="w-full p-2 border border-gray-300 rounded-lg">
-                                <input type="text" id="new-item-sku" placeholder="Codice SKU (es. BM8)" class="w-full p-2 border border-gray-300 rounded-lg">
-                                <input type="text" id="new-item-description" placeholder="Descrizione (Opzionale)" class="w-full p-2 border border-gray-300 rounded-lg">
-                                <input type="number" id="new-item-stock" placeholder="Stock Iniziale (0)" value="0" min="0" class="w-full p-2 border border-gray-300 rounded-lg">
-                                <button onclick="createItem()" class="w-full btn-primary bg-green-600 text-white p-3 rounded-lg font-bold hover:bg-green-700 flex items-center justify-center">
-                                    <i data-lucide="save" class="h-5 w-5 mr-2"></i>
-                                    Salva Prodotto
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Colonna Lista Inventario -->
-                        <div class="md:col-span-2 bg-white p-6 rounded-xl card">
-                            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-                                <i data-lucide="list-checks" class="h-5 w-5 mr-2 text-indigo-600"></i>
-                                Stock Corrente
-                            </h3>
-                            <div id="inventory-list" class="space-y-4">
-                                <!-- La lista verrà iniettata qui -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            window.requestAnimationFrame(() => createIcons());
-            loadInventoryData();
         }
         
-        function renderInventoryList() {
-            const listContainer = document.getElementById('inventory-list');
-            
-            if (itemsCache.length === 0) {
-                listContainer.innerHTML = `<p class="text-gray-500 text-center py-4">Nessun prodotto nel catalogo. Aggiungine uno a sinistra.</p>`;
+        // Event listener per l'input manuale (es. lettore di barcode cablato)
+        function handleBarcodeInput(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault(); // Previene il submit del form
+                const barcode = event.target.value.trim();
+                if (barcode) {
+                    // Tratta l'input manuale come una scansione
+                    handleQrData(barcode);
+                }
+            }
+        }
+
+        // =========================================================================
+        // LOGICA CARICO E SCARICO (Backendless)
+        // =========================================================================
+
+        async function doCarico() {
+            const barcode = document.getElementById('carico-barcode').value.trim();
+            const article = document.getElementById('carico-article').value.trim();
+            const quantity = parseInt(document.getElementById('carico-qty').value, 10);
+
+            if (!barcode || !article || quantity <= 0 || isNaN(quantity)) {
+                showNotification('Compila tutti i campi: Barcode, Articolo e Quantità valida (> 0).', 'error');
                 return;
             }
 
-            const inventoryHtml = itemsCache.map(item => {
-                const stockData = inventoryCache[item.$id]; // Usa l'ID dell'Item
-                const stock = stockData ? stockData.stock : 0;
-                const lowStockClass = stock <= 5 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700';
+            toggleLoading(true);
+            try {
+                const dataStore = Backendless.Data.of(BACKENDLESS_TABLE_NAME);
+                
+                // 1. Cerca l'articolo esistente (Barcode come filtro univoco)
+                const queryBuilder = Backendless.Data.QueryBuilder.create()
+                    .setWhereClause(`barcode = '${barcode}'`);
+                const results = await dataStore.find(queryBuilder);
+                const existing = results.length > 0 ? results[0] : null;
+
+                if (existing) {
+                    // 2. AGGIORNA: Articolo esistente, somma la quantità
+                    const newQuantity = (existing.quantity || 0) + quantity;
+                    existing.quantity = newQuantity;
+                    existing.article = article; // Aggiorna anche il nome se cambiato
+                    
+                    await dataStore.save(existing);
+                    
+                    showNotification(`Carico Riuscito: Aggiunte ${quantity} unità di ${article}. Nuova giacenza: ${newQuantity}.`, 'success');
+                } else {
+                    // 3. INSERISCI: Nuovo articolo
+                    const newItem = { 
+                        barcode: barcode, 
+                        article: article, 
+                        quantity: quantity
+                        // L'utente loggato è implicitamente associato tramite le ACL predefinite di Backendless
+                    };
+                        
+                    await dataStore.save(newItem);
+                    
+                    showNotification(`Carico Riuscito: Nuovo articolo "${article}" inserito con ${quantity} unità.`, 'success');
+                }
+                
+                // Pulisci e aggiorna l'UI
+                document.getElementById('carico-barcode').value = '';
+                document.getElementById('carico-article').value = '';
+                document.getElementById('carico-qty').value = 1;
+                document.getElementById('giacenza-display').textContent = 'Giacenza Attuale: -';
+                
+            } catch (error) {
+                showNotification(`Errore durante il Carico: ${error.message || error.code}`, 'error');
+            } finally {
+                toggleLoading(false);
+                await loadDashboardData(); // Ricarica la dashboard
+            }
+        }
+        
+        async function refreshScaricoSelect(filterBarcode = '') {
+            const selectElement = document.getElementById('scarico-select');
+            const inputElement = document.getElementById('scarico-barcode');
+            
+            let whereClause = `quantity > 0`;
+            if (filterBarcode) {
+                 // Filtra per barcode esatto o article contenente la stringa (usando LIKE)
+                 whereClause += ` AND (barcode = '${filterBarcode}' OR article LIKE '%${filterBarcode}%')`;
+            }
+
+            // Query per tutti gli articoli in magazzino con giacenza > 0
+            const queryBuilder = Backendless.Data.QueryBuilder.create()
+                .setWhereClause(whereClause)
+                .setSortBy(['article ASC']);
+
+            toggleLoading(true);
+            try {
+                const dataStore = Backendless.Data.of(BACKENDLESS_TABLE_NAME);
+                const data = await dataStore.find(queryBuilder);
+            
+                selectElement.innerHTML = '<option value="">-- Seleziona Articolo --</option>';
+                data.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.objectId; // Usiamo objectId come valore
+                    option.setAttribute('data-barcode', item.barcode);
+                    option.setAttribute('data-quantity', item.quantity || 0);
+                    option.textContent = `${item.article} (${item.barcode}) - Stock: ${item.quantity || 0}`;
+                    selectElement.appendChild(option);
+                });
+                
+                // Se c'è un filtro e il risultato è univoco, pre-seleziona
+                if (filterBarcode && data.length === 1 && data[0].barcode === filterBarcode) {
+                     selectElement.value = data[0].objectId;
+                } else {
+                     selectElement.value = '';
+                }
+
+                // Aggiorna la giacenza per l'articolo selezionato
+                updateScaricoGiacenza();
+                
+            } catch (error) {
+                showNotification(`Errore nel caricamento lista Scarico: ${error.message || error.code}`, 'error');
+            } finally {
+                toggleLoading(false);
+            }
+        }
+        
+        function updateScaricoGiacenza() {
+             const selectElement = document.getElementById('scarico-select');
+             const giacenzaDisplay = document.getElementById('scarico-giacenza-display');
+             
+             if (selectElement.value) {
+                const selectedOption = selectElement.options[selectElement.selectedIndex];
+                const stock = selectedOption.getAttribute('data-quantity');
+                giacenzaDisplay.textContent = `Giacenza Attuale: ${stock} unità`;
+             } else {
+                giacenzaDisplay.textContent = 'Giacenza Attuale: -';
+             }
+        }
+
+        async function doScarico() {
+            const objectId = document.getElementById('scarico-select').value;
+            const quantity = parseInt(document.getElementById('scarico-qty').value, 10);
+
+            if (!objectId || quantity <= 0 || isNaN(quantity)) {
+                showNotification('Seleziona un Articolo e inserisci una Quantità valida (> 0).', 'error');
+                return;
+            }
+
+            toggleLoading(true);
+            try {
+                const dataStore = Backendless.Data.of(BACKENDLESS_TABLE_NAME);
+                
+                // 1. Cerca l'articolo per objectId
+                const existing = await dataStore.findById(objectId);
+
+                if (!existing) {
+                    throw new Error('Articolo non trovato in magazzino.');
+                }
+                
+                const currentQuantity = existing.quantity || 0;
+                if (currentQuantity < quantity) {
+                    throw new Error(`Stock insufficiente. Disponibili: ${currentQuantity}.`);
+                }
+
+                // 2. AGGIORNA: Sottrai la quantità
+                const newQuantity = currentQuantity - quantity;
+                existing.quantity = newQuantity;
+                
+                await dataStore.save(existing);
+                
+                showNotification(`Scarico Riuscito: Rimosse ${quantity} unità di ${existing.article}. Nuova giacenza: ${newQuantity}.`, 'success');
+
+                // Pulisci e aggiorna l'UI
+                document.getElementById('scarico-barcode').value = '';
+                document.getElementById('scarico-select').value = '';
+                document.getElementById('scarico-qty').value = 1;
+                document.getElementById('scarico-giacenza-display').textContent = 'Giacenza Attuale: -';
+                
+            } catch (error) {
+                showNotification(`Errore durante lo Scarico: ${error.message || error.code}`, 'error');
+            } finally {
+                toggleLoading(false);
+                await loadDashboardData(); // Ricarica la dashboard
+            }
+        }
+        
+        // =========================================================================
+        // DASHBOARD E LISTA
+        // =========================================================================
+        
+        async function loadDashboardData() {
+            toggleLoading(true);
+            try {
+                const dataStore = Backendless.Data.of(BACKENDLESS_TABLE_NAME);
+                const queryBuilder = Backendless.Data.QueryBuilder.create()
+                    .setSortBy(['article ASC']);
+                
+                const data = await dataStore.find(queryBuilder);
+
+                renderInventoryList(data);
+                refreshScaricoSelect(); // Aggiorna anche la lista per lo Scarico
+            } catch (error) {
+                showNotification(`Errore nel caricamento della lista magazzino: ${error.message || error.code}`, 'error');
+            } finally {
+                toggleLoading(false);
+            }
+        }
+        
+        function renderInventoryList(inventoryData) {
+            const listContainer = document.getElementById('magazzino-list');
+            
+            if (inventoryData.length === 0) {
+                listContainer.innerHTML = `<p class="text-gray-500 text-center py-4">Nessun prodotto in magazzino.</p>`;
+                return;
+            }
+            
+            const inventoryHtml = inventoryData.map(item => {
+                const quantity = item.quantity || 0;
+                const isLow = quantity <= 5 && quantity > 0;
+                const isZero = quantity === 0;
+                
+                let stockClass = 'bg-green-100 text-green-700';
+                if (isLow) stockClass = 'bg-yellow-100 text-yellow-700';
+                if (isZero) stockClass = 'bg-red-100 text-red-700';
 
                 return `
                     <div class="flex flex-col md:flex-row items-start md:items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-all">
                         
                         <!-- Dettagli Prodotto -->
                         <div class="mb-2 md:mb-0 md:w-1/2">
-                            <div class="font-semibold text-gray-900">${item.name} <span class="text-xs text-gray-500 ml-2">(${item.sku})</span></div>
-                            <p class="text-xs text-gray-600">${item.description || 'Nessuna descrizione'}</p>
+                            <div class="font-semibold text-gray-900">${item.article} <span class="text-xs text-gray-500 ml-2">(${item.barcode})</span></div>
+                            <p class="text-xs text-gray-600">ID DB: ${item.objectId}</p>
                         </div>
                         
                         <!-- Stock e Controlli -->
                         <div class="flex items-center space-x-3 w-full md:w-auto">
                             <!-- Display Stock -->
-                            <div class="flex items-center px-3 py-1 rounded-full font-bold ${lowStockClass} min-w-[70px] justify-center text-sm">
-                                ${stock}
-                            </div>
-                            
-                            <!-- Bottoni di Modifica Stock -->
-                            <div class="flex space-x-2">
-                                <button onclick="updateStock('${item.$id}', 1)" class="p-2 bg-indigo-100 text-indigo-600 rounded-full hover:bg-indigo-200" title="Aggiungi 1">
-                                    <i data-lucide="plus" class="h-4 w-4"></i>
-                                </button>
-                                <button onclick="updateStock('${item.$id}', -1)" class="p-2 bg-red-100 text-red-600 rounded-full hover:bg-red-200" title="Rimuovi 1">
-                                    <i data-lucide="minus" class="h-4 w-4"></i>
-                                </button>
-                                <button onclick="deleteItem('${item.$id}')" class="p-2 bg-gray-200 text-gray-600 rounded-full hover:bg-red-300 hover:text-red-700" title="Elimina Prodotto">
-                                    <i data-lucide="trash-2" class="h-4 w-4"></i>
-                                </button>
+                            <div class="flex items-center px-3 py-1 rounded-full font-bold ${stockClass} min-w-[70px] justify-center text-sm">
+                                ${quantity}
                             </div>
                         </div>
                     </div>
@@ -684,16 +658,182 @@
             window.requestAnimationFrame(() => createIcons());
         }
 
+
         // =========================================================================
         // STARTUP
         // =========================================================================
-
         window.onload = function() {
-            if (initializeBackendless()) {
-                checkAuth();
-            }
+            initApp();
+            
+            // Inizializza gli event listener per l'input manuale (lettore barcode)
+            document.getElementById('carico-barcode').addEventListener('keydown', handleBarcodeInput);
+            document.getElementById('scarico-barcode').addEventListener('keydown', handleBarcodeInput);
+            
+            // Listener per aggiornare giacenza Scarico quando cambia l'articolo selezionato
+            document.getElementById('scarico-select').addEventListener('change', updateScaricoGiacenza);
+            
+            // Inizializza la modalità predefinita
+            switchMode('carico');
         };
-
+        
     </script>
+
+    <!-- ================= LAYOUT PRINCIPALE ================= -->
+    <header class="bg-white shadow-md p-4 flex justify-between items-center z-10">
+        <h1 class="text-2xl font-bold text-indigo-600">Gestione Magazzino</h1>
+        <div id="auth-status" class="flex items-center space-x-4 hidden">
+            <span id="user-display" class="text-sm font-medium text-gray-700"></span>
+            <button id="logout-btn" onclick="logout()" class="px-3 py-1 bg-red-500 text-white text-sm font-semibold rounded-lg hover:bg-red-600">
+                <i data-lucide="log-out" class="h-4 w-4 inline-block mr-1"></i>
+                Logout
+            </button>
+        </div>
+    </header>
+
+    <main id="view-container" class="flex-grow p-4 md:p-8">
+        
+        <!-- Vista Login -->
+        <div id="login-view" class="view-content hidden">
+            <div class="max-w-md mx-auto my-12 p-8 bg-white rounded-xl card space-y-8">
+                <h2 class="text-3xl font-extrabold text-gray-900 text-center">Accedi</h2>
+
+                <div class="space-y-4">
+                    <input type="email" id="login-email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                    <input type="password" id="login-password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                    
+                    <button onclick="login()" class="w-full btn-primary bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center">
+                        <i data-lucide="log-in" class="h-5 w-5 mr-2"></i>
+                        Accedi
+                    </button>
+                    
+                    <button onclick="handlePasswordResetRequest()" class="w-full text-indigo-600 text-sm py-2 hover:underline">
+                        Password dimenticata?
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal per il reset password -->
+        <div id="reset-password-modal" class="modal-overlay hidden">
+            <div class="modal-content space-y-4">
+                <h3 class="text-xl font-bold text-gray-900">Nuova Password</h3>
+                <input type="hidden" id="reset-token">
+                <input type="password" id="new-password" placeholder="Nuova Password" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                <input type="password" id="confirm-password" placeholder="Conferma Nuova Password" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                
+                <div class="flex justify-end space-x-2">
+                    <button onclick="closeModal('reset-password-modal')" class="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300">Annulla</button>
+                    <button onclick="completePasswordReset()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Conferma Reset</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Vista Dashboard -->
+        <div id="dashboard-view" class="view-content hidden space-y-8">
+            <div class="max-w-4xl mx-auto">
+                
+                <!-- Scanner QR -->
+                <div class="p-6 bg-white rounded-xl card mb-8">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i data-lucide="qrcode" class="h-5 w-5 mr-2 text-indigo-600"></i>
+                        Scanner QR/Barcode
+                    </h3>
+                    <div id="qr-reader" class="mb-4"></div>
+                    <input type="text" id="qr-result" placeholder="Risultato Scansione" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-gray-100" readonly>
+                </div>
+
+                <!-- CARICO / SCARICO TAB -->
+                <div class="flex border-b border-gray-200 mb-6">
+                    <button id="tab-carico" onclick="switchMode('carico')" class="px-4 py-2 text-gray-700 transition-colors duration-150 tab-active">
+                        <i data-lucide="package-plus" class="h-5 w-5 inline-block mr-1"></i>
+                        Carico (Entrata)
+                    </button>
+                    <button id="tab-scarico" onclick="switchMode('scarico')" class="px-4 py-2 text-gray-700 transition-colors duration-150">
+                        <i data-lucide="package-minus" class="h-5 w-5 inline-block mr-1"></i>
+                        Scarico (Uscita)
+                    </button>
+                </div>
+
+                <!-- Modulo Carico -->
+                <div id="form-carico" class="bg-white p-6 rounded-xl card space-y-4">
+                    <h3 class="text-lg font-semibold">Modulo di Carico</h3>
+                    
+                    <!-- Campo Barcode (gestito da handleBarcodeInput/handleQrData) -->
+                    <input type="text" id="carico-barcode" placeholder="Barcode (Scannerizza o Inserisci)" 
+                           class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                           
+                    <p id="giacenza-display" class="text-sm font-medium text-indigo-600">Giacenza Attuale: -</p>
+                    
+                    <input type="text" id="carico-article" placeholder="Nome Articolo (Auto-compilato o Nuovo)" 
+                           class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                           
+                    <input type="number" id="carico-qty" placeholder="Quantità da Caricare" value="1" min="1" 
+                           class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                           
+                    <button onclick="doCarico()" class="w-full btn-primary bg-green-600 text-white p-3 rounded-lg font-bold hover:bg-green-700 flex items-center justify-center">
+                        <i data-lucide="save" class="h-5 w-5 mr-2"></i>
+                        Conferma Carico
+                    </button>
+                </div>
+
+                <!-- Modulo Scarico -->
+                <div id="form-scarico" class="bg-white p-6 rounded-xl card space-y-4 hidden">
+                    <h3 class="text-lg font-semibold">Modulo di Scarico</h3>
+                    
+                    <!-- Input per la scansione/filtro barcode -->
+                    <input type="text" id="scarico-barcode" placeholder="Scannerizza Barcode o Inserisci per filtrare" 
+                           class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                           
+                    <!-- Seleziona Articolo (popolato da refreshScaricoSelect) -->
+                    <select id="scarico-select" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                        <option value="">-- Seleziona Articolo o Scansiona --</option>
+                    </select>
+
+                    <p id="scarico-giacenza-display" class="text-sm font-medium text-red-600">Giacenza Attuale: -</p>
+                    
+                    <input type="number" id="scarico-qty" placeholder="Quantità da Scaricare" value="1" min="1" 
+                           class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                           
+                    <button onclick="doScarico()" class="w-full btn-primary bg-red-600 text-white p-3 rounded-lg font-bold hover:bg-red-700 flex items-center justify-center">
+                        <i data-lucide="package-minus" class="h-5 w-5 mr-2"></i>
+                        Conferma Scarico
+                    </button>
+                </div>
+                
+                <!-- Lista Inventario -->
+                <div class="mt-8 bg-white p-6 rounded-xl card">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i data-lucide="list-checks" class="h-5 w-5 mr-2 text-indigo-600"></i>
+                        Stock Corrente in Magazzino
+                    </h3>
+                    <div id="magazzino-list" class="space-y-3">
+                        <!-- Lista articoli caricata da loadDashboardData -->
+                    </div>
+                    <button onclick="loadDashboardData()" class="mt-4 w-full p-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                        <i data-lucide="refresh-cw" class="h-4 w-4 inline-block mr-1"></i>
+                        Aggiorna Lista
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+    
+    <!-- Loader Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-6 rounded-lg flex items-center">
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Caricamento...</span>
+        </div>
+    </div>
+    
+    <!-- Notification Box -->
+    <div id="notification-box"></div>
+
+</div>
 </body>
 </html>
