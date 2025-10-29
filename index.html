@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventario Magazzino Appwrite</title>
+    <title>Inventario Magazzino Backendless</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Icone Lucide -->
@@ -11,8 +11,6 @@
         import { createIcons } from 'https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.js';
         window.addEventListener('load', () => createIcons());
     </script>
-    <!-- Manifest per PWA -->
-    <link rel="manifest" href="manifest.json">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f7f9fc; }
         .card { box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.05); }
@@ -23,11 +21,12 @@
 </head>
 <body class="min-h-screen flex flex-col">
 
-    <!-- SDK Appwrite -->
-    <script src="https://unpkg.com/appwrite@13.0.0"></script>
+    <!-- SDK Backendless -->
+    <script src="https://cdn.jsdelivr.net/npm/backendless@7.0.0/dist/backendless.min.js"></script>
 
     <div id="app" class="flex-grow flex flex-col">
-        <!-- Loader e Messaggi -->
+        
+        <!-- Loader e Messaggi (Mantenuti) -->
         <div id="loading-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
             <div class="bg-white p-6 rounded-lg flex items-center">
                 <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -38,7 +37,7 @@
             </div>
         </div>
 
-        <!-- Modale per Messaggi/Errori -->
+        <!-- Modale per Messaggi/Errori (Mantenuto) -->
         <div id="modal-container" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-40 hidden">
             <div id="modal-content" class="bg-white p-6 rounded-lg card max-w-sm mx-4" role="alert">
                 <h3 id="modal-title" class="font-bold text-lg mb-2 text-gray-800">Messaggio</h3>
@@ -49,9 +48,9 @@
             </div>
         </div>
 
-        <!-- Header -->
+        <!-- Header (Mantenuto) -->
         <header class="bg-white shadow-md p-4 flex justify-between items-center z-10">
-            <h1 class="text-2xl font-bold text-indigo-600">App Magazzino</h1>
+            <h1 class="text-2xl font-bold text-indigo-600">App Magazzino (Backendless)</h1>
             <div id="auth-status" class="flex items-center space-x-4">
                 <span id="user-display" class="text-sm font-medium text-gray-700 hidden"></span>
                 <button id="logout-btn" onclick="logout()" class="px-3 py-1 bg-red-500 text-white text-sm font-semibold rounded-lg hover:bg-red-600 hidden">
@@ -71,38 +70,44 @@
 
     <script>
         // =========================================================================
-        // CONFIGURAZIONE APPWRITE (I TUOI VALORI SONO STATI INSERITI QUI)
+        // CONFIGURAZIONE BACKENDLESS (MODIFICARE I VALORI QUI)
         // =========================================================================
-        const APPWRITE_ENDPOINT = 'https://fra.cloud.appwrite.io/v1'; 
-        const APPWRITE_PROJECT_ID = '69012f06002108294102';     
-
-        // Nomi esatti delle collezioni create nel pannello di Appwrite
-        const COLLECTION_IDS = {
-            PROFILES: 'profiles',
-            TENANTS: 'tenants',
-            ITEMS: 'items',
-            INVENTORY: 'inventory',
+        const BACKENDLESS_APP_ID = 'AA895053-C960-45EC-BFBE-FCBAFD9D7D0B'; 
+        const BACKENDLESS_API_KEY = '1F4341D8-CAB8-44F6-97D6-203322D8D245';     
+        
+        // Nomi esatti delle tabelle (Collections) create nel pannello di Backendless
+        const TABLE_NAMES = {
+            TENANTS: 'Tenant',
+            ITEMS: 'Item',
+            INVENTORY: 'StockData', // *** AGGIORNATO: Ora usa StockData ***
         };
-        const DATABASE_ID = 'default'; // Di solito 'default' o l'ID che hai usato
+        const USER_TABLE = 'Users'; // Nome tabella utente predefinito in Backendless
 
         // =========================================================================
-        // INIZIALIZZAZIONE GLOBALE APPWRITE
+        // INIZIALIZZAZIONE GLOBALE BACKENDLESS
         // =========================================================================
-        const { Client, Account, Databases, Query } = Appwrite;
-        const client = new Client()
-            .setEndpoint(APPWRITE_ENDPOINT)
-            .setProject(APPWRITE_PROJECT_ID);
-
-        const account = new Account(client);
-        const databases = new Databases(client);
-
         let currentUser = null;
         let currentTenantId = null;
         let currentTenantName = '';
         let tenantsCache = [];
 
+        // Inizializza Backendless
+        function initializeBackendless() {
+             if (BACKENDLESS_APP_ID.startsWith('YOUR_')) {
+                document.getElementById('view-container').innerHTML = `
+                    <div class="max-w-xl mx-auto my-12 p-8 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-xl card">
+                        <h2 class="text-2xl font-bold mb-4">Errore di Configurazione Backendless</h2>
+                        <p>Per favore, modifica il file index.html e sostituisci <code>YOUR_APP_ID</code> e <code>YOUR_JS_API_KEY</code> con le credenziali reali del tuo progetto Backendless.</p>
+                    </div>
+                `;
+                return false;
+            }
+            Backendless.initApp(BACKENDLESS_APP_ID, BACKENDLESS_API_KEY);
+            return true;
+        }
+
         // =========================================================================
-        // UTILITY E UI MANAGEMENT
+        // UTILITY E UI MANAGEMENT (Mantenute)
         // =========================================================================
 
         function showLoading(message = 'Caricamento...') {
@@ -129,80 +134,43 @@
             const logoutBtn = document.getElementById('logout-btn');
 
             if (user) {
-                currentUser = user;
-                userDisplay.textContent = `Benvenuto, ${user.displayName || user.email}`;
+                // Backendless usa 'name' e 'email'
+                const nameToShow = user.name || user.email;
+                userDisplay.textContent = `Benvenuto, ${nameToShow}`;
                 userDisplay.classList.remove('hidden');
                 logoutBtn.classList.remove('hidden');
             } else {
-                currentUser = null;
                 userDisplay.classList.add('hidden');
                 logoutBtn.classList.add('hidden');
             }
         }
 
         // =========================================================================
-        // GESTIONE AUTENTICAZIONE
+        // GESTIONE AUTENTICAZIONE (Backendless Logic)
         // =========================================================================
 
         async function checkAuth() {
             showLoading('Verifica sessione...');
             try {
-                const session = await account.get();
-                currentUser = session;
-                await fetchUserProfile(session.$id);
+                // Backendless verifica se l'utente è loggato in base al token locale
+                currentUser = await Backendless.UserService.getCurrentUser();
+                
+                if (currentUser && currentUser.objectId) {
+                    // L'utente è loggato, aggiorna l'UI e fetch tenants
+                    await fetchTenants();
+                } else {
+                    currentUser = null;
+                    renderLoginView();
+                }
             } catch (error) {
-                console.error("Nessuna sessione attiva:", error);
+                // Errore generico (es. token scaduto o non valido)
                 currentUser = null;
                 renderLoginView();
             } finally {
                 hideLoading();
+                updateAuthUI(currentUser);
             }
         }
-
-        async function fetchUserProfile(userId) {
-            try {
-                // Tenta di ottenere il profilo esistente
-                const response = await databases.listDocuments(
-                    DATABASE_ID,
-                    COLLECTION_IDS.PROFILES,
-                    [Query.equal('$id', userId)]
-                );
-                
-                if (response.documents.length > 0) {
-                    // Profilo trovato
-                    currentUser.displayName = response.documents[0].display_name;
-                    await fetchTenants();
-                } else {
-                    // Profilo non trovato: deve essere creato
-                    currentUser.displayName = currentUser.name || currentUser.email.split('@')[0]; // Default name
-                    await createProfileDocument(currentUser.$id, currentUser.displayName);
-                    await fetchTenants();
-                }
-
-            } catch (error) {
-                console.error("Errore nel recupero/creazione profilo:", error);
-                showModal('Errore Database', `Impossibile accedere al tuo profilo utente. Assicurati che le collezioni siano state create correttamente. Errore: ${error.message}`);
-                // Forza il logout per evitare loop
-                await logout(false);
-            }
-        }
-
-        async function createProfileDocument(userId, displayName) {
-            showLoading('Creazione profilo...');
-            try {
-                const document = await databases.createDocument(
-                    DATABASE_ID,
-                    COLLECTION_IDS.PROFILES,
-                    userId, // Usa l'ID utente come ID del documento per un mapping 1:1
-                    { display_name: displayName }
-                );
-                currentUser.displayName = document.display_name;
-            } catch (error) {
-                console.error("Errore nella creazione del documento profilo:", error);
-                // Non mostriamo modale, l'errore è gestito in fetchUserProfile
-            }
-        }
-
 
         async function login() {
             const email = document.getElementById('login-email').value;
@@ -210,8 +178,12 @@
 
             showLoading('Accesso in corso...');
             try {
-                await account.createEmailPasswordSession(email, password);
-                await checkAuth(); // Ricarica auth e fetch profile/tenants
+                // Login con email/password
+                const user = await Backendless.UserService.login(email, password, true);
+                currentUser = user;
+                
+                showModal('Accesso Riuscito', `Benvenuto, ${user.name || user.email}!`);
+                await checkAuth(); 
             } catch (error) {
                 showModal('Errore di Accesso', `Verifica email e password. Errore: ${error.message}`);
             } finally {
@@ -226,13 +198,23 @@
             
             showLoading('Registrazione in corso...');
             try {
-                await account.create(
-                    'unique()', // Appwrite ID
-                    email,
-                    password,
-                    displayName
-                );
-                showModal('Registrazione Riuscita', `Utente ${email} creato con successo. Ora puoi effettuare il login.`);
+                // Oggetto utente Backendless
+                const newUser = {
+                    email: email,
+                    password: password,
+                    name: displayName // Campo 'name' usato come display name
+                };
+
+                // 1. Registra l'utente
+                await Backendless.UserService.register(newUser);
+                
+                // 2. EFFETTUA IL LOGIN AUTOMATICAMENTE SUBITO DOPO
+                await Backendless.UserService.login(email, password, true);
+                
+                showModal('Registrazione Riuscita', `Benvenuto ${displayName}! Ora puoi accedere.`);
+                
+                // 3. Controlla e carica la dashboard
+                await checkAuth(); 
             } catch (error) {
                 showModal('Errore di Registrazione', `Impossibile completare la registrazione. Errore: ${error.message}`);
             } finally {
@@ -240,10 +222,10 @@
             }
         }
 
-        async function logout(renderView = true) {
+        async function logout() {
             showLoading('Uscita...');
             try {
-                await account.deleteSession('current');
+                await Backendless.UserService.logout();
                 currentUser = null;
                 currentTenantId = null;
                 currentTenantName = '';
@@ -252,14 +234,33 @@
                 console.error("Errore durante il logout:", error);
             } finally {
                 updateAuthUI(null);
-                if (renderView) {
-                    renderLoginView();
-                }
+                renderLoginView();
                 hideLoading();
             }
         }
         
-        // Nuova funzione per richiedere il recupero della password
+        // Il recupero password è complesso in Backendless (richiede una configurazione specifica), 
+        // quindi manteniamo la vista di recupero base per non bloccare l'app
+        function renderRecoveryView() {
+            const container = document.getElementById('view-container');
+            container.innerHTML = `
+                <div class="max-w-md mx-auto my-12 p-8 bg-white rounded-xl card space-y-8">
+                    <h2 class="text-3xl font-extrabold text-gray-900 text-center">Recupero Password</h2>
+                    <p class="text-center text-gray-600">Inserisci l'indirizzo email. Riceverai un link per reimpostare la password (richiede configurazione email nel pannello Backendless).</p>
+
+                    <div class="space-y-4">
+                        <input type="email" id="recovery-email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                        <button onclick="requestPasswordRecovery()" class="w-full btn-primary bg-yellow-500 text-white p-3 rounded-lg font-bold hover:bg-yellow-600 flex items-center justify-center">
+                            <i data-lucide="mail-search" class="h-5 w-5 mr-2"></i>
+                            Invia Link di Recupero
+                        </button>
+                        <button onclick="renderLoginView()" class="w-full text-sm text-gray-500 hover:text-indigo-600 mt-2">Torna al Login</button>
+                    </div>
+                </div>
+            `;
+            window.requestAnimationFrame(() => createIcons());
+        }
+
         async function requestPasswordRecovery() {
             const email = document.getElementById('recovery-email').value.trim();
             if (!email) {
@@ -267,82 +268,59 @@
                 return;
             }
 
-            // !!! IMPORTANTE: Sostituisci questo URL con l'URL della tua pagina di reset password !!!
-            const recoveryUrl = window.location.origin + window.location.pathname; // URL di base per reindirizzare a questa pagina dopo il click sull'email
-            // Se gestisci il reset su una pagina dedicata, usa: 'https://tuoapp.com/reset-password'
-
             showLoading('Invio email di recupero...');
             try {
-                await account.createRecovery(
-                    email,
-                    recoveryUrl
-                );
+                // Metodo specifico Backendless per il recupero password
+                await Backendless.UserService.restorePassword(email);
 
-                showModal('Email Inviata', `Se l'indirizzo email è corretto, riceverai un link per il reset della password. Controlla la tua casella di posta.`);
-                renderLoginView(); // Torna al login dopo l'invio
+                showModal('Email Inviata', `Se l'indirizzo email è corretto, riceverai un link per il reset della password.`);
+                renderLoginView(); 
             } catch (error) {
-                // Appwrite non distingue tra utente trovato e non trovato per sicurezza
-                showModal('Richiesta Fallita', `Si è verificato un errore. Riprova più tardi o verifica l'email. Errore: ${error.message}`);
+                showModal('Richiesta Fallita', `Si è verificato un errore: ${error.message}. Assicurati che il servizio email sia configurato in Backendless.`);
             } finally {
                 hideLoading();
             }
         }
         
-        // Nuova funzione per gestire la seconda fase del reset (NON IMPLEMENTATA in questo file)
-        async function handlePasswordRecovery() {
-            const params = new URLSearchParams(window.location.search);
-            const userId = params.get('userId');
-            const secret = params.get('secret');
-
-            if (userId && secret) {
-                // Qui dovresti renderizzare un'interfaccia per inserire la NUOVA password
-                // e chiamare account.updateRecovery(userId, secret, newPassword, newPassword)
-                // Questo è un placeholder:
-                showModal('Reset Password', 'Sei stato reindirizzato dal link di recupero. Qui andrebbe l\'interfaccia per inserire la nuova password e l\'implementazione di account.updateRecovery().');
-                // Dopo il reset, renderLoginView()
-            }
-        }
-
         // =========================================================================
-        // GESTIONE DEI TENANTS (MAGAZZINI)
+        // GESTIONE DEI TENANTS (MAGAZZINI) - Backendless Logic
         // =========================================================================
 
         async function fetchTenants() {
             showLoading('Caricamento magazzini...');
             try {
-                const response = await databases.listDocuments(
-                    DATABASE_ID,
-                    COLLECTION_IDS.TENANTS,
-                    [Query.equal('owner_id', currentUser.$id)]
-                );
+                const queryBuilder = Backendless.DataQueryBuilder.create()
+                    .setWhereClause(`ownerId = '${currentUser.objectId}'`); // Usa ownerId come STRINGA
+
+                const response = await Backendless.Data.of(TABLE_NAMES.TENANTS).find(queryBuilder);
                 
-                tenantsCache = response.documents;
+                // Backendless usa 'objectId' come ID
+                tenantsCache = response.map(t => ({ 
+                    ...t, 
+                    $id: t.objectId, 
+                    owner_id: t.ownerId || currentUser.objectId 
+                }));
 
                 if (tenantsCache.length === 0) {
                     renderTenantManagementView();
-                } else if (!currentTenantId) {
-                    // Seleziona il primo tenant come predefinito se non ne è stato selezionato uno
-                    currentTenantId = tenantsCache[0].$id;
-                    currentTenantName = tenantsCache[0].name;
-                    renderDashboard();
                 } else {
-                    // Mantiene la selezione corrente
-                    const current = tenantsCache.find(t => t.$id === currentTenantId);
-                    if (current) {
-                         currentTenantName = current.name;
+                    if (!currentTenantId || !tenantsCache.some(t => t.$id === currentTenantId)) {
+                        // Seleziona il primo tenant come predefinito se non ce n'è uno valido
+                        currentTenantId = tenantsCache[0].$id;
+                        currentTenantName = tenantsCache[0].name;
                     } else {
-                        // Se il tenant corrente è stato cancellato, riparte dalla lista
-                         currentTenantId = tenantsCache[0]?.$id || null;
-                         currentTenantName = tenantsCache[0]?.name || '';
-                         renderDashboard();
+                         const current = tenantsCache.find(t => t.$id === currentTenantId);
+                         currentTenantName = current ? current.name : '';
                     }
+                    renderDashboard();
                 }
                 
-                updateAuthUI(currentUser); // Aggiorna UI con display name
+                updateAuthUI(currentUser); 
             } catch (error) {
                 console.error("Errore nel recupero tenants:", error);
                 showModal('Errore Database', `Impossibile caricare i magazzini. Errore: ${error.message}`);
-                renderDashboard(); // Tenta di renderizzare anche con errore
+                // In caso di errore grave, torna alla dashboard per non bloccare la UI
+                renderDashboard(); 
             } finally {
                 hideLoading();
             }
@@ -354,17 +332,17 @@
 
             showLoading('Creazione magazzino...');
             try {
-                await databases.createDocument(
-                    DATABASE_ID,
-                    COLLECTION_IDS.TENANTS,
-                    'unique()',
-                    { 
-                        name: name.trim(), 
-                        owner_id: currentUser.$id 
-                    }
-                );
+                // Crea il record in Backendless
+                const newTenant = { 
+                    name: name.trim(), 
+                    // Memorizziamo l'objectId dell'utente loggato come ownerId Stringa
+                    ownerId: currentUser.objectId 
+                };
+
+                await Backendless.Data.of(TABLE_NAMES.TENANTS).save(newTenant);
+                
                 showModal('Successo', `Magazzino "${name}" creato!`);
-                await fetchTenants(); // Ricarica la lista
+                await fetchTenants(); 
             } catch (error) {
                 showModal('Errore', `Impossibile creare il magazzino. Errore: ${error.message}`);
             } finally {
@@ -380,37 +358,43 @@
         }
 
         // =========================================================================
-        // GESTIONE PRODOTTI E INVENTARIO (CRUD)
+        // GESTIONE PRODOTTI E INVENTARIO (CRUD) - Backendless Logic
         // =========================================================================
         let itemsCache = [];
-        let inventoryCache = {}; // Mappa {itemId: stock}
+        let inventoryCache = {}; 
 
         async function loadInventoryData() {
             if (!currentTenantId) return;
 
             showLoading(`Caricamento inventario di ${currentTenantName}...`);
             try {
-                // 1. Carica gli Items per il tenant
-                const itemsResponse = await databases.listDocuments(
-                    DATABASE_ID,
-                    COLLECTION_IDS.ITEMS,
-                    [Query.equal('tenant_id', currentTenantId)]
-                );
-                itemsCache = itemsResponse.documents;
+                // Query per Items
+                const itemsQuery = Backendless.DataQueryBuilder.create()
+                    .setWhereClause(`tenantId = '${currentTenantId}'`);
 
-                // 2. Carica l'Inventory (Stock) per il tenant
-                const inventoryResponse = await databases.listDocuments(
-                    DATABASE_ID,
-                    COLLECTION_IDS.INVENTORY,
-                    [Query.equal('tenant_id', currentTenantId)]
-                );
+                // Query per StockData (precedentemente Inventory)
+                const inventoryQuery = Backendless.DataQueryBuilder.create()
+                    .setWhereClause(`tenantId = '${currentTenantId}'`);
+
+                // 1. Carica gli Items per il tenant
+                const itemsResponse = await Backendless.Data.of(TABLE_NAMES.ITEMS).find(itemsQuery);
+                
+                // Mappa gli oggetti per usare $id come chiave (come in Appwrite)
+                itemsCache = itemsResponse.map(i => ({
+                    ...i,
+                    $id: i.objectId,
+                    tenant_id: i.tenantId
+                }));
+
+                // 2. Carica lo Stock (StockData) per il tenant
+                const inventoryResponse = await Backendless.Data.of(TABLE_NAMES.INVENTORY).find(inventoryQuery);
                 
                 // Mappa l'inventario per accesso rapido
                 inventoryCache = {};
-                inventoryResponse.documents.forEach(doc => {
-                    inventoryCache[doc.item_id] = { 
+                inventoryResponse.forEach(doc => {
+                    inventoryCache[doc.itemId] = { // Usa itemId come chiave, che è l'objectId dell'Item
                         stock: doc.stock,
-                        docId: doc.$id
+                        docId: doc.objectId // Backendless objectId del record StockData
                     };
                 });
                 
@@ -437,29 +421,21 @@
             showLoading('Aggiunta prodotto...');
             try {
                 // 1. Crea l'Item
-                const itemDoc = await databases.createDocument(
-                    DATABASE_ID,
-                    COLLECTION_IDS.ITEMS,
-                    'unique()',
-                    { 
-                        name, 
-                        sku, 
-                        description, 
-                        tenant_id: currentTenantId 
-                    }
-                );
+                const newItem = { 
+                    name, 
+                    sku, 
+                    description, 
+                    tenantId: currentTenantId // ID del Tenant
+                };
+                const itemDoc = await Backendless.Data.of(TABLE_NAMES.ITEMS).save(newItem);
 
-                // 2. Crea il record di Inventory (Stock)
-                await databases.createDocument(
-                    DATABASE_ID,
-                    COLLECTION_IDS.INVENTORY,
-                    'unique()',
-                    {
-                        item_id: itemDoc.$id,
-                        tenant_id: currentTenantId,
-                        stock: initialStock
-                    }
-                );
+                // 2. Crea il record di StockData
+                const newStockData = {
+                    itemId: itemDoc.objectId, // ID dell'Item appena creato
+                    tenantId: currentTenantId,
+                    stock: initialStock
+                };
+                await Backendless.Data.of(TABLE_NAMES.INVENTORY).save(newStockData);
 
                 // Pulisce i campi e ricarica i dati
                 document.getElementById('new-item-name').value = '';
@@ -477,28 +453,30 @@
         }
 
         async function updateStock(itemId, delta) {
-            const currentStock = inventoryCache[itemId]?.stock || 0;
-            const inventoryDocId = inventoryCache[itemId]?.docId;
-            const newStock = Math.max(0, currentStock + delta); // Lo stock non può essere negativo
+            const stockData = inventoryCache[itemId];
             
-            if (!inventoryDocId) {
+            if (!stockData) {
                 showModal('Errore', 'Record di inventario non trovato.');
                 return;
             }
+            
+            const currentStock = stockData.stock || 0;
+            const inventoryDocId = stockData.docId;
+            const newStock = Math.max(0, currentStock + delta); 
 
             showLoading('Aggiornamento stock...');
             try {
-                await databases.updateDocument(
-                    DATABASE_ID,
-                    COLLECTION_IDS.INVENTORY,
-                    inventoryDocId,
-                    { stock: newStock }
-                );
+                // Aggiorna il record di StockData con l'objectId
+                await Backendless.Data.of(TABLE_NAMES.INVENTORY).save({
+                    objectId: inventoryDocId,
+                    stock: newStock
+                });
 
                 // Aggiorna la cache e la UI in modo ottimistico
                 inventoryCache[itemId].stock = newStock;
                 renderInventoryList();
                 
+                showModal('Aggiornamento Riuscito', `Stock per l'articolo aggiornato a ${newStock}.`);
             } catch (error) {
                 showModal('Errore', `Impossibile aggiornare lo stock. Errore: ${error.message}`);
             } finally {
@@ -510,27 +488,19 @@
             const item = itemsCache.find(i => i.$id === itemId);
             const inventoryDocId = inventoryCache[itemId]?.docId;
 
-            if (!confirm(`Sei sicuro di voler eliminare il prodotto "${item.name}"? Verranno rimossi anche i dati di inventario.`)) {
+            if (!confirm(`Sei sicuro di voler eliminare il prodotto "${item.name}"? Verranno rimossi anche i dati di stock.`)) {
                 return;
             }
 
             showLoading('Eliminazione prodotto...');
             try {
-                // 1. Elimina il record di Inventory
+                // 1. Elimina il record di StockData
                 if (inventoryDocId) {
-                    await databases.deleteDocument(
-                        DATABASE_ID,
-                        COLLECTION_IDS.INVENTORY,
-                        inventoryDocId
-                    );
+                    await Backendless.Data.of(TABLE_NAMES.INVENTORY).remove({ objectId: inventoryDocId });
                 }
 
                 // 2. Elimina l'Item
-                await databases.deleteDocument(
-                    DATABASE_ID,
-                    COLLECTION_IDS.ITEMS,
-                    itemId
-                );
+                await Backendless.Data.of(TABLE_NAMES.ITEMS).remove({ objectId: itemId });
 
                 showModal('Successo', `Prodotto "${item.name}" eliminato.`);
                 loadInventoryData();
@@ -543,28 +513,8 @@
 
 
         // =========================================================================
-        // RENDERING DELLE VISTE (VIEW RENDERING)
+        // RENDERING DELLE VISTE (VIEW RENDERING) (Mantenute)
         // =========================================================================
-
-        function renderRecoveryView() {
-            const container = document.getElementById('view-container');
-            container.innerHTML = `
-                <div class="max-w-md mx-auto my-12 p-8 bg-white rounded-xl card space-y-8">
-                    <h2 class="text-3xl font-extrabold text-gray-900 text-center">Recupero Password</h2>
-                    <p class="text-center text-gray-600">Inserisci l'indirizzo email associato al tuo account. Riceverai un link per reimpostare la password.</p>
-
-                    <div class="space-y-4">
-                        <input type="email" id="recovery-email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
-                        <button onclick="requestPasswordRecovery()" class="w-full btn-primary bg-yellow-500 text-white p-3 rounded-lg font-bold hover:bg-yellow-600 flex items-center justify-center">
-                            <i data-lucide="mail-search" class="h-5 w-5 mr-2"></i>
-                            Invia Link di Recupero
-                        </button>
-                        <button onclick="renderLoginView()" class="w-full text-sm text-gray-500 hover:text-indigo-600 mt-2">Torna al Login</button>
-                    </div>
-                </div>
-            `;
-            window.requestAnimationFrame(() => createIcons());
-        }
 
         function renderLoginView() {
             const container = document.getElementById('view-container');
@@ -693,7 +643,7 @@
             }
 
             const inventoryHtml = itemsCache.map(item => {
-                const stockData = inventoryCache[item.$id];
+                const stockData = inventoryCache[item.$id]; // Usa l'ID dell'Item
                 const stock = stockData ? stockData.stock : 0;
                 const lowStockClass = stock <= 5 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700';
 
@@ -738,24 +688,12 @@
         // STARTUP
         // =========================================================================
 
-        // Avvia la verifica dell'autenticazione al caricamento della pagina
         window.onload = function() {
-            if (APPWRITE_PROJECT_ID.startsWith('YOUR_')) {
-                document.getElementById('view-container').innerHTML = `
-                    <div class="max-w-xl mx-auto my-12 p-8 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-xl card">
-                        <h2 class="text-2xl font-bold mb-4">Errore di Configurazione Appwrite</h2>
-                        <p>Per favore, modifica il file index.html e sostituisci <code>YOUR_APPWRITE_ENDPOINT</code> e <code>YOUR_PROJECT_ID</code> con le credenziali reali del tuo progetto Appwrite.</p>
-                    </div>
-                `;
-                return;
+            if (initializeBackendless()) {
+                checkAuth();
             }
-            // Gestisce la seconda fase del reset se ci sono i parametri URL
-            handlePasswordRecovery(); 
-            // Continua con il normale controllo dell'autenticazione
-            checkAuth();
         };
 
     </script>
 </body>
 </html>
-
