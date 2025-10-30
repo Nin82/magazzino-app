@@ -832,6 +832,23 @@ window.onload = async function() {
     }
 };
 
+
+
+// =========================================================================
+// AVVIO APPLICAZIONE E LISTENER (Punto di ingresso)
+// =========================================================================
+
+// Chiama la funzione di autenticazione quando la pagina è completamente caricata.
+// Questo è il punto che fa partire l'intera applicazione.
+document.addEventListener('DOMContentLoaded', checkAuth);
+
+// Aggiungi gli ascoltatori per gli input che usano il tasto Enter
+document.getElementById('carico-barcode').addEventListener('keypress', handleBarcodeInput);
+document.getElementById('scarico-barcode').addEventListener('keypress', handleBarcodeInput);
+
+// Aggiungi l'ascoltatore per aggiornare la giacenza nello scarico quando l'utente cambia articolo
+document.getElementById('scarico-select').addEventListener('change', updateScaricoGiacenza);
+
         
     </script>
   
