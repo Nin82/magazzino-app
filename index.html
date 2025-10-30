@@ -734,78 +734,79 @@ async function handlePasswordResetRequest() {
             }
         }
         
-        function renderDashboardStats(inventoryData) {
-            let totalItems = inventoryData.length;
-            let totalQuantity = inventoryData.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-            
-            document.getElementById('stat-total-items').textContent = totalItems;
-            document.getElementById('stat-total-qty').textContent = totalQuantity;
-            
-            // Logica per lo Stat 3: Articoli sotto soglia (es. <= 5 unità)
-            const lowStockCount = inventoryData.filter(item => (item.quantity || 0) > 0 && (item.quantity || 0) <= 5).length;
-            document.getElementById('stat-low-stock').textContent = lowStockCount;
+ function renderDashboardStats(inventoryData) {
+    const chartContainer = document.getElementById('chart-container');
 
+    // Distrugge eventuale grafico precedente
+    if (chartInstance) {
+        chartInstance.destroy();
+        chartInstance = null;
+    }
 
-            // Ordina per quantità per i report
-            const sortedByQuantity = [...inventoryData]
-                .filter(item => (item.quantity || 0) > 0)
-                .sort((a, b) => (b.quantity || 0) - (a.quantity || 0));
+    // Pulisce il container e ricrea sempre il canvas
+    chartContainer.innerHTML = '<canvas id="inventory-chart"></canvas>';
+    const ctx = document.getElementById('inventory-chart').getContext('2d');
 
-            const top5 = sortedByQuantity.slice(0, 5);
-            const low5 = sortedByQuantity.slice(-5).reverse().filter(item => item.quantity > 0); 
-            // Filtra per > 0 per evitare barre di articoli esauriti se non ce ne sono di basso stock
-            
-            // Prepara i dati per Chart.js
-            const chartLabels = [...top5.map(i => i.article), ...low5.map(i => i.article)];
-            const chartData = [...top5.map(i => i.quantity), ...low5.map(i => i.quantity)];
-            const chartColors = [
-                '#10b981', '#10b981', '#10b981', '#10b981', '#10b981', // Top 5 (Verde)
-                '#f59e0b', '#f59e0b', '#f59e0b', '#f59e0b', '#f59e0b'  // Low 5 (Giallo/Arancio)
-            ].slice(0, chartLabels.length); // Assicura che i colori corrispondano ai dati
+    // Statistiche principali
+    const totalItems = inventoryData.length;
+    const totalQuantity = inventoryData.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+    const lowStockCount = inventoryData.filter(item => (item.quantity || 0) > 0 && (item.quantity || 0) <= 5).length;
 
-            const ctx = document.getElementById('inventory-chart').getContext('2d');
-            
-            if (chartInstance) {
-                chartInstance.destroy();
-            }
+    document.getElementById('stat-total-items').textContent = totalItems;
+    document.getElementById('stat-total-qty').textContent = totalQuantity;
+    document.getElementById('stat-low-stock').textContent = lowStockCount;
 
-            if (chartData.length > 0) {
-                 chartInstance = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: chartLabels,
-                        datasets: [{
-                            label: 'Giacenza (Quantità)',
-                            data: chartData,
-                            backgroundColor: chartColors,
-                            borderColor: chartColors.map(c => c === '#10b981' ? '#065f46' : '#9a3412'), 
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        indexAxis: 'y', // Grafico a barre orizzontali
-                        plugins: {
-                            legend: { display: false },
-                            title: {
-                                display: true,
-                                text: 'Top e Basso Stock per Articolo',
-                                font: { size: 16 }
-                            }
-                        },
-                        scales: {
-                            x: {
-                                beginAtZero: true
-                            }
-                        }
+    // Ordina per quantità per il grafico (Top 5 e Low 5)
+    const sortedByQuantity = [...inventoryData]
+        .filter(item => (item.quantity || 0) > 0)
+        .sort((a, b) => (b.quantity || 0) - (a.quantity || 0));
+
+    const top5 = sortedByQuantity.slice(0, 5);
+    const low5 = sortedByQuantity.slice(-5).reverse();
+
+    const chartLabels = [...top5.map(i => i.article), ...low5.map(i => i.article)];
+    const chartData = [...top5.map(i => i.quantity), ...low5.map(i => i.quantity)];
+    const chartColors = [
+        '#10b981', '#10b981', '#10b981', '#10b981', '#10b981', // Top 5 verde
+        '#f59e0b', '#f59e0b', '#f59e0b', '#f59e0b', '#f59e0b'  // Low 5 giallo
+    ].slice(0, chartLabels.length);
+
+    // Crea il grafico solo se ci sono dati
+    if (chartData.length > 0) {
+        chartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    label: 'Giacenza (Quantità)',
+                    data: chartData,
+                    backgroundColor: chartColors,
+                    borderColor: chartColors.map(c => c === '#10b981' ? '#065f46' : '#9a3412'),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    title: {
+                        display: true,
+                        text: 'Top e Basso Stock per Articolo',
+                        font: { size: 16 }
                     }
-                });
-            } else {
-                // Sostituisce il canvas se non ci sono dati
-                document.getElementById('chart-container').innerHTML = '<p class="text-gray-500 text-center py-8">Nessun dato di giacenza da mostrare.</p>';
+                },
+                scales: {
+                    x: { beginAtZero: true }
+                }
             }
-        }
+        });
+    } else {
+        // Nessun dato disponibile
+        chartContainer.innerHTML = '<p class="text-gray-500 text-center py-8">Nessun dato di giacenza da mostrare.</p>';
+    }
+}
 
         
         function renderInventoryList(inventoryData) {
