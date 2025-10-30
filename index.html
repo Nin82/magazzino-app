@@ -1,235 +1,282 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestione Magazzino Backendless</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Magazzino Backendless</title>
 
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#4f46e5">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
 
-<script src="https://cdn.tailwindcss.com"></script>
-<script type="module">
-    // CORREZIONE: Usiamo la versione ESM per l'import modulare corretto con Lucide
-    import { createIcons } from 'https://cdn.jsdelivr.net/npm/lucide@latest/dist/esm/lucide.js'; 
-    window.addEventListener('load', () => createIcons());
-</script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script type="module">
+        // Importa e inizializza le icone Lucide
+        import { createIcons } from 'https://cdn.jsdelivr.net/npm/lucide@latest/dist/esm/lucide.js'; 
+        window.addEventListener('load', () => createIcons());
+    </script>
 
-<script src="https://unpkg.com/backendless/dist/backendless.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.9/html5-qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script src="https://unpkg.com/backendless/dist/backendless.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.9/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 
-<style>
-    .tab-button {
-        padding: 1rem 1.5rem;
-        font-weight: 600;
-        color: #4b5563; /* gray-600 */
-        border-bottom: 2px solid transparent;
-        transition: all 0.2s;
-    }
-    .tab-button:hover {
-        color: #1f2937; /* gray-800 */
-    }
-    .tab-button.active {
-        color: #4f46e5; /* indigo-600 */
-        border-bottom-color: #4f46e5;
-    }
-    .tab-content {
-        padding-top: 1.5rem;
-    }
-    .hidden {
-        display: none !important;
-    }
-</style>
-
+    <style>
+        body {
+            background-color: #f3f4f6; /* gray-100 */
+        }
+        .card {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .input-focus:focus {
+            border-color: #4f46e5; /* indigo-600 */
+            box-shadow: 0 0 0 1px #4f46e5;
+            outline: none;
+        }
+        /* Classe attiva per i Tab di autenticazione e dashboard */
+        .tab-active {
+            color: #4f46e5 !important; /* indigo-600 */
+            border-bottom: 2px solid #4f46e5 !important;
+        }
+        /* Overlay del modale */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        /* Contenuto del modale */
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.75rem; /* rounded-xl */
+            max-width: 400px;
+            width: 90%;
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </head>
-<body class="bg-gray-50">
+<body class="min-h-screen flex flex-col">
 
-    <header class="bg-white shadow-sm sticky top-0 z-10">
-        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-            <h1 class="text-2xl font-bold text-gray-900">
-                <i data-lucide="layout-dashboard" class="h-6 w-6 inline-block mr-2 text-indigo-600"></i>
-                Dashboard Magazzino
-            </h1>
-            <button onclick="showLoginScreen()" class="p-2 text-sm text-white bg-red-500 rounded-lg hover:bg-red-600 transition">
+<header class="bg-white shadow-md p-4 flex justify-between items-center z-10">
+        <h1 class="text-2xl font-bold text-indigo-600">Gestione Magazzino</h1>
+        <div id="auth-status" class="flex items-center space-x-4 hidden">
+            <span id="user-display" class="text-sm font-medium text-gray-700"></span>
+            <button id="logout-btn" onclick="logout()" class="px-3 py-1 bg-red-500 text-white text-sm font-semibold rounded-lg hover:bg-red-600">
                 <i data-lucide="log-out" class="h-4 w-4 inline-block mr-1"></i>
                 Logout
             </button>
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-
-        <div id="auth-screen" class="min-h-screen flex items-center justify-center bg-gray-50 p-4 hidden">
-            </div>
-
-        <div id="app-screen" class="hidden">
-
-            <div class="flex border-b border-gray-200">
-                <button id="btn-statistiche" onclick="showTab('statistiche')" class="tab-button active">Statistiche</button>
-                <button id="btn-carico" onclick="showTab('carico')" class="tab-button">Carico</button>
-                <button id="btn-scarico" onclick="showTab('scarico')" class="tab-button">Scarico</button>
-            </div>
-
-            <div id="tab-statistiche" class="tab-content">
-
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <main id="view-container" class="flex-grow p-4 md:p-8">
+        
+        <div id="login-view" class="view-content hidden">
+            <div class="max-w-md mx-auto my-12 p-8 bg-white rounded-xl card space-y-4">
+                <h2 class="text-3xl font-extrabold text-gray-900 text-center">Autenticazione Backendless</h2>
+                
+                <div class="flex border-b border-gray-200 mb-6">
+                    <button id="auth-tab-login" onclick="switchAuthTab('login')" class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150 tab-active">
+                        Accedi
+                    </button>
+                    <button id="auth-tab-register" onclick="switchAuthTab('register')" class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150">
+                        Registrati
+                    </button>
+                </div>
+                
+                <div id="auth-content-login" class="space-y-4">
+                    <input type="email" id="login-email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                    <input type="password" id="login-password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded-lg input-focus" onkeydown="if(event.key==='Enter') login()">
                     
-                    <div class="bg-white p-6 rounded-xl shadow-lg flex items-center">
-                        <div class="flex-shrink-0 p-3 bg-indigo-100 rounded-full">
-                            <i data-lucide="package" class="h-6 w-6 text-indigo-600"></i>
-                        </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-500">Totale Articoli a Stock</p>
-                            <p id="total-articles" class="text-2xl font-bold text-gray-900">0</p>
-                        </div>
-                    </div>
-
-                    <div class="bg-white p-6 rounded-xl shadow-lg flex items-center">
-                        <div class="flex-shrink-0 p-3 bg-green-100 rounded-full">
-                            <i data-lucide="box" class="h-6 w-6 text-green-600"></i>
-                        </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-500">Unità Totali in Stock</p>
-                            <p id="total-units-stock" class="text-2xl font-bold text-gray-900">0</p>
-                        </div>
-                    </div>
-
-                    <div class="bg-white p-6 rounded-xl shadow-lg flex items-center">
-                        <div class="flex-shrink-0 p-3 bg-yellow-100 rounded-full">
-                            <i data-lucide="package-plus" class="h-6 w-6 text-yellow-600"></i>
-                        </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-500">Ultimo Carico</p>
-                            <p id="last-load" class="text-lg font-bold text-gray-900">N/A</p>
-                        </div>
-                    </div>
-
-                    <div class="bg-white p-6 rounded-xl shadow-lg flex items-center">
-                        <div class="flex-shrink-0 p-3 bg-red-100 rounded-full">
-                            <i data-lucide="package-minus" class="h-6 w-6 text-red-600"></i>
-                        </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-500">Ultimo Scarico</p>
-                            <p id="last-unload" class="text-lg font-bold text-gray-900">N/A</p>
-                        </div>
-                    </div>
-
-                </div>
-
-                <div class="p-6 bg-white rounded-xl shadow-lg mb-8">
-                    <h3 class="text-xl font-semibold mb-4 flex items-center text-gray-700">
-                        <i data-lucide="trending-up" class="h-6 w-6 mr-3 text-indigo-500"></i>
-                        Storico Movimentazioni
-                    </h3>
-                    <div class="relative h-96">
-                        <canvas id="inventoryChart"></canvas>
-                    </div>
-                </div>
-
-                <div class="p-6 bg-white rounded-xl shadow-lg">
-                    <h3 class="text-xl font-semibold mb-4 flex items-center text-gray-700">
-                        <i data-lucide="clipboard-list" class="h-6 w-6 mr-3 text-indigo-500"></i>
-                        Stock Corrente in Magazzino
-                    </h3>
-                    <div id="magazzino-list" class="space-y-3">
-                        </div>
-                    <button onclick="loadDashboardData()" class="mt-4 w-full p-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
-                        <i data-lucide="refresh-cw" class="h-4 w-4 inline-block mr-1"></i>
-                        Aggiorna Lista
+                    <button onclick="login()" class="w-full btn-primary bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center">
+                        <i data-lucide="log-in" class="h-5 w-5 mr-2"></i>
+                        Accedi
+                    </button>
+                    
+                    <button onclick="handlePasswordResetRequest()" class="w-full text-indigo-600 text-sm py-2 hover:underline">
+                        Password dimenticata?
                     </button>
                 </div>
 
-            </div>
-
-            <div id="tab-carico" class="tab-content hidden">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div id="auth-content-register" class="space-y-4 hidden">
+                    <p class="text-sm text-gray-600 text-center">Crea un nuovo account per accedere al magazzino.</p>
+                    <input type="email" id="register-email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                    <input type="password" id="register-password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                    <input type="password" id="register-password-confirm" placeholder="Conferma Password" class="w-full p-3 border border-gray-300 rounded-lg input-focus" onkeydown="if(event.key==='Enter') registerUser()">
                     
-                    <div class="p-6 bg-white rounded-xl shadow-lg">
-                        <h3 class="text-xl font-semibold mb-4 flex items-center text-gray-700">
-                            <i data-lucide="keyboard" class="h-6 w-6 mr-3 text-indigo-500"></i>
-                            Carico Manuale
+                    <button onclick="registerUser()" class="w-full btn-primary bg-green-600 text-white p-3 rounded-lg font-bold hover:bg-green-700 flex items-center justify-center">
+                        <i data-lucide="user-plus" class="h-5 w-5 mr-2"></i>
+                        Registrati
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="edit-modal" class="modal-overlay hidden">
+            <div class="modal-content space-y-4">
+                <h3 class="text-xl font-bold text-gray-900 flex items-center"><i data-lucide="edit" class="h-5 w-5 mr-2 text-indigo-600"></i> Modifica Articolo</h3>
+                <input type="hidden" id="edit-objectId">
+                
+                <label class="block text-sm font-medium text-gray-700">Nome Articolo</label>
+                <input type="text" id="edit-article" placeholder="Nome Articolo" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                
+                <label class="block text-sm font-medium text-gray-700">Barcode</label>
+                <input type="text" id="edit-barcode" placeholder="Barcode" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                
+                <label class="block text-sm font-medium text-gray-700">Quantità in Stock</label>
+                <input type="number" id="edit-quantity" placeholder="Quantità" min="0" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                
+                <button onclick="saveEdit()" class="w-full btn-primary bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center">
+                    <i data-lucide="save" class="h-5 w-5 mr-2"></i>
+                    Salva Modifiche
+                </button>
+                
+                <button onclick="deleteItem()" class="w-full btn-primary bg-red-500 text-white p-3 rounded-lg font-bold hover:bg-red-600 flex items-center justify-center">
+                    <i data-lucide="trash-2" class="h-5 w-5 mr-2"></i>
+                    Elimina Articolo
+                </button>
+                
+                <button onclick="closeModal('edit-modal')" class="w-full text-sm py-2 text-gray-600 hover:text-gray-800">Annulla</button>
+            </div>
+        </div>
+        
+        
+        <div id="dashboard-view" class="view-content hidden space-y-8">
+            <div class="max-w-6xl mx-auto">
+                
+                <div class="flex border-b border-gray-200 mb-6">
+                    <button id="tab-dashboard-main" onclick="showDashboardTab('main')" 
+                        class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150 tab-active">
+                        Magazzino
+                    </button>
+                    <button id="tab-dashboard-stats" onclick="showDashboardTab('stats')" 
+                        class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150">
+                        Statistiche
+                    </button>
+                </div>	
+
+                <div id="dashboard-main-content">
+                    
+                    <div class="p-6 bg-white rounded-xl card mb-8">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                            <i data-lucide="qrcode" class="h-5 w-5 mr-2 text-indigo-600"></i>
+                            Scanner QR/Barcode
                         </h3>
-                        <form id="carico-form" class="space-y-4">
-                            <div>
-                                <label for="carico-codice" class="block text-sm font-medium text-gray-700">Codice Articolo</label>
-                                <input type="text" id="carico-codice" name="codice" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            </div>
-                            <div>
-                                <label for="carico-nome" class="block text-sm font-medium text-gray-700">Nome Articolo</label>
-                                <input type="text" id="carico-nome" name="nome" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            </div>
-                            <div>
-                                <label for="carico-quantita" class="block text-sm font-medium text-gray-700">Quantità</label>
-                                <input type="number" id="carico-quantita" name="quantita" min="1" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            </div>
-                            <button type="submit" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                                <i data-lucide="package-plus" class="h-4 w-4 inline-block mr-1"></i>
-                                Registra Carico
-                            </button>
-                        </form>
+                        <div id="qr-reader" class="mb-4"></div>
+                        <input type="text" id="qr-result" placeholder="Risultato Scansione" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-gray-100" readonly>
                     </div>
 
-                    <div class="p-6 bg-white rounded-xl shadow-lg">
-                        <h3 class="text-xl font-semibold mb-4 flex items-center text-gray-700">
-                            <i data-lucide="scan-line" class="h-6 w-6 mr-3 text-indigo-500"></i>
-                            Scanner QR/Bar Code
+                    <div class="flex border-b border-gray-200 mb-6">
+                        <button id="tab-carico" onclick="switchMode('carico')" class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150 tab-active">
+                            <i data-lucide="package-plus" class="h-5 w-5 inline-block mr-1"></i>
+                            Carico (Entrata)
+                        </button>
+                        <button id="tab-scarico" onclick="switchMode('scarico')" class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150">
+                            <i data-lucide="package-minus" class="h-5 w-5 inline-block mr-1"></i>
+                            Scarico (Uscita)
+                        </button>
+                    </div>
+
+                    <div id="form-carico" class="bg-white p-6 rounded-xl card space-y-4">
+                        <h3 class="text-lg font-semibold">Modulo di Carico</h3>
+                        
+                        <input type="text" id="carico-barcode" placeholder="Barcode (Scannerizza o Inserisci)" 
+                                class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                                
+                        <p id="giacenza-display" class="text-sm font-medium text-indigo-600">Giacenza Attuale: -</p>
+                        
+                        <input type="text" id="carico-article" placeholder="Nome Articolo (Auto-compilato o Nuovo)" 
+                                class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                                
+                        <input type="number" id="carico-qty" placeholder="Quantità da Caricare" value="1" min="1" 
+                                class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                                
+                        <button onclick="doCarico()" class="w-full btn-primary bg-green-600 text-white p-3 rounded-lg font-bold hover:bg-green-700 flex items-center justify-center">
+                            <i data-lucide="save" class="h-5 w-5 mr-2"></i>
+                            Conferma Carico
+                        </button>
+                    </div>
+
+                    <div id="form-scarico" class="bg-white p-6 rounded-xl card space-y-4 hidden">
+                        <h3 class="text-lg font-semibold">Modulo di Scarico</h3>
+                        
+                        <input type="text" id="scarico-barcode" placeholder="Scannerizza Barcode o Inserisci per filtrare" 
+                                class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                                
+                        <select id="scarico-select" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                            <option value="">-- Seleziona Articolo o Scansiona --</option>
+                        </select>
+
+                        <p id="scarico-giacenza-display" class="text-sm font-medium text-red-600">Giacenza Attuale: -</p>
+                        
+                        <input type="number" id="scarico-qty" placeholder="Quantità da Scaricare" value="1" min="1" 
+                                class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                                
+                        <button onclick="doScarico()" class="w-full btn-primary bg-red-600 text-white p-3 rounded-lg font-bold hover:bg-red-700 flex items-center justify-center">
+                            <i data-lucide="package-minus" class="h-5 w-5 mr-2"></i>
+                            Conferma Scarico
+                        </button>
+                    </div>
+                    
+                    <div class="mt-8 bg-white p-6 rounded-xl card">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                            <i data-lucide="list-checks" class="h-5 w-5 mr-2 text-indigo-600"></i>
+                            Stock Corrente in Magazzino
                         </h3>
-                        <div id="qr-reader-carico" style="width:100%;"></div>
-                        <div id="qr-reader-results-carico" class="mt-4 p-3 bg-gray-100 rounded-md text-sm text-gray-700 hidden">
-                            <p class="font-semibold">Codice Rilevato:</p>
-                            <p id="scanned-code-carico" class="break-all"></p>
-                            <button onclick="fillCaricoFormFromScan()" class="mt-2 w-full py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600">
-                                Applica a Carico
-                            </button>
-                        </div>
+                        <div id="magazzino-list" class="space-y-3">
+                            </div>
+                        <button onclick="loadDashboardData()" class="mt-4 w-full p-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                            <i data-lucide="refresh-cw" class="h-4 w-4 inline-block mr-1"></i>
+                            Aggiorna Lista
+                        </button>
                     </div>
 
                 </div>
-            </div>
-
-            <div id="tab-scarico" class="tab-content hidden">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    
-                    <div class="p-6 bg-white rounded-xl shadow-lg">
-                        <h3 class="text-xl font-semibold mb-4 flex items-center text-gray-700">
-                            <i data-lucide="keyboard" class="h-6 w-6 mr-3 text-red-500"></i>
-                            Scarico Manuale
+                <div id="dashboard-stats-tab" class="hidden">
+                    <div class="bg-white p-6 rounded-xl card mb-8">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                            <i data-lucide="pie-chart" class="h-5 w-5 mr-2 text-indigo-600"></i>
+                            Statistiche di Magazzino
                         </h3>
-                        <form id="scarico-form" class="space-y-4">
-                            <div>
-                                <label for="scarico-codice" class="block text-sm font-medium text-gray-700">Codice Articolo</label>
-                                <input type="text" id="scarico-codice" name="codice" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-red-500 focus:border-red-500">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div class="bg-indigo-50 p-4 rounded-lg flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-indigo-700 font-medium">Articoli Unici</p>
+                                    <p id="stat-total-items" class="text-3xl font-bold text-indigo-800">0</p>
+                                </div>
+                                <i data-lucide="boxes" class="h-8 w-8 text-indigo-400"></i>
                             </div>
-                            <div>
-                                <label for="scarico-quantita" class="block text-sm font-medium text-gray-700">Quantità da Scaricare</label>
-                                <input type="number" id="scarico-quantita" name="quantita" min="1" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-red-500 focus:border-red-500">
+                            <div class="bg-green-50 p-4 rounded-lg flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-green-700 font-medium">Unità Totali in Stock</p>
+                                    <p id="stat-total-qty" class="text-3xl font-bold text-green-800">0</p>
+                                </div>
+                                <i data-lucide="package" class="h-8 w-8 text-green-400"></i>
                             </div>
-                            <button type="submit" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                                <i data-lucide="package-minus" class="h-4 w-4 inline-block mr-1"></i>
-                                Registra Scarico
-                            </button>
-                        </form>
-                    </div>
+                            <div class="bg-yellow-50 p-4 rounded-lg flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-yellow-700 font-medium">Articoli Sotto Soglia (<=5)</p>
+                                    <p id="stat-low-stock" class="text-3xl font-bold text-yellow-800">0</p>
+                                </div>
+                                <i data-lucide="alert-triangle" class="h-8 w-8 text-yellow-400"></i>
+                            </div>
+                        </div>
 
-                    <div class="p-6 bg-white rounded-xl shadow-lg">
-                        <h3 class="text-xl font-semibold mb-4 flex items-center text-gray-700">
-                            <i data-lucide="scan-line" class="h-6 w-6 mr-3 text-red-500"></i>
-                            Scanner QR/Bar Code
-                        </h3>
-                        <div id="qr-reader-scarico" style="width:100%;"></div>
-                        <div id="qr-reader-results-scarico" class="mt-4 p-3 bg-gray-100 rounded-md text-sm text-gray-700 hidden">
-                            <p class="font-semibold">Codice Rilevato:</p>
-                            <p id="scanned-code-scarico" class="break-all"></p>
-                            <button onclick="fillScaricoFormFromScan()" class="mt-2 w-full py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">
-                                Applica a Scarico
-                            </button>
+                        <div id="chart-container" class="h-96">
+                            <canvas id="inventory-chart"></canvas>
                         </div>
                     </div>
-
                 </div>
-            </div>
 
+            </div>
         </div>
 
     </main>
@@ -240,28 +287,24 @@
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            Caricamento in corso...
+            <span>Caricamento...</span>
         </div>
     </div>
+    
+    <div id="notification-box"></div>
 
-</style>
-
-<div id="app" class="min-h-screen flex flex-col">
-
-    <!-- ================= CONFIGURAZIONE E INIZIALIZZAZIONE (Backendless) ================= -->
- <script>
+<script>
 
 // ================= CONFIGURAZIONE =================
-const APP_ID = 'TUA_APP_ID'; // SOSTITUISCI CON IL TUO APP ID
-const API_KEY = 'TUA_API_KEY'; // SOSTITUISCI CON LA TUA API KEY
+// >>>>>>> SOSTITUISCI CON LE TUE CHIAVI BACKENDLESS <<<<<<<
+const APP_ID = 'TUA_APP_ID'; 
+const API_KEY = 'TUA_API_KEY'; 
 
-// Backendless Tables (NOTA: ho cambiato il nome interno per uniformità)
+// Nomi delle tabelle su Backendless
 const INVENTORY_TABLE = 'Inventario';
 const MOVEMENT_TABLE = 'Movimenti';
 
 // Inizializzazione Backendless
-// DEVI ASSICURARTI CHE LO SCRIPT DI BACKENDLESS SIA CARICATO PRIMA DI QUESTO BLOCCO!
-// Esempio: <script src="https://unpkg.com/backendless/dist/backendless.min.js"></script>
 if (typeof Backendless !== 'undefined') {
     Backendless.initApp(APP_ID, API_KEY);
 } else {
@@ -271,29 +314,25 @@ if (typeof Backendless !== 'undefined') {
 // Stato Globale
 let currentUser = null;
 let inventoryChart = null;
-let qrScanner = null; // Unico scanner per dashboard
+let qrScanner = null; // Scanner
 let allArticles = []; // Cache articoli per filtro scarico/ricerca
-let currentEditItem = null; // Articolo attualmente in modifica nel modale
+let currentEditItem = null; // Articolo in modifica
 
 // ================= FUNZIONI UTILITY & UI =================
 
 function showLoader() { document.getElementById('loading-overlay').classList.remove('hidden'); }
 function hideLoader() { document.getElementById('loading-overlay').classList.add('hidden'); }
 
-// Semplice funzione di notifica
 function showToast(message, isError = false) { 
     console.log((isError ? "ERRORE: " : "SUCCESS: ") + message); 
-    alert(message); // Uso alert come fallback rapido
+    alert(message); 
 }
 
-/**
- * Pulisce i campi input specificati tramite ID.
- */
 function clearInputs(idList) {
     idList.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
-            if (el.type === 'number') el.value = 1; // Default quantity
+            if (el.type === 'number') el.value = 1; 
             else el.value = '';
         }
     });
@@ -305,53 +344,38 @@ function closeModal(modalId) { document.getElementById(modalId).classList.add('h
 
 // ================= GESTIONE VISTE (VIEWS) =================
 
-/**
- * Funzione principale per switchare tra Login e Dashboard
- */
 function updateUIScreen() {
-    // Simula il controllo della sessione utente (da Backendless)
     const isUserLoggedIn = !!currentUser;
     
-    // Toggle delle Viste Principali
     document.getElementById('login-view').classList.toggle('hidden', isUserLoggedIn);
     document.getElementById('dashboard-view').classList.toggle('hidden', !isUserLoggedIn);
     document.getElementById('auth-status').classList.toggle('hidden', !isUserLoggedIn);
 
     if (isUserLoggedIn) {
-        // Visualizza l'email/ID utente
         document.getElementById('user-display').textContent = `Benvenuto, ${currentUser.email || currentUser.objectId}`;
         loadDashboardData();
-        // Avvia lo scanner QR quando l'utente entra nella dashboard
         if (!qrScanner) startQrScanner('qr-reader', onScanSuccessDashboard);
+        switchMode('carico'); 
+        showDashboardTab('main'); 
     } else {
-        // Ferma lo scanner al logout
         stopQrScanner();
     }
 }
 
-/**
- * Switcha tra tab Login e Registrazione
- */
 function switchAuthTab(type) {
-    // Rimuove la classe 'tab-active' definita nel tuo CSS custom per le tab
     document.getElementById('auth-tab-login').classList.remove('tab-active');
     document.getElementById('auth-tab-register').classList.remove('tab-active');
     
-    // Nasconde i contenuti
     document.getElementById('auth-content-login').classList.add('hidden');
     document.getElementById('auth-content-register').classList.add('hidden');
     
-    // Mostra il contenuto e attiva la tab selezionata
     document.getElementById(`auth-content-${type}`).classList.remove('hidden');
     document.getElementById(`auth-tab-${type}`).classList.add('tab-active');
 }
 
-/**
- * Switcha tra tab Magazzino (Main) e Statistiche della Dashboard
- */
 function showDashboardTab(tab) {
-    // Il tuo HTML ha solo un div per la dashboard, quindi userò un approccio con ID interni
-    const mainTabContent = document.querySelector('#dashboard-view > div > div.max-w-6xl.mx-auto');
+    // ID della nuova div per il contenuto principale
+    const mainTabContent = document.getElementById('dashboard-main-content'); 
     const statsTabContent = document.getElementById('dashboard-stats-tab');
 
     if (mainTabContent) mainTabContent.classList.add('hidden');
@@ -371,9 +395,6 @@ function showDashboardTab(tab) {
 }
 
 
-/**
- * Switcha tra modalità Carico e Scarico
- */
 function switchMode(mode) {
     document.getElementById('form-carico').classList.add('hidden');
     document.getElementById('form-scarico').classList.add('hidden');
@@ -383,14 +404,14 @@ function switchMode(mode) {
     document.getElementById(`form-${mode}`).classList.remove('hidden');
     document.getElementById(`tab-${mode}`).classList.add('tab-active');
 
-    // Assicura che i campi siano puliti al cambio modo
     if (mode === 'carico') {
-        clearInputs(['carico-barcode', 'carico-article', 'carico-qty']);
+        clearInputs(['carico-barcode', 'carico-article']);
+        document.getElementById('carico-qty').value = 1;
         document.getElementById('giacenza-display').textContent = 'Giacenza Attuale: -';
     } else {
-        clearInputs(['scarico-barcode', 'scarico-qty']);
+        clearInputs(['scarico-barcode']);
+        document.getElementById('scarico-qty').value = 1;
         document.getElementById('scarico-giacenza-display').textContent = 'Giacenza Attuale: -';
-        // Ricarica la select degli articoli disponibili per lo scarico
         refreshScaricoSelect(allArticles); 
     }
 }
@@ -403,10 +424,10 @@ async function login() {
     const password = document.getElementById('login-password').value;
 
     try {
-        // LOGICA REALE DI BACKENDLESS (DEVI SCOMMENTARE)
+        // PER USARE BACKENDLESS REALE, SCOMMENTA QUESTA RIGA:
         // currentUser = await Backendless.UserService.login(email, password, true);
         
-        // SIMULAZIONE DI SUCCESSO
+        // SIMULAZIONE DI SUCCESSO (rimuovi dopo aver scommentato la riga sopra)
         if (email === "test@magazzino.it" && password === "password") {
             currentUser = { email, objectId: 'user123' };
             showToast("Accesso effettuato con successo!");
@@ -428,7 +449,7 @@ async function logout() {
     if (!currentUser) return;
 
     try {
-        // LOGICA REALE DI BACKENDLESS (DEVI SCOMMENTARE)
+        // PER USARE BACKENDLESS REALE, SCOMMENTA QUESTA RIGA:
         // await Backendless.UserService.logout();
 
         currentUser = null;
@@ -438,7 +459,7 @@ async function logout() {
         console.error("Errore di logout:", error);
         showToast("Errore durante il logout: " + (error.message || error), true);
     } finally {
-        updateUIScreen(); // Torna alla schermata di login
+        updateUIScreen(); 
     }
 }
 
@@ -458,13 +479,12 @@ async function registerUser() {
         user.email = email;
         user.password = password;
 
-        // LOGICA REALE DI BACKENDLESS (DEVI SCOMMENTARE)
+        // PER USARE BACKENDLESS REALE, SCOMMENTA QUESTA RIGA:
         // await Backendless.UserService.register(user);
 
         // SIMULAZIONE
         showToast("Registrazione completata! Ora puoi accedere.");
         
-        // Dopo la registrazione, torna al login
         switchAuthTab('login');
         clearInputs(['register-email', 'register-password', 'register-password-confirm']);
     } catch (error) {
@@ -483,7 +503,7 @@ async function handlePasswordResetRequest() {
     
     showLoader();
     try {
-        // LOGICA REALE DI BACKENDLESS (DEVI SCOMMENTARE)
+        // PER USARE BACKENDLESS REALE, SCOMMENTA QUESTA RIGA:
         // await Backendless.UserService.restorePassword(email);
 
         showToast(`Istruzioni per il reset password inviate a ${email}. Controlla la tua casella di posta.`);
@@ -497,9 +517,6 @@ async function handlePasswordResetRequest() {
 
 // ================= MOVIMENTAZIONE =================
 
-/**
- * Gestisce l'operazione di Carico.
- */
 async function doCarico() {
     showLoader();
     
@@ -516,7 +533,6 @@ async function doCarico() {
         const inventoryStore = Backendless.Data.of(INVENTORY_TABLE);
         const movementStore = Backendless.Data.of(MOVEMENT_TABLE);
 
-        // 1. Cerca articolo esistente (usa Barcode, non Codice)
         const whereClause = `barcode = '${barcode}'`;
         const existingArticle = (await inventoryStore.find(Backendless.DataQueryBuilder.create().setWhereClause(whereClause)))[0];
 
@@ -524,22 +540,18 @@ async function doCarico() {
             existingArticle.quantita = Number(existingArticle.quantita) + quantita;
             await inventoryStore.save(existingArticle);
         } else {
-            // Crea nuovo articolo
             await inventoryStore.save({ barcode, nome, quantita: quantita });
         }
 
-        // 2. Registra il movimento
         await movementStore.save({ 
             barcode, 
             quantita, 
             tipo: 'carico', 
             data: new Date().getTime(),
-            // Aggiungo l'utente loggato per la tracciabilità (se currentUser è definito)
             user: currentUser ? currentUser.objectId : 'guest' 
         });
 
         showToast(`Carico di ${quantita} unità per ${nome} (${barcode}) registrato con successo!`);
-        // Pulisce solo i campi rilevanti, mantiene la quantità a 1
         clearInputs(['carico-barcode', 'carico-article']);
         document.getElementById('carico-qty').value = 1;
         document.getElementById('giacenza-display').textContent = 'Giacenza Attuale: -';
@@ -553,9 +565,6 @@ async function doCarico() {
     }
 }
 
-/**
- * Gestisce l'operazione di Scarico.
- */
 async function doScarico() {
     showLoader();
     
@@ -564,7 +573,7 @@ async function doScarico() {
 
     if (!barcode || quantita <= 0) {
         hideLoader();
-        return showToast("Per favore, seleziona un articolo e inserisci una Quantità da scaricare (> 0).", true);
+        return showToast("Per favore, seleziona un articolo valido e inserisci una Quantità da scaricare (> 0).", true);
     }
 
     try {
@@ -582,11 +591,9 @@ async function doScarico() {
             throw new Error(`Quantità insufficiente. Disponibili: ${existingArticle.quantita}`);
         }
 
-        // Aggiorna la quantità
         existingArticle.quantita = Number(existingArticle.quantita) - quantita;
         await inventoryStore.save(existingArticle);
 
-        // Registra il movimento
         await movementStore.save({ 
             barcode, 
             quantita, 
@@ -596,7 +603,6 @@ async function doScarico() {
         });
 
         showToast(`Scarico di ${quantita} unità per l'articolo ${existingArticle.nome} registrato con successo!`);
-        // Pulisce solo i campi rilevanti, mantiene la quantità a 1
         clearInputs(['scarico-barcode']);
         document.getElementById('scarico-qty').value = 1;
         document.getElementById('scarico-giacenza-display').textContent = 'Giacenza Attuale: -';
@@ -612,15 +618,12 @@ async function doScarico() {
 
 // ================= DATI & DASHBOARD =================
 
-/**
- * Carica i dati per la Dashboard (Statistiche e lista Magazzino).
- */
 async function loadDashboardData() {
     showLoader();
     try {
         const dataStore = Backendless.Data.of(INVENTORY_TABLE);
         const articles = await dataStore.find();
-        allArticles = articles; // Aggiorna la cache globale
+        allArticles = articles; 
 
         let totalUnits = 0;
         let lowStockCount = 0;
@@ -631,18 +634,12 @@ async function loadDashboardData() {
             if (qty <= 5) lowStockCount++; 
         });
 
-        // Aggiorna le Card Statistiche
         document.getElementById('stat-total-items').textContent = articles.length.toLocaleString('it-IT');
         document.getElementById('stat-total-qty').textContent = totalUnits.toLocaleString('it-IT');
         document.getElementById('stat-low-stock').textContent = lowStockCount.toLocaleString('it-IT');
 
-        // Aggiorna la Lista Magazzino
         renderInventoryList(articles);
-
-        // Aggiorna la select Scarico
         refreshScaricoSelect(articles);
-
-        // Aggiorna il Grafico Storico
         updateInventoryChart();
 
     } catch (error) {
@@ -653,9 +650,6 @@ async function loadDashboardData() {
     }
 }
 
-/**
- * Popola la lista dell'inventario.
- */
 function renderInventoryList(articles) {
     const magazzinoListDiv = document.getElementById('magazzino-list');
     magazzinoListDiv.innerHTML = ''; 
@@ -682,17 +676,12 @@ function renderInventoryList(articles) {
                 <i data-lucide="edit-3" class="h-4 w-4 inline-block ml-2 text-gray-400"></i>
             </span>
         `;
-        // Collega l'evento di modifica (uso la funzione openEditModal)
         itemDiv.onclick = () => openEditModal(item);
         magazzinoListDiv.appendChild(itemDiv);
     });
-    // Riavvia Lucide per le nuove icone
     if (window.createIcons) window.createIcons();
 }
 
-/**
- * Popola la <select> per lo scarico.
- */
 function refreshScaricoSelect(articles) {
     const selectEl = document.getElementById('scarico-select');
     selectEl.innerHTML = '<option value="">-- Seleziona Articolo o Scansiona --</option>';
@@ -702,19 +691,18 @@ function refreshScaricoSelect(articles) {
             if (Number(item.quantita) > 0) {
                  const option = document.createElement('option');
                  option.value = item.barcode;
-                 option.textContent = `${item.nome || 'N/D'} (${item.barcode}) - Stock: ${item.quantita}`;
+                 option.textContent = `${item.nome || 'N/D'} (Stock: ${item.quantita})`;
                  selectEl.appendChild(option);
             }
         });
     }
 
-    // Aggiunge l'event listener per aggiornare la giacenza al cambio selezione
-    selectEl.onchange = () => {
-        const barcode = selectEl.value;
+    selectEl.onchange = (event) => {
+        const barcode = event.target.value;
         const selectedItem = articles.find(a => a.barcode === barcode);
         const giacenzaDisplay = document.getElementById('scarico-giacenza-display');
         giacenzaDisplay.textContent = selectedItem ? `Giacenza Attuale: ${selectedItem.quantita}` : 'Giacenza Attuale: -';
-        document.getElementById('scarico-barcode').value = barcode; // Sincronizza il campo barcode
+        document.getElementById('scarico-barcode').value = barcode; 
     };
 }
 
@@ -724,7 +712,6 @@ function refreshScaricoSelect(articles) {
 function openEditModal(item) {
     currentEditItem = item;
     
-    // Popola il modale (gli ID sono stati adattati al tuo HTML)
     document.getElementById('edit-objectId').value = item.objectId;
     document.getElementById('edit-article').value = item.nome || '';
     document.getElementById('edit-barcode').value = item.barcode || '';
@@ -789,14 +776,9 @@ async function deleteItem() {
 
 // ================= QR CODE SCANNER =================
 
-/**
- * Callback di successo per la scansione nella Dashboard.
- */
 const onScanSuccessDashboard = (decodedText, decodedResult) => {
-    // 1. Aggiorna il campo risultato in tempo reale
     document.getElementById('qr-result').value = decodedText;
     
-    // 2. Controlla se siamo in modalità Carico o Scarico per pre-compilare
     const isScaricoMode = !document.getElementById('form-scarico').classList.contains('hidden');
 
     if (!isScaricoMode) { // Carico
@@ -805,21 +787,16 @@ const onScanSuccessDashboard = (decodedText, decodedResult) => {
         checkArticleForCarico(decodedText);
     } else { // Scarico
         document.getElementById('scarico-barcode').value = decodedText;
-        // Aggiorna la select e l'indicatore di giacenza
         const selectEl = document.getElementById('scarico-select');
         selectEl.value = decodedText;
-        selectEl.dispatchEvent(new Event('change')); // Attiva l'evento onchange per aggiornare la giacenza
+        selectEl.dispatchEvent(new Event('change')); 
     }
     
-    // 3. Su scansione, vibra
     if ("vibrate" in navigator) {
         navigator.vibrate(200); 
     }
 };
 
-/**
- * Cerca l'articolo nel Carico per pre-compilare il nome e la giacenza.
- */
 function checkArticleForCarico(barcode) {
     const existingArticle = allArticles.find(a => a.barcode === barcode);
     const giacenzaDisplay = document.getElementById('giacenza-display');
@@ -834,11 +811,8 @@ function checkArticleForCarico(barcode) {
     }
 }
 
-/**
- * Inizializza e avvia lo scanner QR/Bar Code.
- */
 function startQrScanner(readerId, onScanSuccessCallback) {
-    const onScanError = (errorMessage) => {}; // Log discreto
+    const onScanError = (errorMessage) => {}; 
 
     if (!qrScanner) {
         qrScanner = new Html5Qrcode(readerId);
@@ -857,9 +831,6 @@ function startQrScanner(readerId, onScanSuccessCallback) {
     }
 }
 
-/**
- * Ferma lo scanner QR/Bar Code.
- */
 function stopQrScanner() {
     if (qrScanner && qrScanner.isScanning) {
         qrScanner.stop().then(() => {
@@ -867,7 +838,7 @@ function stopQrScanner() {
         }).catch(err => {
             console.warn("Impossibile fermare lo scanner:", err);
         });
-        qrScanner = null; // Resetta l'oggetto per un nuovo start
+        qrScanner = null; 
     }
 }
 
@@ -918,285 +889,33 @@ function updateInventoryChart() {
 // ================= INIZIALIZZAZIONE =================
 
 function initApp() {
-    // SIMULAZIONE: Assumiamo NON loggato all'inizio per mostrare la schermata di login
     currentUser = null; 
 
-    // Avvia la UI
     updateUIScreen();
     
-    // Imposta la visualizzazione predefinita alla prima apertura
     switchAuthTab('login');
-    switchMode('carico'); 
-    showDashboardTab('main');
     
-    // Aggiunge l'event listener per la ricerca/pre-compilazione nel campo Carico
     document.getElementById('carico-barcode').addEventListener('input', (e) => {
         checkArticleForCarico(e.target.value.trim());
     });
     
-    // Aggiunge l'event listener per il filtro nel campo Scarico
     document.getElementById('scarico-barcode').addEventListener('input', (e) => {
         const filterText = e.target.value.trim().toLowerCase();
-        // Filtra sulla cache degli articoli (allArticles)
         const filtered = allArticles.filter(a => 
             a.barcode.toLowerCase().includes(filterText) || 
             (a.nome && a.nome.toLowerCase().includes(filterText))
         );
         refreshScaricoSelect(filtered);
     });
+    
+    document.getElementById('scarico-select').addEventListener('change', (e) => {
+        const barcode = e.target.value;
+        document.getElementById('scarico-barcode').value = barcode;
+    });
 }
 
-// Avvia l'applicazione quando la pagina è completamente caricata
 window.addEventListener('load', initApp);
 </script>
 
-    <!-- ================= LAYOUT PRINCIPALE ================= -->
-    <header class="bg-white shadow-md p-4 flex justify-between items-center z-10">
-        <h1 class="text-2xl font-bold text-indigo-600">Gestione Magazzino</h1>
-        <div id="auth-status" class="flex items-center space-x-4 hidden">
-            <span id="user-display" class="text-sm font-medium text-gray-700"></span>
-            <button id="logout-btn" onclick="logout()" class="px-3 py-1 bg-red-500 text-white text-sm font-semibold rounded-lg hover:bg-red-600">
-                <i data-lucide="log-out" class="h-4 w-4 inline-block mr-1"></i>
-                Logout
-            </button>
-        </div>
-    </header>
-
-    <main id="view-container" class="flex-grow p-4 md:p-8">
-        
-        <!-- Vista Login & Register -->
-        <div id="login-view" class="view-content hidden">
-            <div class="max-w-md mx-auto my-12 p-8 bg-white rounded-xl card space-y-4">
-                <h2 class="text-3xl font-extrabold text-gray-900 text-center">Autenticazione Backendless</h2>
-                
-                <!-- Tab Selector -->
-                <div class="flex border-b border-gray-200 mb-6">
-                    <button id="auth-tab-login" onclick="switchAuthTab('login')" class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150 tab-active">
-                        Accedi
-                    </button>
-                    <button id="auth-tab-register" onclick="switchAuthTab('register')" class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150">
-                        Registrati
-                    </button>
-                </div>
-                
-                <!-- Contenuto Tab Login -->
-                <div id="auth-content-login" class="space-y-4">
-                    <input type="email" id="login-email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                    <input type="password" id="login-password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded-lg input-focus" onkeydown="if(event.key==='Enter') login()">
-                    
-                    <button onclick="login()" class="w-full btn-primary bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center">
-                        <i data-lucide="log-in" class="h-5 w-5 mr-2"></i>
-                        Accedi
-                    </button>
-                    
-                    <button onclick="handlePasswordResetRequest()" class="w-full text-indigo-600 text-sm py-2 hover:underline">
-                        Password dimenticata?
-                    </button>
-                </div>
-
-                <!-- Contenuto Tab Registrazione -->
-                <div id="auth-content-register" class="space-y-4 hidden">
-                    <p class="text-sm text-gray-600 text-center">Crea un nuovo account per accedere al magazzino.</p>
-                    <input type="email" id="register-email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                    <input type="password" id="register-password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                    <input type="password" id="register-password-confirm" placeholder="Conferma Password" class="w-full p-3 border border-gray-300 rounded-lg input-focus" onkeydown="if(event.key==='Enter') registerUser()">
-                    
-                    <button onclick="registerUser()" class="w-full btn-primary bg-green-600 text-white p-3 rounded-lg font-bold hover:bg-green-700 flex items-center justify-center">
-                        <i data-lucide="user-plus" class="h-5 w-5 mr-2"></i>
-                        Registrati
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Modal di Modifica Articolo -->
-        <div id="edit-modal" class="modal-overlay hidden">
-            <div class="modal-content space-y-4">
-                <h3 class="text-xl font-bold text-gray-900 flex items-center"><i data-lucide="edit" class="h-5 w-5 mr-2 text-indigo-600"></i> Modifica Articolo</h3>
-                <input type="hidden" id="edit-objectId">
-                
-                <label class="block text-sm font-medium text-gray-700">Nome Articolo</label>
-                <input type="text" id="edit-article" placeholder="Nome Articolo" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                
-                <label class="block text-sm font-medium text-gray-700">Barcode</label>
-                <input type="text" id="edit-barcode" placeholder="Barcode" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                
-                <label class="block text-sm font-medium text-gray-700">Quantità in Stock</label>
-                <input type="number" id="edit-quantity" placeholder="Quantità" min="0" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                
-                <button onclick="saveEdit()" class="w-full btn-primary bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center">
-                    <i data-lucide="save" class="h-5 w-5 mr-2"></i>
-                    Salva Modifiche
-                </button>
-                
-                <button onclick="deleteItem()" class="w-full btn-primary bg-red-500 text-white p-3 rounded-lg font-bold hover:bg-red-600 flex items-center justify-center">
-                    <i data-lucide="trash-2" class="h-5 w-5 mr-2"></i>
-                    Elimina Articolo
-                </button>
-                
-                <button onclick="closeModal('edit-modal')" class="w-full text-sm py-2 text-gray-600 hover:text-gray-800">Annulla</button>
-            </div>
-        </div>
-        
-        
-        <!-- Vista Dashboard -->
-        <div id="dashboard-view" class="view-content hidden space-y-8">
-            <div class="max-w-6xl mx-auto">
-                
-               !-- TAB STATISTICHE -->
-<div id="dashboard-stats-tab" class="hidden">
-    <div class="bg-white p-6 rounded-xl card mb-8">
-        <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-            <i data-lucide="pie-chart" class="h-5 w-5 mr-2 text-indigo-600"></i>
-            Statistiche di Magazzino
-        </h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <!-- Stat 1: Totale Articoli -->
-            <div class="bg-indigo-50 p-4 rounded-lg flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-indigo-700 font-medium">Articoli Unici</p>
-                    <p id="stat-total-items" class="text-3xl font-bold text-indigo-800">0</p>
-                </div>
-                <i data-lucide="boxes" class="h-8 w-8 text-indigo-400"></i>
-            </div>
-            <!-- Stat 2: Totale Quantità -->
-            <div class="bg-green-50 p-4 rounded-lg flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-green-700 font-medium">Unità Totali in Stock</p>
-                    <p id="stat-total-qty" class="text-3xl font-bold text-green-800">0</p>
-                </div>
-                <i data-lucide="package" class="h-8 w-8 text-green-400"></i>
-            </div>
-            <!-- Stat 3: Articoli Basso Stock -->
-            <div class="bg-yellow-50 p-4 rounded-lg flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-yellow-700 font-medium">Articoli Sotto Soglia (<=5)</p>
-                    <p id="stat-low-stock" class="text-3xl font-bold text-yellow-800">0</p>
-                </div>
-                <i data-lucide="alert-triangle" class="h-8 w-8 text-yellow-400"></i>
-            </div>
-        </div>
-
-        <div id="chart-container" class="h-96">
-            <canvas id="inventory-chart"></canvas>
-        </div>
-    </div>
-</div>
-		
-
-		<div class="flex border-b border-gray-200 mb-6">
-    			<button id="tab-dashboard-main" onclick="showDashboardTab('main')" 
-           		 class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150 tab-active">
-       			 Magazzino
-    			</button>
-    			<button id="tab-dashboard-stats" onclick="showDashboardTab('stats')" 
-         		class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150">
-        		Statistiche
-   			 </button>
-		</div>				
-
-                <!-- Scanner QR -->
-                <div class="p-6 bg-white rounded-xl card mb-8">
-                    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-                        <i data-lucide="qrcode" class="h-5 w-5 mr-2 text-indigo-600"></i>
-                        Scanner QR/Barcode
-                    </h3>
-                    <div id="qr-reader" class="mb-4"></div>
-                    <input type="text" id="qr-result" placeholder="Risultato Scansione" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-gray-100" readonly>
-                </div>
-
-                <!-- CARICO / SCARICO TAB -->
-                <div class="flex border-b border-gray-200 mb-6">
-                    <button id="tab-carico" onclick="switchMode('carico')" class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150 tab-active">
-                        <i data-lucide="package-plus" class="h-5 w-5 inline-block mr-1"></i>
-                        Carico (Entrata)
-                    </button>
-                    <button id="tab-scarico" onclick="switchMode('scarico')" class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150">
-                        <i data-lucide="package-minus" class="h-5 w-5 inline-block mr-1"></i>
-                        Scarico (Uscita)
-                    </button>
-                </div>
-
-                <!-- Modulo Carico -->
-                <div id="form-carico" class="bg-white p-6 rounded-xl card space-y-4">
-                    <h3 class="text-lg font-semibold">Modulo di Carico</h3>
-                    
-                    <!-- Campo Barcode -->
-                    <input type="text" id="carico-barcode" placeholder="Barcode (Scannerizza o Inserisci)" 
-                           class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                           
-                    <p id="giacenza-display" class="text-sm font-medium text-indigo-600">Giacenza Attuale: -</p>
-                    
-                    <input type="text" id="carico-article" placeholder="Nome Articolo (Auto-compilato o Nuovo)" 
-                           class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                           
-                    <input type="number" id="carico-qty" placeholder="Quantità da Caricare" value="1" min="1" 
-                           class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                           
-                    <button onclick="doCarico()" class="w-full btn-primary bg-green-600 text-white p-3 rounded-lg font-bold hover:bg-green-700 flex items-center justify-center">
-                        <i data-lucide="save" class="h-5 w-5 mr-2"></i>
-                        Conferma Carico
-                    </button>
-                </div>
-
-                <!-- Modulo Scarico -->
-                <div id="form-scarico" class="bg-white p-6 rounded-xl card space-y-4 hidden">
-                    <h3 class="text-lg font-semibold">Modulo di Scarico</h3>
-                    
-                    <!-- Input per la scansione/filtro barcode -->
-                    <input type="text" id="scarico-barcode" placeholder="Scannerizza Barcode o Inserisci per filtrare" 
-                           class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                           
-                    <!-- Seleziona Articolo (popolato da refreshScaricoSelect) -->
-                    <select id="scarico-select" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                        <option value="">-- Seleziona Articolo o Scansiona --</option>
-                    </select>
-
-                    <p id="scarico-giacenza-display" class="text-sm font-medium text-red-600">Giacenza Attuale: -</p>
-                    
-                    <input type="number" id="scarico-qty" placeholder="Quantità da Scaricare" value="1" min="1" 
-                           class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                           
-                    <button onclick="doScarico()" class="w-full btn-primary bg-red-600 text-white p-3 rounded-lg font-bold hover:bg-red-700 flex items-center justify-center">
-                        <i data-lucide="package-minus" class="h-5 w-5 mr-2"></i>
-                        Conferma Scarico
-                    </button>
-                </div>
-                
-                <!-- Lista Inventario -->
-                <div class="mt-8 bg-white p-6 rounded-xl card">
-                    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-                        <i data-lucide="list-checks" class="h-5 w-5 mr-2 text-indigo-600"></i>
-                        Stock Corrente in Magazzino
-                    </h3>
-                    <div id="magazzino-list" class="space-y-3">
-                        <!-- Lista articoli caricata da loadDashboardData -->
-                    </div>
-                    <button onclick="loadDashboardData()" class="mt-4 w-full p-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
-                        <i data-lucide="refresh-cw" class="h-4 w-4 inline-block mr-1"></i>
-                        Aggiorna Lista
-                    </button>
-                </div>
-
-            </div>
-        </div>
-
-    </main>
-    
-    <!-- Loader Overlay -->
-    <div id="loading-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white p-6 rounded-lg flex items-center">
-            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span>Caricamento...</span>
-        </div>
-    </div>
-    
-    <!-- Notification Box -->
-    <div id="notification-box"></div>
-
-</div>
 </body>
 </html>
