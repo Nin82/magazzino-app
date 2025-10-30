@@ -479,11 +479,10 @@ async function registerUser() {
         user.email = email;
         user.password = password;
 
-        // PER USARE BACKENDLESS REALE, SCOMMENTA QUESTA RIGA:
-        // await Backendless.UserService.register(user);
+        // === QUESTA È LA CHIAMATA REALE: DEVE ESSERE SCOMMENTATA ===
+        await Backendless.UserService.register(user);
 
-        // SIMULAZIONE
-        showToast("Registrazione completata! Ora puoi accedere.");
+        showToast("Registrazione completata! Controlla la tua casella email (anche nello Spam) per il link di verifica.");
         
         switchAuthTab('login');
         clearInputs(['register-email', 'register-password', 'register-password-confirm']);
