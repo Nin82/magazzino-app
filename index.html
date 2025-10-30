@@ -424,22 +424,27 @@ async function login() {
     const password = document.getElementById('login-password').value;
 
     try {
-        // PER USARE BACKENDLESS REALE, SCOMMENTA QUESTA RIGA:
-        // currentUser = await Backendless.UserService.login(email, password, true);
+        // === CHIAMATA REALE DI BACKENDLESS: QUESTA DEVE ESSERE ATTIVA ===
+        currentUser = await Backendless.UserService.login(email, password, true);
         
-        // SIMULAZIONE DI SUCCESSO (rimuovi dopo aver scommentato la riga sopra)
+        // SIMULAZIONE DI SUCCESSO (QUESTO INTERO BLOCCO È ORA DISATTIVATO)
+        /*
         if (email === "test@magazzino.it" && password === "password") {
             currentUser = { email, objectId: 'user123' };
             showToast("Accesso effettuato con successo!");
         } else {
             throw new Error("Credenziali errate.");
         }
+        */
+        
+        showToast("Accesso effettuato con successo!");
         
         updateUIScreen();
         clearInputs(['login-email', 'login-password']);
     } catch (error) {
         console.error("Errore di login:", error);
-        showToast("Errore di accesso: " + (error.message || error), true);
+        // L'errore di Backendless verrà mostrato direttamente all'utente
+        showToast("Errore di accesso: Credenziali errate o utente non trovato. " + (error.message || error), true);
     } finally {
         hideLoader();
     }
