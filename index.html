@@ -170,40 +170,40 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
         }
         
         async function checkAuth() {
-            if (!initBackendless()) return;
-            
-            toggleLoading(true);
-            try {
-                // Recupera l'utente corrente dalla sessione (anche se in cache)
-                currentUser = await Backendless.UserService.getCurrentUser();
-                
-                if (currentUser && currentUser.objectId) {
-                    // Se la sessione è valida e l'utente esiste
-                    updateAuthUI(currentUser);
-                    showView('dashboard-view');
-                    initializeQrScanner();
-                    await loadDashboardData();
-                } else {
-                    // Nessuna sessione valida
-                    currentUser = null;
-                    updateAuthUI(null);
-                    showView('login-view');
-                    switchAuthTab('login');
-                    stopQrScanner();
-                }
+    if (!initBackendless()) return;
+    toggleLoading(true);
 
-            } catch (error) {
-                // Errore generico (es. 3003 - user non loggato), trattato come non autenticato
-                currentUser = null;
-                updateAuthUI(null);
+    try {
+        const storedUser = await Backendless.UserService.getCurrentUser();
+
+        if (storedUser && storedUser.objectId) {
+            // Verifica se il token è ancora valido
+            try {
+                await Backendless.Data.of("Users").findById(storedUser.objectId);
+                currentUser = storedUser;
+                updateAuthUI(currentUser);
+                showView('dashboard-view');
+                initializeQrScanner();
+                await loadDashboardData();
+            } catch (tokenError) {
+                console.warn("Token scaduto, richiedo nuovo login.");
+                await Backendless.UserService.logout();
                 showView('login-view');
                 switchAuthTab('login');
-                stopQrScanner();
-                console.warn("Errore checkAuth Backendless (probabilmente non loggato):", error);
-            } finally {
-                toggleLoading(false);
+                showNotification('Sessione scaduta, effettua nuovamente il login.', 'info');
             }
+        } else {
+            showView('login-view');
+            switchAuthTab('login');
         }
+    } catch (error) {
+        console.error("Errore checkAuth Backendless:", error);
+        showView('login-view');
+        switchAuthTab('login');
+    } finally {
+        toggleLoading(false);
+    }
+}
 
         function updateAuthUI(user) {
             const authStatus = document.getElementById('auth-status');
@@ -256,83 +256,71 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
             }
         }
         
-        async function registerUser() {
-            const email = document.getElementById('register-email').value;
-            const password = document.getElementById('register-password').value;
-            const passwordConfirm = document.getElementById('register-password-confirm').value;
+       async function registerUser() {
+    const email = document.getElementById('register-email').value;
+    const password = document.getElementById('register-password').value;
+    const passwordConfirm = document.getElementById('register-password-confirm').value;
 
-            if (!email || !password || !passwordConfirm) {
-                 showNotification('Compila tutti i campi richiesti.', 'error');
-                 return;
-            }
-            if (password !== passwordConfirm) {
-                showNotification('Le password non corrispondono.', 'error');
-                return;
-            }
-            
-            toggleLoading(true);
-            try {
-                const user = new Backendless.User();
-                user.email = email;
-                user.password = password;
-                
-                // Registra l'utente
-                await Backendless.UserService.register(user);
-                
-                showNotification(`Registrazione completata! Controlla la tua email (${email}) per la verifica (se abilitata).`, 'success', 8000);
-                
-                switchAuthTab('login');
-                document.getElementById('login-email').value = email;
-                
-            } catch (error) {
-                // Errori comuni: 3033 (Email già esistente)
-                showNotification(`Errore di Registrazione: ${error.message || 'Email già esistente o errore server.'}`, 'error');
-                console.error("Errore di Registrazione Backendless:", error);
-            } finally {
-                toggleLoading(false);
-            }
-        }
+    if (!email || !password || !passwordConfirm) {
+        showNotification('Compila tutti i campi richiesti.', 'error');
+        return;
+    }
+    if (password !== passwordConfirm) {
+        showNotification('Le password non corrispondono.', 'error');
+        return;
+    }
+    
+    toggleLoading(true);
+    try {
+        const user = new Backendless.User();
+        user.email = email;
+        user.password = password;
+        
+        // ✅ 1. Registra l'utente
+        await Backendless.UserService.register(user);
+
+        // ✅ 2. Login automatico subito dopo la registrazione
+        currentUser = await Backendless.UserService.login(email, password, true);
+        updateAuthUI(currentUser);
+        showView('dashboard-view');
+        initializeQrScanner();
+        await loadDashboardData();
+        showNotification(`Registrazione e login completati! Benvenuto, ${email}.`, 'success', 8000);
+
+    } catch (error) {
+        // Errori comuni: 3033 (Email già esistente)
+        showNotification(`Errore di Registrazione: ${error.message || 'Email già esistente o errore server.'}`, 'error');
+        console.error("Errore di Registrazione Backendless:", error);
+    } finally {
+        toggleLoading(false);
+    }
+}
 
         async function logout() {
-            toggleLoading(true);
-            try {
-                // Elimina la sessione corrente
-                await Backendless.UserService.logout();
-                
-                currentUser = null;
-                updateAuthUI(null);
-                showView('login-view');
-                stopQrScanner();
-                showNotification('Logout effettuato con successo.', 'info');
-            } catch (error) {
-                showNotification(`Errore di Logout: ${error.message || 'Errore sconosciuto.'}`, 'error');
-                console.error("Errore di Logout Backendless:", error);
-            } finally {
-                toggleLoading(false);
-            }
-        }
+    toggleLoading(true);
+    try {
+        // Elimina la sessione corrente da Backendless
+        await Backendless.UserService.logout();
+
+        // ✅ Pulisce il token salvato localmente (evita errori di token scaduto)
+        localStorage.removeItem("Backendless_current_user");
         
-        async function handlePasswordResetRequest() {
-            const email = document.getElementById('login-email').value;
-            if (!email) {
-                showNotification("Inserisci l'email per il recupero password.", 'error');
-                return;
-            }
-            toggleLoading(true);
-            try {
-                // Invia l'email di recupero password
-                await Backendless.UserService.restorePassword(email);
-                
-                showNotification(`Istruzioni per il reset password inviate a ${email}. Controlla la tua casella email.`, 'success', 10000);
-            } catch (error) {
-                showNotification(`Errore nel reset: ${error.message || 'Assicurati che l\'email sia corretta.'}`, 'error');
-                console.error("Errore di Reset Backendless:", error);
-            } finally {
-                toggleLoading(false);
-            }
-        }
+        currentUser = null;
+        updateAuthUI(null);
+        showView('login-view');
+        stopQrScanner();
+        showNotification('Logout effettuato con successo.', 'info');
+    } catch (error) {
+        showNotification(`Errore di Logout: ${error.message || 'Errore sconosciuto.'}`, 'error');
+        console.error("Errore di Logout Backendless:", error);
+    } finally {
+        toggleLoading(false);
+    }
+}
         
-        // Backendless gestisce il cambio password tramite il link nell'email, 
+localStorage.removeItem("Backendless_current_user");
+        
+// Backendless gestisce il cambio password tramite il link nell'email, 
         // non è necessario un modal in-app per la seconda fase del reset.
         
         // =========================================================================
