@@ -734,79 +734,78 @@ async function handlePasswordResetRequest() {
             }
         }
         
- function renderDashboardStats(inventoryData) {
-    const chartContainer = document.getElementById('chart-container');
+        function renderDashboardStats(inventoryData) {
+            let totalItems = inventoryData.length;
+            let totalQuantity = inventoryData.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+            
+            document.getElementById('stat-total-items').textContent = totalItems;
+            document.getElementById('stat-total-qty').textContent = totalQuantity;
+            
+            // Logica per lo Stat 3: Articoli sotto soglia (es. <= 5 unità)
+            const lowStockCount = inventoryData.filter(item => (item.quantity || 0) > 0 && (item.quantity || 0) <= 5).length;
+            document.getElementById('stat-low-stock').textContent = lowStockCount;
 
-    // Distrugge eventuale grafico precedente
-    if (chartInstance) {
-        chartInstance.destroy();
-        chartInstance = null;
-    }
 
-    // Pulisce il container e ricrea sempre il canvas
-    chartContainer.innerHTML = '<canvas id="inventory-chart"></canvas>';
-    const ctx = document.getElementById('inventory-chart').getContext('2d');
+            // Ordina per quantità per i report
+            const sortedByQuantity = [...inventoryData]
+                .filter(item => (item.quantity || 0) > 0)
+                .sort((a, b) => (b.quantity || 0) - (a.quantity || 0));
 
-    // Statistiche principali
-    const totalItems = inventoryData.length;
-    const totalQuantity = inventoryData.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-    const lowStockCount = inventoryData.filter(item => (item.quantity || 0) > 0 && (item.quantity || 0) <= 5).length;
+            const top5 = sortedByQuantity.slice(0, 5);
+            const low5 = sortedByQuantity.slice(-5).reverse().filter(item => item.quantity > 0); 
+            // Filtra per > 0 per evitare barre di articoli esauriti se non ce ne sono di basso stock
+            
+            // Prepara i dati per Chart.js
+            const chartLabels = [...top5.map(i => i.article), ...low5.map(i => i.article)];
+            const chartData = [...top5.map(i => i.quantity), ...low5.map(i => i.quantity)];
+            const chartColors = [
+                '#10b981', '#10b981', '#10b981', '#10b981', '#10b981', // Top 5 (Verde)
+                '#f59e0b', '#f59e0b', '#f59e0b', '#f59e0b', '#f59e0b'  // Low 5 (Giallo/Arancio)
+            ].slice(0, chartLabels.length); // Assicura che i colori corrispondano ai dati
 
-    document.getElementById('stat-total-items').textContent = totalItems;
-    document.getElementById('stat-total-qty').textContent = totalQuantity;
-    document.getElementById('stat-low-stock').textContent = lowStockCount;
-
-    // Ordina per quantità per il grafico (Top 5 e Low 5)
-    const sortedByQuantity = [...inventoryData]
-        .filter(item => (item.quantity || 0) > 0)
-        .sort((a, b) => (b.quantity || 0) - (a.quantity || 0));
-
-    const top5 = sortedByQuantity.slice(0, 5);
-    const low5 = sortedByQuantity.slice(-5).reverse();
-
-    const chartLabels = [...top5.map(i => i.article), ...low5.map(i => i.article)];
-    const chartData = [...top5.map(i => i.quantity), ...low5.map(i => i.quantity)];
-    const chartColors = [
-        '#10b981', '#10b981', '#10b981', '#10b981', '#10b981', // Top 5 verde
-        '#f59e0b', '#f59e0b', '#f59e0b', '#f59e0b', '#f59e0b'  // Low 5 giallo
-    ].slice(0, chartLabels.length);
-
-    // Crea il grafico solo se ci sono dati
-    if (chartData.length > 0) {
-        chartInstance = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: chartLabels,
-                datasets: [{
-                    label: 'Giacenza (Quantità)',
-                    data: chartData,
-                    backgroundColor: chartColors,
-                    borderColor: chartColors.map(c => c === '#10b981' ? '#065f46' : '#9a3412'),
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                indexAxis: 'y',
-                plugins: {
-                    legend: { display: false },
-                    title: {
-                        display: true,
-                        text: 'Top e Basso Stock per Articolo',
-                        font: { size: 16 }
-                    }
-                },
-                scales: {
-                    x: { beginAtZero: true }
-                }
+            const ctx = document.getElementById('inventory-chart').getContext('2d');
+            
+            if (chartInstance) {
+                chartInstance.destroy();
             }
-        });
-    } else {
-        // Nessun dato disponibile
-        chartContainer.innerHTML = '<p class="text-gray-500 text-center py-8">Nessun dato di giacenza da mostrare.</p>';
-    }
-}
+
+            if (chartData.length > 0) {
+                 chartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: chartLabels,
+                        datasets: [{
+                            label: 'Giacenza (Quantità)',
+                            data: chartData,
+                            backgroundColor: chartColors,
+                            borderColor: chartColors.map(c => c === '#10b981' ? '#065f46' : '#9a3412'), 
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y', // Grafico a barre orizzontali
+                        plugins: {
+                            legend: { display: false },
+                            title: {
+                                display: true,
+                                text: 'Top e Basso Stock per Articolo',
+                                font: { size: 16 }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            } else {
+                // Sostituisce il canvas se non ci sono dati
+                document.getElementById('chart-container').innerHTML = '<p class="text-gray-500 text-center py-8">Nessun dato di giacenza da mostrare.</p>';
+            }
+        }
 
         
         function renderInventoryList(inventoryData) {
@@ -878,100 +877,109 @@ async function handlePasswordResetRequest() {
         
     </script>
 
-    <!-- ================= LAYOUT PRINCIPALE ================= -->
-    <header class="bg-white shadow-md p-4 flex justify-between items-center z-10">
-        <h1 class="text-2xl font-bold text-indigo-600">Gestione Magazzino</h1>
-        <div id="auth-status" class="flex items-center space-x-4 hidden">
-            <span id="user-display" class="text-sm font-medium text-gray-700"></span>
-            <button id="logout-btn" onclick="logout()" class="px-3 py-1 bg-red-500 text-white text-sm font-semibold rounded-lg hover:bg-red-600">
-                <i data-lucide="log-out" class="h-4 w-4 inline-block mr-1"></i>
-                Logout
+   <header class="bg-white shadow-md p-4 flex justify-between items-center z-10">
+    <h1 class="text-2xl font-bold text-indigo-600">Gestione Magazzino</h1>
+    <div id="auth-status" class="flex items-center space-x-4 hidden">
+        <span id="user-display" class="text-sm font-medium text-gray-700"></span>
+        <button id="logout-btn" onclick="logout()" class="px-3 py-1 bg-red-500 text-white text-sm font-semibold rounded-lg hover:bg-red-600">
+            <i data-lucide="log-out" class="h-4 w-4 inline-block mr-1"></i>
+            Logout
+        </button>
+    </div>
+</header>
+
+<main id="view-container" class="flex-grow p-4 md:p-8">
+    
+    <!-- Vista Login & Register -->
+    <div id="login-view" class="view-content hidden">
+        <div class="max-w-md mx-auto my-12 p-8 bg-white rounded-xl card space-y-4">
+            <h2 class="text-3xl font-extrabold text-gray-900 text-center">Autenticazione Backendless</h2>
+            
+            <!-- Tab Selector -->
+            <div class="flex border-b border-gray-200 mb-6">
+                <button id="auth-tab-login" onclick="switchAuthTab('login')" class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150 tab-active">
+                    Accedi
+                </button>
+                <button id="auth-tab-register" onclick="switchAuthTab('register')" class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150">
+                    Registrati
+                </button>
+            </div>
+            
+            <!-- Contenuto Tab Login -->
+            <div id="auth-content-login" class="space-y-4">
+                <input type="email" id="login-email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                <input type="password" id="login-password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded-lg input-focus" onkeydown="if(event.key==='Enter') login()">
+                
+                <button onclick="login()" class="w-full btn-primary bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center">
+                    <i data-lucide="log-in" class="h-5 w-5 mr-2"></i>
+                    Accedi
+                </button>
+                
+                <button onclick="handlePasswordResetRequest()" class="w-full text-indigo-600 text-sm py-2 hover:underline">
+                    Password dimenticata?
+                </button>
+            </div>
+
+            <!-- Contenuto Tab Registrazione -->
+            <div id="auth-content-register" class="space-y-4 hidden">
+                <p class="text-sm text-gray-600 text-center">Crea un nuovo account per accedere al magazzino.</p>
+                <input type="email" id="register-email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                <input type="password" id="register-password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                <input type="password" id="register-password-confirm" placeholder="Conferma Password" class="w-full p-3 border border-gray-300 rounded-lg input-focus" onkeydown="if(event.key==='Enter') registerUser()">
+                
+                <button onclick="registerUser()" class="w-full btn-primary bg-green-600 text-white p-3 rounded-lg font-bold hover:bg-green-700 flex items-center justify-center">
+                    <i data-lucide="user-plus" class="h-5 w-5 mr-2"></i>
+                    Registrati
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal di Modifica Articolo -->
+    <div id="edit-modal" class="modal-overlay hidden">
+        <div class="modal-content space-y-4">
+            <h3 class="text-xl font-bold text-gray-900 flex items-center"><i data-lucide="edit" class="h-5 w-5 mr-2 text-indigo-600"></i> Modifica Articolo</h3>
+            <input type="hidden" id="edit-objectId">
+            
+            <label class="block text-sm font-medium text-gray-700">Nome Articolo</label>
+            <input type="text" id="edit-article" placeholder="Nome Articolo" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+            
+            <label class="block text-sm font-medium text-gray-700">Barcode</label>
+            <input type="text" id="edit-barcode" placeholder="Barcode" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+            
+            <label class="block text-sm font-medium text-gray-700">Quantità in Stock</label>
+            <input type="number" id="edit-quantity" placeholder="Quantità" min="0" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+            
+            <button onclick="saveEdit()" class="w-full btn-primary bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center">
+                <i data-lucide="save" class="h-5 w-5 mr-2"></i>
+                Salva Modifiche
             </button>
+            
+            <button onclick="deleteItem()" class="w-full btn-primary bg-red-500 text-white p-3 rounded-lg font-bold hover:bg-red-600 flex items-center justify-center">
+                <i data-lucide="trash-2" class="h-5 w-5 mr-2"></i>
+                Elimina Articolo
+            </button>
+            
+            <button onclick="closeModal('edit-modal')" class="w-full text-sm py-2 text-gray-600 hover:text-gray-800">Annulla</button>
         </div>
-    </header>
-
-    <main id="view-container" class="flex-grow p-4 md:p-8">
-        
-        <!-- Vista Login & Register -->
-        <div id="login-view" class="view-content hidden">
-            <div class="max-w-md mx-auto my-12 p-8 bg-white rounded-xl card space-y-4">
-                <h2 class="text-3xl font-extrabold text-gray-900 text-center">Autenticazione Backendless</h2>
-                
-                <!-- Tab Selector -->
-                <div class="flex border-b border-gray-200 mb-6">
-                    <button id="auth-tab-login" onclick="switchAuthTab('login')" class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150 tab-active">
-                        Accedi
-                    </button>
-                    <button id="auth-tab-register" onclick="switchAuthTab('register')" class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150">
-                        Registrati
-                    </button>
-                </div>
-                
-                <!-- Contenuto Tab Login -->
-                <div id="auth-content-login" class="space-y-4">
-                    <input type="email" id="login-email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                    <input type="password" id="login-password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded-lg input-focus" onkeydown="if(event.key==='Enter') login()">
-                    
-                    <button onclick="login()" class="w-full btn-primary bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center">
-                        <i data-lucide="log-in" class="h-5 w-5 mr-2"></i>
-                        Accedi
-                    </button>
-                    
-                    <button onclick="handlePasswordResetRequest()" class="w-full text-indigo-600 text-sm py-2 hover:underline">
-                        Password dimenticata?
-                    </button>
-                </div>
-
-                <!-- Contenuto Tab Registrazione -->
-                <div id="auth-content-register" class="space-y-4 hidden">
-                    <p class="text-sm text-gray-600 text-center">Crea un nuovo account per accedere al magazzino.</p>
-                    <input type="email" id="register-email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                    <input type="password" id="register-password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                    <input type="password" id="register-password-confirm" placeholder="Conferma Password" class="w-full p-3 border border-gray-300 rounded-lg input-focus" onkeydown="if(event.key==='Enter') registerUser()">
-                    
-                    <button onclick="registerUser()" class="w-full btn-primary bg-green-600 text-white p-3 rounded-lg font-bold hover:bg-green-700 flex items-center justify-center">
-                        <i data-lucide="user-plus" class="h-5 w-5 mr-2"></i>
-                        Registrati
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Modal di Modifica Articolo -->
-        <div id="edit-modal" class="modal-overlay hidden">
-            <div class="modal-content space-y-4">
-                <h3 class="text-xl font-bold text-gray-900 flex items-center"><i data-lucide="edit" class="h-5 w-5 mr-2 text-indigo-600"></i> Modifica Articolo</h3>
-                <input type="hidden" id="edit-objectId">
-                
-                <label class="block text-sm font-medium text-gray-700">Nome Articolo</label>
-                <input type="text" id="edit-article" placeholder="Nome Articolo" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                
-                <label class="block text-sm font-medium text-gray-700">Barcode</label>
-                <input type="text" id="edit-barcode" placeholder="Barcode" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                
-                <label class="block text-sm font-medium text-gray-700">Quantità in Stock</label>
-                <input type="number" id="edit-quantity" placeholder="Quantità" min="0" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                
-                <button onclick="saveEdit()" class="w-full btn-primary bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center">
-                    <i data-lucide="save" class="h-5 w-5 mr-2"></i>
-                    Salva Modifiche
+    </div>
+    
+    <!-- Vista Dashboard -->
+    <div id="dashboard-view" class="view-content hidden space-y-8">
+        <div class="max-w-6xl mx-auto">
+            
+            <!-- Tab Selector Dashboard -->
+            <div class="flex border-b border-gray-200 mb-6">
+                <button id="tab-dashboard-main" onclick="showDashboardTab('main')" class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150 tab-active">
+                    Magazzino
                 </button>
-                
-                <button onclick="deleteItem()" class="w-full btn-primary bg-red-500 text-white p-3 rounded-lg font-bold hover:bg-red-600 flex items-center justify-center">
-                    <i data-lucide="trash-2" class="h-5 w-5 mr-2"></i>
-                    Elimina Articolo
+                <button id="tab-dashboard-stats" onclick="showDashboardTab('stats')" class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150">
+                    Statistiche
                 </button>
-                
-                <button onclick="closeModal('edit-modal')" class="w-full text-sm py-2 text-gray-600 hover:text-gray-800">Annulla</button>
             </div>
-        </div>
-        
-        
-        <!-- Vista Dashboard -->
-        <div id="dashboard-view" class="view-content hidden space-y-8">
-            <div class="max-w-6xl mx-auto">
-                
-                <!-- STATISTICHE E REPORT -->
+
+            <!-- STATISTICHE TAB -->
+            <div id="dashboard-stats-tab" class="hidden">
                 <div class="bg-white p-6 rounded-xl card mb-8">
                     <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
                         <i data-lucide="pie-chart" class="h-5 w-5 mr-2 text-indigo-600"></i>
@@ -1008,8 +1016,10 @@ async function handlePasswordResetRequest() {
                         <canvas id="inventory-chart"></canvas>
                     </div>
                 </div>
+            </div>
 
-
+            <!-- DASHBOARD MAIN TAB -->
+            <div id="dashboard-main-tab">
                 <!-- Scanner QR -->
                 <div class="p-6 bg-white rounded-xl card mb-8">
                     <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
@@ -1035,19 +1045,10 @@ async function handlePasswordResetRequest() {
                 <!-- Modulo Carico -->
                 <div id="form-carico" class="bg-white p-6 rounded-xl card space-y-4">
                     <h3 class="text-lg font-semibold">Modulo di Carico</h3>
-                    
-                    <!-- Campo Barcode -->
-                    <input type="text" id="carico-barcode" placeholder="Barcode (Scannerizza o Inserisci)" 
-                           class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                           
+                    <input type="text" id="carico-barcode" placeholder="Barcode (Scannerizza o Inserisci)" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
                     <p id="giacenza-display" class="text-sm font-medium text-indigo-600">Giacenza Attuale: -</p>
-                    
-                    <input type="text" id="carico-article" placeholder="Nome Articolo (Auto-compilato o Nuovo)" 
-                           class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                           
-                    <input type="number" id="carico-qty" placeholder="Quantità da Caricare" value="1" min="1" 
-                           class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                           
+                    <input type="text" id="carico-article" placeholder="Nome Articolo (Auto-compilato o Nuovo)" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                    <input type="number" id="carico-qty" placeholder="Quantità da Caricare" value="1" min="1" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
                     <button onclick="doCarico()" class="w-full btn-primary bg-green-600 text-white p-3 rounded-lg font-bold hover:bg-green-700 flex items-center justify-center">
                         <i data-lucide="save" class="h-5 w-5 mr-2"></i>
                         Conferma Carico
@@ -1057,27 +1058,18 @@ async function handlePasswordResetRequest() {
                 <!-- Modulo Scarico -->
                 <div id="form-scarico" class="bg-white p-6 rounded-xl card space-y-4 hidden">
                     <h3 class="text-lg font-semibold">Modulo di Scarico</h3>
-                    
-                    <!-- Input per la scansione/filtro barcode -->
-                    <input type="text" id="scarico-barcode" placeholder="Scannerizza Barcode o Inserisci per filtrare" 
-                           class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                           
-                    <!-- Seleziona Articolo (popolato da refreshScaricoSelect) -->
+                    <input type="text" id="scarico-barcode" placeholder="Scannerizza Barcode o Inserisci per filtrare" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
                     <select id="scarico-select" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
                         <option value="">-- Seleziona Articolo o Scansiona --</option>
                     </select>
-
                     <p id="scarico-giacenza-display" class="text-sm font-medium text-red-600">Giacenza Attuale: -</p>
-                    
-                    <input type="number" id="scarico-qty" placeholder="Quantità da Scaricare" value="1" min="1" 
-                           class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                           
+                    <input type="number" id="scarico-qty" placeholder="Quantità da Scaricare" value="1" min="1" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
                     <button onclick="doScarico()" class="w-full btn-primary bg-red-600 text-white p-3 rounded-lg font-bold hover:bg-red-700 flex items-center justify-center">
                         <i data-lucide="package-minus" class="h-5 w-5 mr-2"></i>
                         Conferma Scarico
                     </button>
                 </div>
-                
+
                 <!-- Lista Inventario -->
                 <div class="mt-8 bg-white p-6 rounded-xl card">
                     <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
@@ -1092,25 +1084,26 @@ async function handlePasswordResetRequest() {
                         Aggiorna Lista
                     </button>
                 </div>
-
             </div>
-        </div>
 
-    </main>
-    
-    <!-- Loader Overlay -->
-    <div id="loading-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white p-6 rounded-lg flex items-center">
-            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span>Caricamento...</span>
         </div>
     </div>
-    
-    <!-- Notification Box -->
-    <div id="notification-box"></div>
+
+</main>
+
+<!-- Loader Overlay -->
+<div id="loading-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white p-6 rounded-lg flex items-center">
+        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span>Caricamento...</span>
+    </div>
+</div>
+
+<!-- Notification Box -->
+<div id="notification-box"></div>
 
 </div>
 </body>
