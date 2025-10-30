@@ -295,14 +295,16 @@
 
 <script>
 
+<script>
+
 // ================= CONFIGURAZIONE =================
 // >>>>>>> SOSTITUISCI CON LE TUE CHIAVI BACKENDLESS <<<<<<<
 const APP_ID = 'AA895053-C960-45EC-BFBE-FCBAFD9D7D0B'; 
 const API_KEY = '1F4341D8-CAB8-44F6-97D6-203322D8D245'; 
 
-// Nomi delle tabelle su Backendless
-const INVENTORY_TABLE = 'Inventario';
-const MOVEMENT_TABLE = 'Movimenti';
+// Nomi delle tabelle su Backendless - USA I NOMI ESISTENTI!
+const INVENTORY_TABLE = 'Magazzino'; // CORRETTO: Usa il nome della tua tabella stock
+const MOVEMENT_TABLE = 'Movimenti';  // Assumiamo che la tabella dei movimenti si chiami così
 
 // Inizializzazione Backendless
 if (typeof Backendless !== 'undefined') {
@@ -314,9 +316,9 @@ if (typeof Backendless !== 'undefined') {
 // Stato Globale
 let currentUser = null;
 let inventoryChart = null;
-let qrScanner = null; // Scanner
-let allArticles = []; // Cache articoli per filtro scarico/ricerca
-let currentEditItem = null; // Articolo in modifica
+let qrScanner = null; 
+let allArticles = []; 
+let currentEditItem = null; 
 
 // ================= FUNZIONI UTILITY & UI =================
 
@@ -424,18 +426,8 @@ async function login() {
     const password = document.getElementById('login-password').value;
 
     try {
-        // === CHIAMATA REALE DI BACKENDLESS: QUESTA DEVE ESSERE ATTIVA ===
+        // CHIAMATA REALE DI BACKENDLESS (NON COMMENTATA)
         currentUser = await Backendless.UserService.login(email, password, true);
-        
-        // SIMULAZIONE DI SUCCESSO (QUESTO INTERO BLOCCO È ORA DISATTIVATO)
-        /*
-        if (email === "test@magazzino.it" && password === "password") {
-            currentUser = { email, objectId: 'user123' };
-            showToast("Accesso effettuato con successo!");
-        } else {
-            throw new Error("Credenziali errate.");
-        }
-        */
         
         showToast("Accesso effettuato con successo!");
         
@@ -443,7 +435,6 @@ async function login() {
         clearInputs(['login-email', 'login-password']);
     } catch (error) {
         console.error("Errore di login:", error);
-        // L'errore di Backendless verrà mostrato direttamente all'utente
         showToast("Errore di accesso: Credenziali errate o utente non trovato. " + (error.message || error), true);
     } finally {
         hideLoader();
@@ -454,8 +445,7 @@ async function logout() {
     if (!currentUser) return;
 
     try {
-        // PER USARE BACKENDLESS REALE, SCOMMENTA QUESTA RIGA:
-        // await Backendless.UserService.logout();
+        await Backendless.UserService.logout();
 
         currentUser = null;
         showToast("Logout effettuato con successo.");
@@ -484,7 +474,6 @@ async function registerUser() {
         user.email = email;
         user.password = password;
 
-        // === QUESTA È LA CHIAMATA REALE: DEVE ESSERE SCOMMENTATA ===
         await Backendless.UserService.register(user);
 
         showToast("Registrazione completata! Controlla la tua casella email (anche nello Spam) per il link di verifica.");
@@ -500,15 +489,13 @@ async function registerUser() {
 }
 
 async function handlePasswordResetRequest() {
-    // Il campo 'login-email' viene usato per prendere l'email dell'utente
-    const email = document.getElementById('login-email').value; 
+    const email = document.getElementById('login-email').value;
     if (!email) {
         return showToast("Inserisci l'email nel campo di login per richiedere il reset.", true);
     }
     
     showLoader();
     try {
-        // === CHIAMATA REALE DI BACKENDLESS: DEVE ESSERE SCOMMENTATA ===
         await Backendless.UserService.restorePassword(email);
 
         showToast(`Istruzioni per il reset password inviate a ${email}. Controlla la tua casella di posta (anche lo Spam).`);
@@ -526,10 +513,11 @@ async function doCarico() {
     showLoader();
     
     const barcode = document.getElementById('carico-barcode').value.trim();
-    const nome = document.getElementById('carico-article').value.trim();
+    // Il campo input lo chiamiamo 'carico-article'
+    const articleName = document.getElementById('carico-article').value.trim(); 
     const quantita = Number(document.getElementById('carico-qty').value);
 
-    if (!barcode || !nome || quantita <= 0) {
+    if (!barcode || !articleName || quantita <= 0) {
         hideLoader();
         return showToast("Per favore, compila Barcode, Nome Articolo e Quantità (deve essere > 0).", true);
     }
@@ -542,10 +530,12 @@ async function doCarico() {
         const existingArticle = (await inventoryStore.find(Backendless.DataQueryBuilder.create().setWhereClause(whereClause)))[0];
 
         if (existingArticle) {
-            existingArticle.quantita = Number(existingArticle.quantita) + quantita;
+            // Usa la colonna 'quantity' del tuo DB
+            existingArticle.quantity = Number(existingArticle.quantity) + quantita; 
             await inventoryStore.save(existingArticle);
         } else {
-            await inventoryStore.save({ barcode, nome, quantita: quantita });
+            // Usa le colonne 'article' e 'quantity' del tuo DB
+            await inventoryStore.save({ barcode, article: articleName, quantity: quantita });
         }
 
         await movementStore.save({ 
@@ -556,7 +546,7 @@ async function doCarico() {
             user: currentUser ? currentUser.objectId : 'guest' 
         });
 
-        showToast(`Carico di ${quantita} unità per ${nome} (${barcode}) registrato con successo!`);
+        showToast(`Carico di ${quantita} unità per ${articleName} (${barcode}) registrato con successo!`);
         clearInputs(['carico-barcode', 'carico-article']);
         document.getElementById('carico-qty').value = 1;
         document.getElementById('giacenza-display').textContent = 'Giacenza Attuale: -';
@@ -592,11 +582,13 @@ async function doScarico() {
             throw new Error("Articolo non trovato in magazzino per lo scarico.");
         }
 
-        if (Number(existingArticle.quantita) < quantita) {
-            throw new Error(`Quantità insufficiente. Disponibili: ${existingArticle.quantita}`);
+        // Usa la colonna 'quantity' del tuo DB
+        if (Number(existingArticle.quantity) < quantita) { 
+            throw new Error(`Quantità insufficiente. Disponibili: ${existingArticle.quantity}`);
         }
 
-        existingArticle.quantita = Number(existingArticle.quantita) - quantita;
+        // Usa la colonna 'quantity' del tuo DB
+        existingArticle.quantity = Number(existingArticle.quantity) - quantita; 
         await inventoryStore.save(existingArticle);
 
         await movementStore.save({ 
@@ -607,7 +599,8 @@ async function doScarico() {
             user: currentUser ? currentUser.objectId : 'guest'
         });
 
-        showToast(`Scarico di ${quantita} unità per l'articolo ${existingArticle.nome} registrato con successo!`);
+        // Usa la colonna 'article' del tuo DB
+        showToast(`Scarico di ${quantita} unità per l'articolo ${existingArticle.article} registrato con successo!`);
         clearInputs(['scarico-barcode']);
         document.getElementById('scarico-qty').value = 1;
         document.getElementById('scarico-giacenza-display').textContent = 'Giacenza Attuale: -';
@@ -634,7 +627,8 @@ async function loadDashboardData() {
         let lowStockCount = 0;
         
         articles.forEach(item => {
-            const qty = Number(item.quantita);
+            // Usa la colonna 'quantity' del tuo DB
+            const qty = Number(item.quantity); 
             totalUnits += qty;
             if (qty <= 5) lowStockCount++; 
         });
@@ -664,20 +658,22 @@ function renderInventoryList(articles) {
         return;
     }
 
-    articles.sort((a, b) => b.quantita - a.quantita); 
+    // Usa la colonna 'quantity' del tuo DB per l'ordinamento
+    articles.sort((a, b) => b.quantity - a.quantity); 
     articles.forEach(item => {
-        const isLowStock = Number(item.quantita) <= 5;
+        // Usa la colonna 'quantity' del tuo DB
+        const isLowStock = Number(item.quantity) <= 5;
         const bgColor = isLowStock ? 'bg-red-50 ring-2 ring-red-200' : 'bg-gray-50';
         
         const itemDiv = document.createElement('div');
         itemDiv.className = `flex justify-between items-center p-3 rounded-lg cursor-pointer transition hover:shadow-md ${bgColor}`;
         itemDiv.innerHTML = `
             <div>
-                <span class="font-medium text-gray-800">${item.nome || 'N/D'}</span>
+                <span class="font-medium text-gray-800">${item.article || 'N/D'}</span>
                 <span class="text-sm text-gray-500 block">Barcode: ${item.barcode}</span>
             </div>
             <span class="text-lg font-bold ${isLowStock ? 'text-red-600' : 'text-indigo-600'}">
-                ${item.quantita} Unità
+                ${item.quantity} Unità
                 <i data-lucide="edit-3" class="h-4 w-4 inline-block ml-2 text-gray-400"></i>
             </span>
         `;
@@ -693,10 +689,12 @@ function refreshScaricoSelect(articles) {
 
     if (articles && articles.length > 0) {
         articles.forEach(item => {
-            if (Number(item.quantita) > 0) {
+            // Usa la colonna 'quantity' del tuo DB
+            if (Number(item.quantity) > 0) { 
                  const option = document.createElement('option');
                  option.value = item.barcode;
-                 option.textContent = `${item.nome || 'N/D'} (Stock: ${item.quantita})`;
+                 // Usa le colonne 'article' e 'quantity' del tuo DB
+                 option.textContent = `${item.article || 'N/D'} (Stock: ${item.quantity})`;
                  selectEl.appendChild(option);
             }
         });
@@ -706,7 +704,8 @@ function refreshScaricoSelect(articles) {
         const barcode = event.target.value;
         const selectedItem = articles.find(a => a.barcode === barcode);
         const giacenzaDisplay = document.getElementById('scarico-giacenza-display');
-        giacenzaDisplay.textContent = selectedItem ? `Giacenza Attuale: ${selectedItem.quantita}` : 'Giacenza Attuale: -';
+        // Usa la colonna 'quantity' del tuo DB
+        giacenzaDisplay.textContent = selectedItem ? `Giacenza Attuale: ${selectedItem.quantity}` : 'Giacenza Attuale: -';
         document.getElementById('scarico-barcode').value = barcode; 
     };
 }
@@ -718,9 +717,11 @@ function openEditModal(item) {
     currentEditItem = item;
     
     document.getElementById('edit-objectId').value = item.objectId;
-    document.getElementById('edit-article').value = item.nome || '';
+    // Usa la colonna 'article' del tuo DB
+    document.getElementById('edit-article').value = item.article || ''; 
     document.getElementById('edit-barcode').value = item.barcode || '';
-    document.getElementById('edit-quantity').value = Number(item.quantita);
+    // Usa la colonna 'quantity' del tuo DB
+    document.getElementById('edit-quantity').value = Number(item.quantity); 
     
     showModal('edit-modal');
 }
@@ -734,12 +735,14 @@ async function saveEdit() {
         
         const updatedItem = {
             objectId: currentEditItem.objectId,
-            nome: document.getElementById('edit-article').value.trim(),
+            // Assicurati che il nome della colonna sia 'article'
+            article: document.getElementById('edit-article').value.trim(), 
             barcode: document.getElementById('edit-barcode').value.trim(),
-            quantita: Number(document.getElementById('edit-quantity').value),
+            // Assicurati che il nome della colonna sia 'quantity'
+            quantity: Number(document.getElementById('edit-quantity').value), 
         };
 
-        if (!updatedItem.nome || !updatedItem.barcode || updatedItem.quantita < 0) {
+        if (!updatedItem.article || !updatedItem.barcode || updatedItem.quantity < 0) {
              throw new Error("Tutti i campi sono obbligatori e la quantità non può essere negativa.");
         }
         
@@ -758,7 +761,7 @@ async function saveEdit() {
 }
 
 async function deleteItem() {
-    if (!currentEditItem || !confirm(`Sei sicuro di voler eliminare l'articolo ${currentEditItem.nome}?`)) {
+    if (!currentEditItem || !confirm(`Sei sicuro di voler eliminare l'articolo ${currentEditItem.article}?`)) {
         return;
     }
     
@@ -807,8 +810,10 @@ function checkArticleForCarico(barcode) {
     const giacenzaDisplay = document.getElementById('giacenza-display');
     
     if (existingArticle) {
-        document.getElementById('carico-article').value = existingArticle.nome;
-        giacenzaDisplay.textContent = `Giacenza Attuale: ${existingArticle.quantita}`;
+        // Usa la colonna 'article' del tuo DB
+        document.getElementById('carico-article').value = existingArticle.article; 
+        // Usa la colonna 'quantity' del tuo DB
+        giacenzaDisplay.textContent = `Giacenza Attuale: ${existingArticle.quantity}`; 
     } else {
         document.getElementById('carico-article').value = '';
         giacenzaDisplay.textContent = 'Giacenza Attuale: NUOVO ARTICOLO';
@@ -852,7 +857,7 @@ function stopQrScanner() {
 
 function updateInventoryChart() {
     const ctx = document.getElementById('inventory-chart');
-
+    // ... (Logica del grafico omessa per brevità, non è stata modificata) ...
     const data = {
         labels: ['Settimana 1', 'Settimana 2', 'Settimana 3', 'Settimana 4'],
         datasets: [{
@@ -884,6 +889,7 @@ function updateInventoryChart() {
         }
     };
 
+
     if (inventoryChart) {
         inventoryChart.destroy();
     }
@@ -908,7 +914,7 @@ function initApp() {
         const filterText = e.target.value.trim().toLowerCase();
         const filtered = allArticles.filter(a => 
             a.barcode.toLowerCase().includes(filterText) || 
-            (a.nome && a.nome.toLowerCase().includes(filterText))
+            (a.article && a.article.toLowerCase().includes(filterText)) // Usa 'article'
         );
         refreshScaricoSelect(filtered);
     });
@@ -920,7 +926,6 @@ function initApp() {
 }
 
 window.addEventListener('load', initApp);
-</script>
-
+</script
 </body>
 </html>
