@@ -12,12 +12,12 @@
 <!-- Tailwind CSS CDN -->
 <script src="https://cdn.tailwindcss.com"></script>
 <!-- Icone Lucide -->
-<script type="module">
-    // CORREZIONE: Usiamo la versione ESM per l'import modulare corretto con Lucide
-    import { createIcons } from 'https://cdn.jsdelivr.net/npm/lucide@latest/dist/esm/lucide.js'; 
-    window.addEventListener('load', () => createIcons());
+<script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/lucide.min.js"></script>
+<script>
+    window.addEventListener('load', () => {
+        createIcons();
+    });
 </script>
-
 <!-- Librerie Aggiuntive -->
 <!-- Backendless SDK (Importante!) -->
 <script src="https://unpkg.com/backendless/dist/backendless.min.js"></script>
@@ -313,24 +313,7 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
     }
 }
 
-
-async function handlePasswordResetRequest() {
-    const email = document.getElementById('login-email').value;
-    if(!email) {
-        showNotification('Inserisci l\'email per il recupero','error');
-        return;
-    }
-    toggleLoading(true);
-    try {
-        await Backendless.UserService.restorePassword(email);
-        showNotification('Email di recupero password inviata','success');
-    } catch(e) {
-        showNotification('Errore invio email: ' + (e.message || ''),'error');
-    } finally {
-        toggleLoading(false);
-    }
-}
-
+	
 // =========================================================================
 // RESET PASSWORD (recupero tramite email Backendless)
 // =========================================================================        
@@ -500,14 +483,14 @@ async function handlePasswordResetRequest() {
         let item;
         if(items.length > 0) {
             item = items[0];
-            item.qty += quantity;
+            item.quantity += quantity;
         } else {
             item = { barcode, name: article, qty: quantity };
         }
         await Backendless.Data.of(MAGAZZINO_TABLE_NAME).save(item);
 
         // aggiorna giacenza
-        document.getElementById('giacenza-display').innerText = `Giacenza Attuale: ${item.qty}`;
+        document.getElementById('giacenza-display').innerText = `Giacenza Attuale: ${item.quantity}`;
 
         showNotification('Articolo caricato','success');
         await loadDashboardData();
@@ -589,11 +572,11 @@ async function handlePasswordResetRequest() {
         const item = items[0];
 
         // aggiorna quantità
-        item.qty = Math.max(0, item.qty - quantity);
+        item.quantity = Math.max(0, item.quantity - quantity);
         await Backendless.Data.of(MAGAZZINO_TABLE_NAME).save(item);
 
         // aggiorna giacenza
-        document.getElementById('scarico-giacenza-display').innerText = `Giacenza Attuale: ${item.qty}`;
+        document.getElementById('scarico-giacenza-display').innerText = `Giacenza Attuale: ${item.quantity}`;
 
         showNotification('Articolo scaricato','success');
         await loadDashboardData();
@@ -830,8 +813,9 @@ async function handlePasswordResetRequest() {
         // =========================================================================
         // STARTUP
         // =========================================================================
-       window.onload = async function() {
-    initBackendless();
+window.onload = async function() {
+    if (!initBackendless()) return; // interrompe se la configurazione è sbagliata
+
     try {
         currentUser = await Backendless.UserService.getCurrentUser();
         if(currentUser) {
@@ -843,13 +827,14 @@ async function handlePasswordResetRequest() {
             showView('login-view');
         }
     } catch(e) {
+        console.error("Errore durante il caricamento iniziale:", e);
         showView('login-view');
     }
 };
+
         
     </script>
-
-   
+  
 
 
 <!-- ================= LAYOUT PRINCIPALE ================= -->
