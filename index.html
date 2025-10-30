@@ -495,17 +495,18 @@ async function registerUser() {
 }
 
 async function handlePasswordResetRequest() {
-    const email = document.getElementById('login-email').value;
+    // Il campo 'login-email' viene usato per prendere l'email dell'utente
+    const email = document.getElementById('login-email').value; 
     if (!email) {
         return showToast("Inserisci l'email nel campo di login per richiedere il reset.", true);
     }
     
     showLoader();
     try {
-        // PER USARE BACKENDLESS REALE, SCOMMENTA QUESTA RIGA:
-        // await Backendless.UserService.restorePassword(email);
+        // === CHIAMATA REALE DI BACKENDLESS: DEVE ESSERE SCOMMENTATA ===
+        await Backendless.UserService.restorePassword(email);
 
-        showToast(`Istruzioni per il reset password inviate a ${email}. Controlla la tua casella di posta.`);
+        showToast(`Istruzioni per il reset password inviate a ${email}. Controlla la tua casella di posta (anche lo Spam).`);
     } catch (error) {
         console.error("Errore reset password:", error);
         showToast("Errore durante il reset della password: " + (error.message || error), true);
