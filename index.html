@@ -296,6 +296,7 @@
 <script>
 
 
+
 // ================= CONFIGURAZIONE =================
 // >>>>>>> SOSTITUISCI CON LE TUE CHIAVI BACKENDLESS <<<<<<<
 const APP_ID = 'AA895053-C960-45EC-BFBE-FCBAFD9D7D0B'; 
@@ -618,15 +619,34 @@ async function doScarico() {
 async function loadDashboardData() {
     showLoader();
     try {
+        // Verifica di essere loggato prima di accedere ai dati
+        if (!currentUser) {
+            throw new Error("Utente non autenticato.");
+        }
+        
         const dataStore = Backendless.Data.of(INVENTORY_TABLE);
-        const articles = await dataStore.find();
+        
+        // 1. Prendi l'ID dell'utente loggato
+        const userObjectId = currentUser.objectId;
+        
+        // 2. Crea la clausola WHERE per filtrare i dati
+        //    'ownerId' è la colonna automatica che Backendless usa per l'utente creatore
+        const whereClause = `ownerId = '${userObjectId}'`;
+        
+        const queryBuilder = Backendless.DataQueryBuilder.create()
+            .setWhereClause(whereClause); // Filtra solo gli articoli di questo utente
+            
+        // 3. Esegui la query filtrata
+        const articles = await dataStore.find(queryBuilder);
+        
         allArticles = articles; 
+        
+        // ... (Il resto della funzione rimane invariato) ...
 
         let totalUnits = 0;
         let lowStockCount = 0;
         
         articles.forEach(item => {
-            // Usa la colonna 'quantity' del tuo DB
             const qty = Number(item.quantity); 
             totalUnits += qty;
             if (qty <= 5) lowStockCount++; 
@@ -928,4 +948,3 @@ window.addEventListener('load', initApp);
 </script
 </body>
 </html>
-
