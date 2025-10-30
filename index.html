@@ -439,13 +439,13 @@ async function handlePasswordResetRequest() {
                         showNotification('Nuovo articolo, inserisci il nome', 'success');
                     }
                     
-                    document.getElementById('carico-qty').focus();
+                    document.getElementById('carico-quantity').focus();
                     
                 } else {
                     scaricoBarcode.value = qrCode; 
                     await refreshScaricoSelect(qrCode);
                     showNotification(`Barcode inserito nello Scarico: ${qrCode}`, 'success');
-                    document.getElementById('scarico-qty').focus();
+                    document.getElementById('scarico-quantity').focus();
                 }
             } catch (error) {
                 showNotification(`Errore di ricerca Backendless: ${error.message || 'Verifica la tabella Magazzino.'}`, 'error');
@@ -473,7 +473,7 @@ async function handlePasswordResetRequest() {
        async function doCarico() {
     const barcode = document.getElementById('carico-barcode').value.trim();
     const article = document.getElementById('carico-article').value.trim();
-    const quantity = parseInt(document.getElementById('carico-qty').value, 10);
+    const quantity = parseInt(document.getElementById('carico-quantity').value, 10);
     if(!barcode || !article) { showNotification('Compila tutti i campi','error'); return; }
 
     toggleLoading(true);
@@ -485,7 +485,7 @@ async function handlePasswordResetRequest() {
             item = items[0];
             item.quantity += quantity;
         } else {
-            item = { barcode, name: article, qty: quantity };
+            item = { barcode, name: article, quantity: quantity };
         }
         await Backendless.Data.of(MAGAZZINO_TABLE_NAME).save(item);
 
@@ -561,7 +561,7 @@ async function handlePasswordResetRequest() {
 
        async function doScarico() {
     const objectId = document.getElementById('scarico-select').value;
-    const quantity = parseInt(document.getElementById('scarico-qty').value, 10);
+    const quantity = parseInt(document.getElementById('scarico-quantity').value, 10);
     if(!objectId) { showNotification('Seleziona un articolo','error'); return; }
 
     toggleLoading(true);
@@ -690,7 +690,7 @@ async function handlePasswordResetRequest() {
             let totalQuantity = inventoryData.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
             
             document.getElementById('stat-total-items').textContent = totalItems;
-            document.getElementById('stat-total-qty').textContent = totalQuantity;
+            document.getElementById('stat-total-quantity').textContent = totalQuantity;
             
             // Logica per lo Stat 3: Articoli sotto soglia (es. <= 5 unità)
             const lowStockCount = inventoryData.filter(item => (item.quantity || 0) > 0 && (item.quantity || 0) <= 5).length;
@@ -810,29 +810,7 @@ async function handlePasswordResetRequest() {
         }
 
 
-        // =========================================================================
-        // STARTUP
-        // =========================================================================
-window.onload = async function() {
-    if (!initBackendless()) return; // interrompe se la configurazione è sbagliata
-
-    try {
-        currentUser = await Backendless.UserService.getCurrentUser();
-        if(currentUser) {
-            updateAuthUI(currentUser);
-            showView('dashboard-view');
-            initializeQrScanner();
-            await loadDashboardData();
-        } else {
-            showView('login-view');
-        }
-    } catch(e) {
-        console.error("Errore durante il caricamento iniziale:", e);
-        showView('login-view');
-    }
-};
-
-
+ 
 
 // =========================================================================
 // AVVIO APPLICAZIONE E LISTENER (Punto di ingresso)
@@ -884,11 +862,11 @@ document.getElementById('scarico-select').addEventListener('change', updateScari
 	<script id="dashboard-data" type="application/json">
 {
     "totalItems": 120,
-    "totalQty": 350,
+    "totalquantity": 350,
     "lowStockItems": 5,
     "inventory": [
-        {"name": "Articolo A", "barcode": "12345", "qty": 10},
-        {"name": "Articolo B", "barcode": "67890", "qty": 3}
+        {"name": "Articolo A", "barcode": "12345", "quantity": 10},
+        {"name": "Articolo B", "barcode": "67890", "quantity": 3}
     ]
 }
 </script>
@@ -910,7 +888,7 @@ document.getElementById('scarico-select').addEventListener('change', updateScari
                         <div class="bg-green-50 p-4 rounded-lg flex items-center justify-between">
                             <div>
                                 <p class="text-sm text-green-700 font-medium">Unità Totali in Stock</p>
-                                <p id="stat-total-qty" class="text-3xl font-bold text-green-800">0</p>
+                                <p id="stat-total-quantity" class="text-3xl font-bold text-green-800">0</p>
                             </div>
                             <i data-lucide="package" class="h-8 w-8 text-green-400"></i>
                         </div>
