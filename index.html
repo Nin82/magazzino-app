@@ -317,8 +317,39 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
         toggleLoading(false);
     }
 }
-        
-localStorage.removeItem("Backendless_current_user");
+
+
+// =========================================================================
+// RESET PASSWORD (recupero tramite email Backendless)
+// =========================================================================        
+async function handlePasswordResetRequest() {
+    const email = document.getElementById('login-email').value;
+    if (!email) {
+        showNotification("Inserisci l'email per il recupero password.", 'error');
+        return;
+    }
+
+    toggleLoading(true);
+    try {
+        // Invia la richiesta di reset password a Backendless
+        await Backendless.UserService.restorePassword(email);
+
+        showNotification(
+            `Email di reset inviata a ${email}. Controlla la tua posta.`,
+            'success',
+            8000
+        );
+    } catch (error) {
+        // 🔧 Controllo di errore più chiaro e informativo
+        showNotification(
+            `Errore nel reset: ${error.message || 'Assicurati che l\'email sia registrata e che la funzione di reset sia abilitata in Backendless (Users → Email Templates → Password Recovery).'}`,
+            'error'
+        );
+        console.error("Errore reset password:", error);
+    } finally {
+        toggleLoading(false);
+    }
+}
         
 // Backendless gestisce il cambio password tramite il link nell'email, 
         // non è necessario un modal in-app per la seconda fase del reset.
@@ -705,7 +736,7 @@ localStorage.removeItem("Backendless_current_user");
         
         function renderDashboardStats(inventoryData) {
             let totalItems = inventoryData.length;
-            let totalQuantity = inventoryData.reduce((sum, item) => sum + (item.quantity || 0), 0);
+            let totalQuantity = inventoryData.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
             
             document.getElementById('stat-total-items').textContent = totalItems;
             document.getElementById('stat-total-qty').textContent = totalQuantity;
