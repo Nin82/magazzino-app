@@ -513,7 +513,6 @@ async function doCarico() {
     showLoader();
     
     const barcode = document.getElementById('carico-barcode').value.trim();
-    // Il campo input lo chiamiamo 'carico-article'
     const articleName = document.getElementById('carico-article').value.trim(); 
     const quantita = Number(document.getElementById('carico-qty').value);
 
@@ -529,15 +528,15 @@ async function doCarico() {
         const whereClause = `barcode = '${barcode}'`;
         const existingArticle = (await inventoryStore.find(Backendless.DataQueryBuilder.create().setWhereClause(whereClause)))[0];
 
+        // --- Aggiornamento o Creazione in Magazzino ---
         if (existingArticle) {
-            // Usa la colonna 'quantity' del tuo DB
             existingArticle.quantity = Number(existingArticle.quantity) + quantita; 
             await inventoryStore.save(existingArticle);
         } else {
-            // Usa le colonne 'article' e 'quantity' del tuo DB
             await inventoryStore.save({ barcode, article: articleName, quantity: quantita });
         }
-
+        
+        // --- Registrazione Movimento ---
         await movementStore.save({ 
             barcode, 
             quantita, 
@@ -546,6 +545,7 @@ async function doCarico() {
             user: currentUser ? currentUser.objectId : 'guest' 
         });
 
+        // SOLO SE ENTRAMBE LE OPERAZIONI SONO RIUSCITE
         showToast(`Carico di ${quantita} unità per ${articleName} (${barcode}) registrato con successo!`);
         clearInputs(['carico-barcode', 'carico-article']);
         document.getElementById('carico-qty').value = 1;
@@ -553,8 +553,22 @@ async function doCarico() {
         loadDashboardData(); 
         
     } catch (error) {
-        console.error("Errore durante il carico:", error);
-        showToast("Errore durante la registrazione del carico: " + (error.message || error), true);
+        // **********************************************
+        // ********* NUOVA GESTIONE ERRORI **************
+        // **********************************************
+        console.error("ERRORE CRITICO DURANTE IL CARICO:", error); // Registra l'oggetto errore completo
+
+        let errorMessage = "Errore sconosciuto durante il salvataggio.";
+        
+        if (error.message) {
+             errorMessage = "Errore di Backendless: " + error.message;
+        } else if (typeof error === 'string') {
+             errorMessage = "Errore di Sistema: " + error;
+        } else if (error.code && error.code === 1004) {
+             errorMessage = "Errore di Permessi: Accesso negato (Code 1004). Controlla i permessi 'UPDATE'.";
+        }
+        
+        showToast("ERRORE: " + errorMessage, true); // Visualizza il messaggio specifico
     } finally {
         hideLoader();
     }
@@ -948,3 +962,4 @@ window.addEventListener('load', initApp);
 </script
 </body>
 </html>
+
