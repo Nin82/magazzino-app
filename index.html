@@ -304,7 +304,7 @@ const API_KEY = '1F4341D8-CAB8-44F6-97D6-203322D8D245';
 
 // Nomi delle tabelle su Backendless - USA I NOMI ESISTENTI!
 const INVENTORY_TABLE = 'Magazzino'; // CORRETTO: Usa il nome della tua tabella stock
-const MOVEMENT_TABLE = 'Movimenti';  // Assumiamo che la tabella dei movimenti si chiami così
+//const MOVEMENT_TABLE = 'Movimenti';  // Assumiamo che la tabella dei movimenti si chiami così
 
 // Inizializzazione Backendless
 if (typeof Backendless !== 'undefined') {
@@ -523,29 +523,23 @@ async function doCarico() {
 
     try {
         const inventoryStore = Backendless.Data.of(INVENTORY_TABLE);
-        const movementStore = Backendless.Data.of(MOVEMENT_TABLE);
+        // NON serve più: const movementStore = Backendless.Data.of(MOVEMENT_TABLE);
 
         const whereClause = `barcode = '${barcode}'`;
         const existingArticle = (await inventoryStore.find(Backendless.DataQueryBuilder.create().setWhereClause(whereClause)))[0];
 
-        // --- Aggiornamento o Creazione in Magazzino ---
+        // --- Aggiornamento o Creazione in Magazzino (UNICO SALVATAGGIO) ---
         if (existingArticle) {
             existingArticle.quantity = Number(existingArticle.quantity) + quantita; 
             await inventoryStore.save(existingArticle);
         } else {
+            // Usa le colonne 'article' e 'quantity' del tuo DB
             await inventoryStore.save({ barcode, article: articleName, quantity: quantita });
         }
         
-        // --- Registrazione Movimento ---
-        await movementStore.save({ 
-            barcode, 
-            quantita, 
-            tipo: 'carico', 
-            data: new Date().getTime(),
-            user: currentUser ? currentUser.objectId : 'guest' 
-        });
+        // NON serve più: await movementStore.save({...});
 
-        // SOLO SE ENTRAMBE LE OPERAZIONI SONO RIUSCITE
+        // SOLO SE L'OPERAZIONE DI SALVATAGGIO È RIUSCITA
         showToast(`Carico di ${quantita} unità per ${articleName} (${barcode}) registrato con successo!`);
         clearInputs(['carico-barcode', 'carico-article']);
         document.getElementById('carico-qty').value = 1;
@@ -553,10 +547,8 @@ async function doCarico() {
         loadDashboardData(); 
         
     } catch (error) {
-        // **********************************************
-        // ********* NUOVA GESTIONE ERRORI **************
-        // **********************************************
-        console.error("ERRORE CRITICO DURANTE IL CARICO:", error); // Registra l'oggetto errore completo
+        // ... (Logica di cattura errori che abbiamo appena corretto) ...
+        console.error("ERRORE CRITICO DURANTE IL CARICO:", error);
 
         let errorMessage = "Errore sconosciuto durante il salvataggio.";
         
@@ -568,12 +560,11 @@ async function doCarico() {
              errorMessage = "Errore di Permessi: Accesso negato (Code 1004). Controlla i permessi 'UPDATE'.";
         }
         
-        showToast("ERRORE: " + errorMessage, true); // Visualizza il messaggio specifico
+        showToast("ERRORE: " + errorMessage, true);
     } finally {
         hideLoader();
     }
 }
-
 async function doScarico() {
     showLoader();
     
