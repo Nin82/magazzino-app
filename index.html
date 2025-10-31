@@ -287,6 +287,7 @@
 <script src="https://unpkg.com/backendless/dist/backendless.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.9/html5-qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/lucide.min.js"></script>
 
 <script>
 
@@ -512,7 +513,7 @@ async function doCarico() {
     const articleName = document.getElementById('carico-article').value.trim();
     const qtyInput = document.getElementById('carico-qty').value.trim();
     const quantita = parseInt(qtyInput, 10);
-    const INVENTORY_TABLE = 'Inventory'; // Assicurati che il nome della tua tabella sia corretto
+    const INVENTORY_TABLE = 'Inventory'; // Verifica che il nome della tabella sia corretto
 
     if (!barcode || !articleName || isNaN(quantita) || quantita <= 0) {
         showNotification("Per il carico, Barcode, Nome Articolo e Quantità (>0) sono obbligatori.", true);
@@ -524,8 +525,7 @@ async function doCarico() {
     try {
         const inventoryStore = Backendless.Data.of(INVENTORY_TABLE);
         
-        // ======================= FIX CRUCIALE: FILTRO MULTI-UTENTE =======================
-        // Cerchiamo l'articolo esistente SOLO per il barcode E l'utente corrente (ownerId).
+        // FIX: Filtra per barcode E ownerId
         const userObjectId = currentUser.objectId; 
         const whereClause = `barcode = '${barcode}' AND ownerId = '${userObjectId}'`;
         
@@ -534,22 +534,19 @@ async function doCarico() {
             .setPageSize(1);
             
         const existingArticle = (await inventoryStore.find(dataQuery))[0];
-        // =================================================================================
 
-        let savedItem;
         let actionMessage;
 
         if (existingArticle) {
             // Articolo trovato e appartiene all'utente corrente: AGGIORNA la quantità.
             const newQuantity = Number(existingArticle.quantity) + quantita;
             
-            // Creiamo un oggetto da salvare contenente solo le modifiche
             const updateObject = { 
                 objectId: existingArticle.objectId,
                 quantity: newQuantity
             };
 
-            savedItem = await inventoryStore.save(updateObject);
+            await inventoryStore.save(updateObject);
             actionMessage = `Carico di ${quantita} unità riuscito! Nuova giacenza per "${existingArticle.article}": ${newQuantity}`;
         } else {
             // Articolo NON trovato per questo utente: CREA un nuovo record.
@@ -557,27 +554,25 @@ async function doCarico() {
                 barcode: barcode, 
                 article: articleName, 
                 quantity: quantita 
-                // ownerId viene aggiunto automaticamente da Backendless quando un utente salva un oggetto
+                // ownerId viene aggiunto automaticamente da Backendless
             };
             
-            savedItem = await inventoryStore.save(newItem);
+            await inventoryStore.save(newItem);
             actionMessage = `Nuovo Articolo Caricato: "${articleName}" con giacenza iniziale: ${quantita}`;
         }
 
-        // Pulisce i campi input dopo il successo
+        // Pulisce i campi input
         document.getElementById('carico-barcode').value = '';
         document.getElementById('carico-article').value = '';
         document.getElementById('carico-qty').value = '1';
         document.getElementById('giacenza-display').textContent = 'Giacenza Attuale: -';
 
-
         showNotification(actionMessage);
-        // Ricarica la lista del magazzino per mostrare l'aggiornamento
         loadDashboardData(); 
 
     } catch (error) {
         console.error("Errore durante il Carico:", error);
-        showNotification(`Errore nel Carico: ${error.message || 'Controlla la console per i dettagli.'}`, true);
+        showNotification(`Errore nel Carico: ${error.message || 'Errore sconosciuto.'}`, true);
     } finally {
         hideLoading();
     }
@@ -589,7 +584,7 @@ async function doScarico() {
         return;
     }
 
-    // Assumiamo che l'objectId sia salvato come 'value' nell'elemento <option>
+    // L'objectId viene preso dal <select>
     const objectIdToScarico = document.getElementById('scarico-select').value;
     const qtyInput = document.getElementById('scarico-qty').value.trim();
     const quantita = parseInt(qtyInput, 10);
@@ -605,24 +600,14 @@ async function doScarico() {
     try {
         const inventoryStore = Backendless.Data.of(INVENTORY_TABLE);
         
-        // 1. Cerca l'articolo per objectId (selezionato) e ownerId (sicurezza)
-        const userObjectId = currentUser.objectId; 
-        
-        // Cerca un articolo specifico: DEVE corrispondere sia all'ID che all'ownerId
-        const whereClause = `objectId = '${objectIdToScarico}' AND ownerId = '${userObjectId}'`;
-        
-        const dataQuery = Backendless.DataQueryBuilder.create()
-            .setWhereClause(whereClause)
-            .setPageSize(1);
-            
-        const existingArticle = (await inventoryStore.find(dataQuery))[0];
+        // 1. Cerca l'articolo in locale (dovrebbe essere già filtrato, ma cerchiamo per sicurezza)
+        const articleToUpdate = allArticles.find(a => a.objectId === objectIdToScarico);
 
-        if (!existingArticle) {
-            // Questo gestisce il caso in cui un utente malintenzionato tenti di scaricare un articolo di un altro utente.
-            throw new Error("Articolo non trovato o non posseduto dall'utente corrente.");
+        if (!articleToUpdate || articleToUpdate.ownerId !== currentUser.objectId) {
+            throw new Error("Articolo non trovato nel tuo magazzino o permessi insufficienti.");
         }
-
-        const currentQuantity = Number(existingArticle.quantity);
+        
+        const currentQuantity = Number(articleToUpdate.quantity);
 
         if (quantita > currentQuantity) {
             showNotification(`Errore: Impossibile scaricare ${quantita}. La giacenza attuale è solo ${currentQuantity}.`, true);
@@ -630,36 +615,36 @@ async function doScarico() {
         }
 
         const newQuantity = currentQuantity - quantita;
+        let actionMessage;
 
         if (newQuantity === 0) {
             // Se la quantità scende a zero, ELIMINA l'articolo
-            await inventoryStore.remove(existingArticle);
-            showNotification(`Scarico riuscito! L'articolo "${existingArticle.article}" è stato eliminato dallo stock.`, false);
+            await inventoryStore.remove({ objectId: objectIdToScarico });
+            actionMessage = `Scarico riuscito! L'articolo "${articleToUpdate.article}" è stato eliminato dallo stock.`;
         } else {
             // Altrimenti, AGGIORNA la quantità
             const updateObject = { 
-                objectId: existingArticle.objectId,
+                objectId: objectIdToScarico,
                 quantity: newQuantity
             };
             await inventoryStore.save(updateObject);
-            showNotification(`Scarico di ${quantita} unità riuscito! Nuova giacenza per "${existingArticle.article}": ${newQuantity}`, false);
+            actionMessage = `Scarico di ${quantita} unità riuscito! Nuova giacenza: ${newQuantity}`;
         }
 
-        // Pulisce i campi input dopo il successo
+        // Pulisce i campi input
         document.getElementById('scarico-qty').value = '1';
         document.getElementById('scarico-giacenza-display').textContent = 'Giacenza Attuale: -';
 
-        // Ricarica la lista del magazzino per mostrare l'aggiornamento
+        showNotification(actionMessage);
         loadDashboardData(); 
 
     } catch (error) {
         console.error("Errore durante lo Scarico:", error);
-        showNotification(`Errore nello Scarico: ${error.message || 'Controlla la console per i dettagli.'}`, true);
+        showNotification(`Errore nello Scarico: ${error.message || 'Errore sconosciuto.'}`, true);
     } finally {
         hideLoading();
     }
 }
-
 
 // ================= DATI & DASHBOARD =================
 
@@ -811,25 +796,26 @@ async function saveEdit() {
         showNotification("Tutti i campi sono obbligatori e la quantità deve essere >= 0.", true);
         return;
     }
+    
+    // Controllo aggiuntivo di appartenenza prima di salvare
+    const existing = allArticles.find(a => a.objectId === objectId);
+    if (!existing || existing.ownerId !== currentUser.objectId) {
+        showNotification("Non hai i permessi per modificare questo articolo.", true);
+        return;
+    }
 
     showLoading();
 
     try {
-        // Oggetto di aggiornamento, con ownerId esplicito per la sicurezza
         const updateObject = {
             objectId: objectId,
             article: article,
             barcode: barcode,
             quantity: quantity,
-            ownerId: currentUser.objectId // Aggiunge ownerId per il controllo di sicurezza
+            // Non strettamente necessario ma rafforza: ownerId: currentUser.objectId
         };
 
-        const inventoryStore = Backendless.Data.of(INVENTORY_TABLE);
-        
-        // Backendless controlla che l'utente corrente sia l'owner prima di consentire l'aggiornamento/cancellazione
-        // (a meno che tu non abbia disattivato i permessi di sicurezza, cosa non raccomandata).
-        // L'inclusione di ownerId nell'oggetto di update rafforza l'intenzione.
-        await inventoryStore.save(updateObject); 
+        await Backendless.Data.of(INVENTORY_TABLE).save(updateObject); 
 
         showNotification(`Articolo "${article}" modificato con successo.`);
         closeModal('edit-modal');
@@ -837,7 +823,7 @@ async function saveEdit() {
 
     } catch (error) {
         console.error("Errore durante il salvataggio:", error);
-        showNotification(`Errore nella modifica: ${error.message || 'Verifica i permessi di Backendless.'}`, true);
+        showNotification(`Errore nella modifica: ${error.message || 'Verifica la connettività e i permessi.'}`, true);
     } finally {
         hideLoading();
     }
@@ -861,17 +847,22 @@ async function deleteItem() {
         return;
     }
     
-    if (!confirm(`Sei sicuro di voler eliminare l'articolo "${articleName}" (ID: ${objectId})?`)) {
+    // Controllo aggiuntivo di appartenenza
+    const existing = allArticles.find(a => a.objectId === objectId);
+    if (!existing || existing.ownerId !== currentUser.objectId) {
+        showNotification("Non hai i permessi per eliminare questo articolo.", true);
+        return;
+    }
+    
+    if (!confirm(`Sei sicuro di voler eliminare l'articolo "${articleName}"? L'operazione è irreversibile.`)) {
         return;
     }
 
     showLoading();
 
     try {
-        const inventoryStore = Backendless.Data.of(INVENTORY_TABLE);
-        
-        // Esegue la rimozione. Backendless farà il controllo di ownerId di default.
-        await inventoryStore.remove({ objectId: objectId });
+        // La rimozione fallirà automaticamente se l'utente non è l'owner (permesso di Backendless).
+        await Backendless.Data.of(INVENTORY_TABLE).remove({ objectId: objectId });
 
         showNotification(`Articolo "${articleName}" eliminato con successo.`, false);
         closeModal('edit-modal');
@@ -879,12 +870,11 @@ async function deleteItem() {
 
     } catch (error) {
         console.error("Errore durante l'eliminazione:", error);
-        showNotification(`Errore nell'eliminazione: ${error.message || 'Verifica i permessi di Backendless.'}`, true);
+        showNotification(`Errore nell'eliminazione: ${error.message || 'Verifica la connettività e i permessi.'}`, true);
     } finally {
         hideLoading();
     }
 }
-
 
 // ================= QR CODE SCANNER =================
 
@@ -1044,18 +1034,15 @@ function initApp() {
 }
 
 window.addEventListener('load', initApp);
-</script>
+// Funzione di inizializzazione corretta per Lucide (come ti avevo indicato)
+    window.addEventListener('load', () => {
+        // ... Logica per Lucide ...
+        if (window.lucide && lucide.createIcons) {
+             lucide.createIcons();
+        }
+    });
 
-<script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/lucide.min.js"></script>
-    <script>
-        window.addEventListener('load', () => {
-            // Controlla che l'oggetto lucide sia disponibile
-            if (window.lucide && lucide.createIcons) {
-                // Chiama la funzione di inizializzazione
-                lucide.createIcons();
-            }
-        });
-    </script>
+ </script>
 
 
 </body>
