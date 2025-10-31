@@ -16,9 +16,7 @@
         window.addEventListener('load', () => createIcons());
     </script>
 
-    <script src="https://unpkg.com/backendless/dist/backendless.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.9/html5-qrcode.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+   
 
     <style>
         body {
@@ -293,6 +291,10 @@
     
     <div id="notification-box"></div>
 
+ <script src="https://unpkg.com/backendless/dist/backendless.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.9/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
 <script>
 
 
@@ -513,7 +515,7 @@ async function doCarico() {
     showLoader();
     
     const barcode = document.getElementById('carico-barcode').value.trim();
-    const articleName = document.getElementById('carico-article').value.trim(); 
+    const articleName = document.getElementById('carico-article').value.trim();
     const quantita = Number(document.getElementById('carico-qty').value);
 
     if (!barcode || !articleName || quantita <= 0) {
@@ -523,33 +525,35 @@ async function doCarico() {
 
     try {
         const inventoryStore = Backendless.Data.of(INVENTORY_TABLE);
-        // NON serve più: const movementStore = Backendless.Data.of(MOVEMENT_TABLE);
 
         const whereClause = `barcode = '${barcode}'`;
         const existingArticle = (await inventoryStore.find(Backendless.DataQueryBuilder.create().setWhereClause(whereClause)))[0];
-
+        
         // --- Aggiornamento o Creazione in Magazzino (UNICO SALVATAGGIO) ---
+        let savedItem;
         if (existingArticle) {
-            existingArticle.quantity = Number(existingArticle.quantity) + quantita; 
-            await inventoryStore.save(existingArticle);
+            existingArticle.quantity = Number(existingArticle.quantity) + quantita;
+            // Aggiorna l'articolo esistente e cattura il risultato
+            savedItem = await inventoryStore.save(existingArticle);
         } else {
+            // Crea un nuovo articolo e cattura il risultato
             // Usa le colonne 'article' e 'quantity' del tuo DB
-            await inventoryStore.save({ barcode, article: articleName, quantity: quantita });
+            savedItem = await inventoryStore.save({ barcode, article: articleName, quantity: quantita });
         }
         
-        // NON serve più: await movementStore.save({...});
+        // Verifica esplicita per un fallimento "silenzioso" di Backendless
+        if (!savedItem || !savedItem.objectId) {
+            throw new Error("Salvataggio fallito: Backendless non ha restituito un oggetto valido. Verifica i permessi o la validazione dello schema.");
+        }
 
         // SOLO SE L'OPERAZIONE DI SALVATAGGIO È RIUSCITA
         showToast(`Carico di ${quantita} unità per ${articleName} (${barcode}) registrato con successo!`);
         clearInputs(['carico-barcode', 'carico-article']);
         document.getElementById('carico-qty').value = 1;
         document.getElementById('giacenza-display').textContent = 'Giacenza Attuale: -';
-        loadDashboardData(); 
-        
+        loadDashboardData();
     } catch (error) {
-        // ... (Logica di cattura errori che abbiamo appena corretto) ...
         console.error("ERRORE CRITICO DURANTE IL CARICO:", error);
-
         let errorMessage = "Errore sconosciuto durante il salvataggio.";
         
         if (error.message) {
@@ -565,6 +569,7 @@ async function doCarico() {
         hideLoader();
     }
 }
+
 async function doScarico() {
     showLoader();
     
@@ -578,11 +583,11 @@ async function doScarico() {
 
     try {
         const inventoryStore = Backendless.Data.of(INVENTORY_TABLE);
-        const movementStore = Backendless.Data.of(MOVEMENT_TABLE);
+        // La variabile movementStore è stata rimossa per coerenza con doCarico
 
         const whereClause = `barcode = '${barcode}'`;
         const existingArticle = (await inventoryStore.find(Backendless.DataQueryBuilder.create().setWhereClause(whereClause)))[0];
-
+        
         if (!existingArticle) {
             throw new Error("Articolo non trovato in magazzino per lo scarico.");
         }
@@ -593,24 +598,17 @@ async function doScarico() {
         }
 
         // Usa la colonna 'quantity' del tuo DB
-        existingArticle.quantity = Number(existingArticle.quantity) - quantita; 
+        existingArticle.quantity = Number(existingArticle.quantity) - quantita;
         await inventoryStore.save(existingArticle);
 
-        await movementStore.save({ 
-            barcode, 
-            quantita, 
-            tipo: 'scarico', 
-            data: new Date().getTime(),
-            user: currentUser ? currentUser.objectId : 'guest'
-        });
+        // Il salvataggio sulla tabella Movimenti (movementStore.save) è stato rimosso.
 
         // Usa la colonna 'article' del tuo DB
         showToast(`Scarico di ${quantita} unità per l'articolo ${existingArticle.article} registrato con successo!`);
         clearInputs(['scarico-barcode']);
         document.getElementById('scarico-qty').value = 1;
         document.getElementById('scarico-giacenza-display').textContent = 'Giacenza Attuale: -';
-        loadDashboardData(); 
-        
+        loadDashboardData();
     } catch (error) {
         console.error("Errore durante lo scarico:", error);
         showToast("Errore durante la registrazione dello scarico: " + (error.message || error), true);
