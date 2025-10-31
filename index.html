@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestione Magazzinov3</title>
+    <title>Gestione Magazzinov5</title>
 
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#4f46e5">
@@ -300,521 +300,187 @@ const API_KEY = '1F4341D8-CAB8-44F6-97D6-203322D8D245';
 const INVENTORY_TABLE = 'Magazzino'; // CORRETTO: Usa il nome della tua tabella stock
 //const MOVEMENT_TABLE = 'Movimenti';  // Assumiamo che la tabella dei movimenti si chiami così
 
-// Inizializzazione Backendless
-//if (typeof Backendless !== 'undefined') {
-//    Backendless.initApp(APP_ID, API_KEY);
-//} else {
-//    console.error("Backendless SDK non caricato. L'app non funzionerà correttamente.");
-//}
-
-// Stato Globale
 let currentUser = null;
-let inventoryChart = null;
-let qrScanner = null; 
-let allArticles = []; 
-let currentEditItem = null; 
+let allArticles = [];
+let qrCodeScanner = null; // Per lo scanner
 
-// ================= FUNZIONI UTILITY & UI =================
-
-function showLoader() { document.getElementById('loading-overlay').classList.remove('hidden'); }
-function hideLoader() { document.getElementById('loading-overlay').classList.add('hidden'); }
-
-function showToast(message, isError = false) { 
-    console.log((isError ? "ERRORE: " : "SUCCESS: ") + message); 
-    alert(message); 
-}
-
-function clearInputs(idList) {
-    idList.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            if (el.type === 'number') el.value = 1; 
-            else el.value = '';
-        }
-    });
-}
-
-function showModal(modalId) { document.getElementById(modalId).classList.remove('hidden'); }
-function closeModal(modalId) { document.getElementById(modalId).classList.add('hidden'); }
-
-
-// ================= GESTIONE VISTE (VIEWS) =================
-
-function updateUIScreen() {
-    const isUserLoggedIn = !!currentUser;
-    
-    document.getElementById('login-view').classList.toggle('hidden', isUserLoggedIn);
-    document.getElementById('dashboard-view').classList.toggle('hidden', !isUserLoggedIn);
-    document.getElementById('auth-status').classList.toggle('hidden', !isUserLoggedIn);
-
-    if (isUserLoggedIn) {
-        document.getElementById('user-display').textContent = `Benvenuto, ${currentUser.email || currentUser.objectId}`;
-        loadDashboardData();
-        if (!qrScanner) startQrScanner('qr-reader', onScanSuccessDashboard);
-        switchMode('carico'); 
-        showDashboardTab('main'); 
-    } else {
-        stopQrScanner();
-    }
-}
-
-function switchAuthTab(type) {
-    document.getElementById('auth-tab-login').classList.remove('tab-active');
-    document.getElementById('auth-tab-register').classList.remove('tab-active');
-    
-    document.getElementById('auth-content-login').classList.add('hidden');
-    document.getElementById('auth-content-register').classList.add('hidden');
-    
-    document.getElementById(`auth-content-${type}`).classList.remove('hidden');
-    document.getElementById(`auth-tab-${type}`).classList.add('tab-active');
-}
-
-function showDashboardTab(tab) {
-    // ID della nuova div per il contenuto principale
-    const mainTabContent = document.getElementById('dashboard-main-content'); 
-    const statsTabContent = document.getElementById('dashboard-stats-tab');
-
-    if (mainTabContent) mainTabContent.classList.add('hidden');
-    if (statsTabContent) statsTabContent.classList.add('hidden');
-    
-    document.getElementById('tab-dashboard-main').classList.remove('tab-active');
-    document.getElementById('tab-dashboard-stats').classList.remove('tab-active');
-
-    if (tab === 'stats') {
-         if (statsTabContent) statsTabContent.classList.remove('hidden');
-         document.getElementById('tab-dashboard-stats').classList.add('tab-active');
-         if (inventoryChart) inventoryChart.update();
-    } else { // 'main'
-         if (mainTabContent) mainTabContent.classList.remove('hidden');
-         document.getElementById('tab-dashboard-main').classList.add('tab-active');
-    }
-}
-
-
-function switchMode(mode) {
-    document.getElementById('form-carico').classList.add('hidden');
-    document.getElementById('form-scarico').classList.add('hidden');
-    document.getElementById('tab-carico').classList.remove('tab-active');
-    document.getElementById('tab-scarico').classList.remove('tab-active');
-
-    document.getElementById(`form-${mode}`).classList.remove('hidden');
-    document.getElementById(`tab-${mode}`).classList.add('tab-active');
-
-    if (mode === 'carico') {
-        clearInputs(['carico-barcode', 'carico-article']);
-        document.getElementById('carico-qty').value = 1;
-        document.getElementById('giacenza-display').textContent = 'Giacenza Attuale: -';
-    } else {
-        clearInputs(['scarico-barcode']);
-        document.getElementById('scarico-qty').value = 1;
-        document.getElementById('scarico-giacenza-display').textContent = 'Giacenza Attuale: -';
-        refreshScaricoSelect(allArticles); 
-    }
-}
-
-// ================= AUTENTICAZIONE =================
-
-async function login() {
-    showLoader();
-    const email = document.getElementById('login-email').value;
-    const password = document.getElementById('login-password').value;
-
+// Inizializza Backendless
+if (typeof Backendless !== 'undefined') {
     try {
-        // CHIAMATA REALE DI BACKENDLESS (NON COMMENTATA)
-        currentUser = await Backendless.UserService.login(email, password, true);
-        
-        showToast("Accesso effettuato con successo!");
-        
-        updateUIScreen();
-        clearInputs(['login-email', 'login-password']);
-    } catch (error) {
-        console.error("Errore di login:", error);
-        showToast("Errore di accesso: Credenziali errate o utente non trovato. " + (error.message || error), true);
-    } finally {
-        hideLoader();
+        Backendless.initApp(APP_ID, API_KEY);
+    } catch (e) {
+        console.error("ERRORE: Backendless Init fallito.", e);
     }
 }
 
-async function logout() {
-    if (!currentUser) return;
 
-    try {
-        await Backendless.UserService.logout();
+// =========================================================================
+// 2. FUNZIONI UTILITY ESSENZIALI (DEFINITE PER PRIME)
+// 🔥 RISOLVE: ReferenceError: showLoading/showNotification is not defined 🔥
+// =========================================================================
 
-        currentUser = null;
-        showToast("Logout effettuato con successo.");
-        
-    } catch (error) {
-        console.error("Errore di logout:", error);
-        showToast("Errore durante il logout: " + (error.message || error), true);
-    } finally {
-        updateUIScreen(); 
-    }
+function showLoading() {
+    document.getElementById('loading-overlay')?.classList.remove('hidden');
 }
 
-async function registerUser() {
-    showLoader();
-    const email = document.getElementById('register-email').value;
-    const password = document.getElementById('register-password').value;
-    const confirmPassword = document.getElementById('register-password-confirm').value;
-
-    if (password !== confirmPassword) {
-        hideLoader();
-        return showToast("Le password non corrispondono.", true);
-    }
-
-    try {
-        const user = new Backendless.User();
-        user.email = email;
-        user.password = password;
-
-        await Backendless.UserService.register(user);
-
-        showToast("Registrazione completata! Controlla la tua casella email (anche nello Spam) per il link di verifica.");
-        
-        switchAuthTab('login');
-        clearInputs(['register-email', 'register-password', 'register-password-confirm']);
-    } catch (error) {
-        console.error("Errore di registrazione:", error);
-        showToast("Errore durante la registrazione: " + (error.message || error), true);
-    } finally {
-        hideLoader();
-    }
+function hideLoading() {
+    document.getElementById('loading-overlay')?.classList.add('hidden');
 }
 
-async function handlePasswordResetRequest() {
-    const email = document.getElementById('login-email').value;
-    if (!email) {
-        return showToast("Inserisci l'email nel campo di login per richiedere il reset.", true);
-    }
+function showNotification(message, isError = false) {
+    const box = document.getElementById('notification-box');
+    if (!box) { console.warn(`Notifica mancante: ${message}`); return; }
+    const typeClass = isError ? 'bg-red-500' : 'bg-green-500';
     
-    showLoader();
-    try {
-        await Backendless.UserService.restorePassword(email);
-
-        showToast(`Istruzioni per il reset password inviate a ${email}. Controlla la tua casella di posta (anche lo Spam).`);
-    } catch (error) {
-        console.error("Errore reset password:", error);
-        showToast("Errore durante il reset della password: " + (error.message || error), true);
-    } finally {
-        hideLoader();
-    }
+    // Logica di visualizzazione...
+    box.innerHTML = '';
+    const notification = document.createElement('div');
+    notification.className = `fixed bottom-4 right-4 p-4 text-white rounded-lg shadow-xl z-50 transition-transform transform translate-y-0 ${typeClass}`;
+    notification.textContent = message;
+    box.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.classList.add('translate-y-full', 'opacity-0');
+        setTimeout(() => notification.remove(), 500);
+    }, 4000);
 }
 
-// ================= MOVIMENTAZIONE =================
+function closeModal(id) {
+    document.getElementById(id)?.classList.add('hidden');
+}
 
+
+// =========================================================================
+// 3. LOGICA CORE MAGAZZINO (doCarico, doScarico, saveEdit)
+// Funzioni che usano le UTILITY definite al punto 2.
+// =========================================================================
+
+// --- CARICO (ENTRATA) ---
 async function doCarico() {
-    if (!currentUser) {
-        showNotification("Devi essere loggato per eseguire un carico.", true);
-        return;
-    }
+    console.log("-> Tentativo doCarico()"); // Debug: Controlla che arrivi qui!
+    if (!currentUser) { showNotification("Devi essere loggato.", true); return; }
 
     const barcode = document.getElementById('carico-barcode').value.trim();
     const articleName = document.getElementById('carico-article').value.trim();
-    const qtyInput = document.getElementById('carico-qty').value.trim();
-    const quantita = parseInt(qtyInput, 10);
-    const INVENTORY_TABLE = 'Inventory'; // Verifica che il nome della tabella sia corretto
+    const quantita = parseInt(document.getElementById('carico-qty').value.trim(), 10);
 
     if (!barcode || !articleName || isNaN(quantita) || quantita <= 0) {
-        showNotification("Per il carico, Barcode, Nome Articolo e Quantità (>0) sono obbligatori.", true);
+        showNotification("Dati Carico mancanti.", true);
         return;
     }
     
-    showLoading();
+    showLoading(); // ✅ Funziona perché showLoading è definita sopra!
 
     try {
+        // ... (Logica Backendless con filtro ownerId, come fornito) ...
         const inventoryStore = Backendless.Data.of(INVENTORY_TABLE);
-        
-        // FIX: Filtra per barcode E ownerId
         const userObjectId = currentUser.objectId; 
         const whereClause = `barcode = '${barcode}' AND ownerId = '${userObjectId}'`;
-        
-        const dataQuery = Backendless.DataQueryBuilder.create()
-            .setWhereClause(whereClause)
-            .setPageSize(1);
-            
+        const dataQuery = Backendless.DataQueryBuilder.create().setWhereClause(whereClause).setPageSize(1);
         const existingArticle = (await inventoryStore.find(dataQuery))[0];
 
-        let actionMessage;
-
         if (existingArticle) {
-            // Articolo trovato e appartiene all'utente corrente: AGGIORNA la quantità.
             const newQuantity = Number(existingArticle.quantity) + quantita;
-            
-            const updateObject = { 
-                objectId: existingArticle.objectId,
-                quantity: newQuantity
-            };
-
-            await inventoryStore.save(updateObject);
-            actionMessage = `Carico di ${quantita} unità riuscito! Nuova giacenza per "${existingArticle.article}": ${newQuantity}`;
+            await inventoryStore.save({ objectId: existingArticle.objectId, quantity: newQuantity });
+            showNotification(`Carico riuscito! Nuova giacenza: ${newQuantity}`);
         } else {
-            // Articolo NON trovato per questo utente: CREA un nuovo record.
-            const newItem = { 
-                barcode: barcode, 
-                article: articleName, 
-                quantity: quantita 
-                // ownerId viene aggiunto automaticamente da Backendless
-            };
-            
+            const newItem = { barcode: barcode, article: articleName, quantity: quantita };
             await inventoryStore.save(newItem);
-            actionMessage = `Nuovo Articolo Caricato: "${articleName}" con giacenza iniziale: ${quantita}`;
+            showNotification(`Nuovo Articolo Caricato: ${articleName}`);
         }
-
-        // Pulisce i campi input
+        
+        // Pulisce
         document.getElementById('carico-barcode').value = '';
         document.getElementById('carico-article').value = '';
         document.getElementById('carico-qty').value = '1';
-        document.getElementById('giacenza-display').textContent = 'Giacenza Attuale: -';
 
-        showNotification(actionMessage);
         loadDashboardData(); 
 
     } catch (error) {
-        console.error("Errore durante il Carico:", error);
+        console.error("ERRORE in doCarico:", error);
         showNotification(`Errore nel Carico: ${error.message || 'Errore sconosciuto.'}`, true);
     } finally {
         hideLoading();
     }
 }
 
+// --- SCARICO (USCITA) ---
 async function doScarico() {
-    if (!currentUser) {
-        showNotification("Devi essere loggato per eseguire uno scarico.", true);
-        return;
-    }
+    console.log("-> Tentativo doScarico()"); // Debug: Controlla che arrivi qui!
+    if (!currentUser) { showNotification("Devi essere loggato.", true); return; }
 
-    // L'objectId viene preso dal <select>
     const objectIdToScarico = document.getElementById('scarico-select').value;
-    const qtyInput = document.getElementById('scarico-qty').value.trim();
-    const quantita = parseInt(qtyInput, 10);
-    const INVENTORY_TABLE = 'Inventory';
+    const quantita = parseInt(document.getElementById('scarico-qty').value.trim(), 10);
 
     if (!objectIdToScarico || isNaN(quantita) || quantita <= 0) {
-        showNotification("Seleziona un articolo e inserisci una Quantità (>0) da scaricare.", true);
+        showNotification("Dati Scarico mancanti.", true);
         return;
     }
     
-    showLoading();
+    // Controlli di appartenenza e quantità (trovare l'articolo in allArticles)
+    const articleToUpdate = allArticles.find(a => a.objectId === objectIdToScarico);
+    if (!articleToUpdate || articleToUpdate.ownerId !== currentUser.objectId) {
+        showNotification("Articolo non valido o non tuo.", true);
+        return;
+    }
+    if (quantita > Number(articleToUpdate.quantity)) {
+        showNotification(`Giacenza insufficiente (${articleToUpdate.quantity}).`, true);
+        return;
+    }
+
+    showLoading(); // ✅ Funziona perché showLoading è definita sopra!
 
     try {
         const inventoryStore = Backendless.Data.of(INVENTORY_TABLE);
-        
-        // 1. Cerca l'articolo in locale (dovrebbe essere già filtrato, ma cerchiamo per sicurezza)
-        const articleToUpdate = allArticles.find(a => a.objectId === objectIdToScarico);
-
-        if (!articleToUpdate || articleToUpdate.ownerId !== currentUser.objectId) {
-            throw new Error("Articolo non trovato nel tuo magazzino o permessi insufficienti.");
-        }
-        
-        const currentQuantity = Number(articleToUpdate.quantity);
-
-        if (quantita > currentQuantity) {
-            showNotification(`Errore: Impossibile scaricare ${quantita}. La giacenza attuale è solo ${currentQuantity}.`, true);
-            return;
-        }
-
-        const newQuantity = currentQuantity - quantita;
-        let actionMessage;
+        const newQuantity = Number(articleToUpdate.quantity) - quantita;
 
         if (newQuantity === 0) {
-            // Se la quantità scende a zero, ELIMINA l'articolo
             await inventoryStore.remove({ objectId: objectIdToScarico });
-            actionMessage = `Scarico riuscito! L'articolo "${articleToUpdate.article}" è stato eliminato dallo stock.`;
+            showNotification(`Articolo "${articleToUpdate.article}" eliminato.`);
         } else {
-            // Altrimenti, AGGIORNA la quantità
-            const updateObject = { 
-                objectId: objectIdToScarico,
-                quantity: newQuantity
-            };
-            await inventoryStore.save(updateObject);
-            actionMessage = `Scarico di ${quantita} unità riuscito! Nuova giacenza: ${newQuantity}`;
+            await inventoryStore.save({ objectId: objectIdToScarico, quantity: newQuantity });
+            showNotification(`Scarico riuscito! Nuova giacenza: ${newQuantity}`);
         }
-
-        // Pulisce i campi input
+        
+        // Pulisce
         document.getElementById('scarico-qty').value = '1';
-        document.getElementById('scarico-giacenza-display').textContent = 'Giacenza Attuale: -';
 
-        showNotification(actionMessage);
         loadDashboardData(); 
 
     } catch (error) {
-        console.error("Errore durante lo Scarico:", error);
+        console.error("ERRORE in doScarico:", error);
         showNotification(`Errore nello Scarico: ${error.message || 'Errore sconosciuto.'}`, true);
     } finally {
         hideLoading();
     }
 }
 
-// ================= DATI & DASHBOARD =================
-
-async function loadDashboardData() {
-    showLoader();
-    try {
-        // Verifica di essere loggato prima di accedere ai dati
-        if (!currentUser) {
-            throw new Error("Utente non autenticato.");
-        }
-        
-        const dataStore = Backendless.Data.of(INVENTORY_TABLE);
-        
-        // 1. Prendi l'ID dell'utente loggato
-        const userObjectId = currentUser.objectId;
-        
-        // 2. Crea la clausola WHERE per filtrare i dati
-        //    'ownerId' è la colonna automatica che Backendless usa per l'utente creatore
-        const whereClause = `ownerId = '${userObjectId}'`;
-        
-        const queryBuilder = Backendless.DataQueryBuilder.create()
-            .setWhereClause(whereClause); // Filtra solo gli articoli di questo utente
-            
-        // 3. Esegui la query filtrata
-        const articles = await dataStore.find(queryBuilder);
-        
-        allArticles = articles; 
-        
-        // ... (Il resto della funzione rimane invariato) ...
-
-        let totalUnits = 0;
-        let lowStockCount = 0;
-        
-        articles.forEach(item => {
-            const qty = Number(item.quantity); 
-            totalUnits += qty;
-            if (qty <= 5) lowStockCount++; 
-        });
-
-        document.getElementById('stat-total-items').textContent = articles.length.toLocaleString('it-IT');
-        document.getElementById('stat-total-qty').textContent = totalUnits.toLocaleString('it-IT');
-        document.getElementById('stat-low-stock').textContent = lowStockCount.toLocaleString('it-IT');
-
-        renderInventoryList(articles);
-        refreshScaricoSelect(articles);
-        updateInventoryChart();
-
-    } catch (error) {
-        console.error("Errore caricamento dashboard:", error);
-        showToast("Errore durante il caricamento dei dati: " + (error.message || error), true);
-    } finally {
-        hideLoader();
-    }
-}
-
-function renderInventoryList(articles) {
-    const magazzinoListDiv = document.getElementById('magazzino-list');
-    magazzinoListDiv.innerHTML = ''; 
-
-    if (articles.length === 0) {
-        magazzinoListDiv.innerHTML = '<p class="text-gray-500 italic">Nessun articolo a stock.</p>';
-        return;
-    }
-
-    // Usa la colonna 'quantity' del tuo DB per l'ordinamento
-    articles.sort((a, b) => b.quantity - a.quantity); 
-    articles.forEach(item => {
-        // Usa la colonna 'quantity' del tuo DB
-        const isLowStock = Number(item.quantity) <= 5;
-        const bgColor = isLowStock ? 'bg-red-50 ring-2 ring-red-200' : 'bg-gray-50';
-        
-        const itemDiv = document.createElement('div');
-        itemDiv.className = `flex justify-between items-center p-3 rounded-lg cursor-pointer transition hover:shadow-md ${bgColor}`;
-        itemDiv.innerHTML = `
-            <div>
-                <span class="font-medium text-gray-800">${item.article || 'N/D'}</span>
-                <span class="text-sm text-gray-500 block">Barcode: ${item.barcode}</span>
-            </div>
-            <span class="text-lg font-bold ${isLowStock ? 'text-red-600' : 'text-indigo-600'}">
-                ${item.quantity} Unità
-                <i data-lucide="edit-3" class="h-4 w-4 inline-block ml-2 text-gray-400"></i>
-            </span>
-        `;
-        itemDiv.onclick = () => openEditModal(item);
-        magazzinoListDiv.appendChild(itemDiv);
-    });
-    if (window.createIcons) window.createIcons();
-}
-
-function refreshScaricoSelect(articles) {
-    const selectEl = document.getElementById('scarico-select');
-    selectEl.innerHTML = '<option value="">-- Seleziona Articolo o Scansiona --</option>';
-
-    if (articles && articles.length > 0) {
-        articles.forEach(item => {
-            // Usa la colonna 'quantity' del tuo DB
-            if (Number(item.quantity) > 0) { 
-                 const option = document.createElement('option');
-                 option.value = item.barcode;
-                 // Usa le colonne 'article' e 'quantity' del tuo DB
-                 option.textContent = `${item.article || 'N/D'} (Stock: ${item.quantity})`;
-                 selectEl.appendChild(option);
-            }
-        });
-    }
-
-    selectEl.onchange = (event) => {
-        const barcode = event.target.value;
-        const selectedItem = articles.find(a => a.barcode === barcode);
-        const giacenzaDisplay = document.getElementById('scarico-giacenza-display');
-        // Usa la colonna 'quantity' del tuo DB
-        giacenzaDisplay.textContent = selectedItem ? `Giacenza Attuale: ${selectedItem.quantity}` : 'Giacenza Attuale: -';
-        document.getElementById('scarico-barcode').value = barcode; 
-    };
-}
-
-
-// ================= MODAL & EDIT =================
-
-function openEditModal(item) {
-    currentEditItem = item;
-    
-    document.getElementById('edit-objectId').value = item.objectId;
-    // Usa la colonna 'article' del tuo DB
-    document.getElementById('edit-article').value = item.article || ''; 
-    document.getElementById('edit-barcode').value = item.barcode || '';
-    // Usa la colonna 'quantity' del tuo DB
-    document.getElementById('edit-quantity').value = Number(item.quantity); 
-    
-    showModal('edit-modal');
-}
-
-/**
- * Salva le modifiche di un articolo dal modale.
- */
+// --- SALVA MODIFICHE ---
 async function saveEdit() {
-    if (!currentUser) {
-        showNotification("Devi essere loggato per modificare un articolo.", true);
-        return;
-    }
-    
+    console.log("-> Tentativo saveEdit()"); // Debug: Controlla che arrivi qui!
+    if (!currentUser) { showNotification("Devi essere loggato.", true); return; }
+
     const objectId = document.getElementById('edit-objectId').value;
     const article = document.getElementById('edit-article').value.trim();
     const barcode = document.getElementById('edit-barcode').value.trim();
     const quantity = parseInt(document.getElementById('edit-quantity').value, 10);
-    const INVENTORY_TABLE = 'Inventory';
-
+    
     if (!objectId || !article || !barcode || isNaN(quantity) || quantity < 0) {
-        showNotification("Tutti i campi sono obbligatori e la quantità deve essere >= 0.", true);
+        showNotification("Compila tutti i campi. Quantità >= 0.", true);
         return;
     }
     
-    // Controllo aggiuntivo di appartenenza prima di salvare
+    // Controllo di appartenenza
     const existing = allArticles.find(a => a.objectId === objectId);
     if (!existing || existing.ownerId !== currentUser.objectId) {
-        showNotification("Non hai i permessi per modificare questo articolo.", true);
+        showNotification("Permessi insufficienti o articolo non trovato.", true);
         return;
     }
 
-    showLoading();
+    showLoading(); // ✅ Funziona perché showLoading è definita sopra!
 
     try {
-        const updateObject = {
-            objectId: objectId,
-            article: article,
-            barcode: barcode,
-            quantity: quantity,
-            // Non strettamente necessario ma rafforza: ownerId: currentUser.objectId
-        };
-
+        const updateObject = { objectId: objectId, article: article, barcode: barcode, quantity: quantity };
         await Backendless.Data.of(INVENTORY_TABLE).save(updateObject); 
 
         showNotification(`Articolo "${article}" modificato con successo.`);
@@ -822,230 +488,55 @@ async function saveEdit() {
         loadDashboardData();
 
     } catch (error) {
-        console.error("Errore durante il salvataggio:", error);
-        showNotification(`Errore nella modifica: ${error.message || 'Verifica la connettività e i permessi.'}`, true);
+        console.error("ERRORE in saveEdit:", error);
+        showNotification(`Errore nella modifica: ${error.message || 'Errore sconosciuto.'}`, true);
     } finally {
         hideLoading();
     }
 }
 
-/**
- * Elimina l'articolo dal modale.
- */
-async function deleteItem() {
-    if (!currentUser) {
-        showNotification("Devi essere loggato per eliminare un articolo.", true);
-        return;
-    }
-    
-    const objectId = document.getElementById('edit-objectId').value;
-    const articleName = document.getElementById('edit-article').value;
-    const INVENTORY_TABLE = 'Inventory';
+// =========================================================================
+// 4. FUNZIONI DI DIPENDENZA (login, loadDashboardData, ecc.)
+// =========================================================================
 
-    if (!objectId) {
-        showNotification("ID articolo mancante. Impossibile eliminare.", true);
-        return;
-    }
-    
-    // Controllo aggiuntivo di appartenenza
-    const existing = allArticles.find(a => a.objectId === objectId);
-    if (!existing || existing.ownerId !== currentUser.objectId) {
-        showNotification("Non hai i permessi per eliminare questo articolo.", true);
-        return;
-    }
-    
-    if (!confirm(`Sei sicuro di voler eliminare l'articolo "${articleName}"? L'operazione è irreversibile.`)) {
-        return;
-    }
+// Qui vanno login(), loadDashboardData(), updateUIScreen(), initApp() ecc.
+// Devono chiamare le funzioni di magazzino/utility definite prima.
 
-    showLoading();
-
+// Esempio:
+async function login() {
+    // ... logica login ...
+    showLoading(); 
     try {
-        // La rimozione fallirà automaticamente se l'utente non è l'owner (permesso di Backendless).
-        await Backendless.Data.of(INVENTORY_TABLE).remove({ objectId: objectId });
-
-        showNotification(`Articolo "${articleName}" eliminato con successo.`, false);
-        closeModal('edit-modal');
-        loadDashboardData();
-
+        const user = await Backendless.UserService.login(/* ... */);
+        currentUser = user;
+        updateUIScreen();
     } catch (error) {
-        console.error("Errore durante l'eliminazione:", error);
-        showNotification(`Errore nell'eliminazione: ${error.message || 'Verifica la connettività e i permessi.'}`, true);
+        showNotification(error.message || "Errore di accesso.", true);
     } finally {
         hideLoading();
     }
 }
 
-// ================= QR CODE SCANNER =================
-
-const onScanSuccessDashboard = (decodedText, decodedResult) => {
-    document.getElementById('qr-result').value = decodedText;
-    
-    const isScaricoMode = !document.getElementById('form-scarico').classList.contains('hidden');
-
-    if (!isScaricoMode) { // Carico
-        document.getElementById('carico-barcode').value = decodedText;
-        document.getElementById('carico-qty').value = 1;
-        checkArticleForCarico(decodedText);
-    } else { // Scarico
-        document.getElementById('scarico-barcode').value = decodedText;
-        const selectEl = document.getElementById('scarico-select');
-        selectEl.value = decodedText;
-        selectEl.dispatchEvent(new Event('change')); 
-    }
-    
-    if ("vibrate" in navigator) {
-        navigator.vibrate(200); 
-    }
-};
-
-function checkArticleForCarico(barcode) {
-    const existingArticle = allArticles.find(a => a.barcode === barcode);
-    const giacenzaDisplay = document.getElementById('giacenza-display');
-    
-    if (existingArticle) {
-        // Usa la colonna 'article' del tuo DB
-        document.getElementById('carico-article').value = existingArticle.article; 
-        // Usa la colonna 'quantity' del tuo DB
-        giacenzaDisplay.textContent = `Giacenza Attuale: ${existingArticle.quantity}`; 
-    } else {
-        document.getElementById('carico-article').value = '';
-        giacenzaDisplay.textContent = 'Giacenza Attuale: NUOVO ARTICOLO';
-        showToast("Nuovo Barcode rilevato. Inserisci il nome dell'articolo per il primo carico.", false);
+async function loadDashboardData() {
+    // ... logica di caricamento ...
+    if (!currentUser) return;
+    showLoading(); 
+    try {
+        // ... Logica di query Backendless ...
+        // allArticles = result;
+        // displayMagazzinoList();
+        // refreshScaricoSelect(allArticles);
+    } catch (e) {
+        showNotification("Errore caricamento magazzino.", true);
+    } finally {
+        hideLoading();
     }
 }
 
-function startQrScanner(readerId, onScanSuccessCallback) {
-    const onScanError = (errorMessage) => {}; 
+// Avvia l'applicazione (deve essere l'ultima riga)
+window.addEventListener('load', initApp); </script>
 
-    if (!qrScanner) {
-        qrScanner = new Html5Qrcode(readerId);
-    }
-    
-    if (!qrScanner.isScanning) {
-        qrScanner.start(
-            { facingMode: "environment" }, 
-            { fps: 10, qrbox: { width: 250, height: 250 } }, 
-            onScanSuccessCallback, 
-            onScanError
-        ).catch(err => {
-            console.error("Errore all'avvio dello scanner:", err);
-            document.getElementById(readerId).innerHTML = '<p class="text-red-500">Impossibile avviare la fotocamera. Controlla i permessi.</p>';
-        });
-    }
-}
-
-function stopQrScanner() {
-    if (qrScanner && qrScanner.isScanning) {
-        qrScanner.stop().then(() => {
-            console.log("QR scanner fermato.");
-        }).catch(err => {
-            console.warn("Impossibile fermare lo scanner:", err);
-        });
-        qrScanner = null; 
-    }
-}
-
-
-// ================= FUNZIONI GRAFICO (logica di esempio) =================
-
-function updateInventoryChart() {
-    const ctx = document.getElementById('inventory-chart');
-    // ... (Logica del grafico omessa per brevità, non è stata modificata) ...
-    const data = {
-        labels: ['Settimana 1', 'Settimana 2', 'Settimana 3', 'Settimana 4'],
-        datasets: [{
-            label: 'Carichi',
-            data: [65, 59, 80, 81],
-            borderColor: 'rgb(79, 70, 229)', 
-            backgroundColor: 'rgba(79, 70, 229, 0.5)',
-            tension: 0.3
-        }, {
-            label: 'Scarichi',
-            data: [28, 48, 40, 19],
-            borderColor: 'rgb(239, 68, 68)', 
-            backgroundColor: 'rgba(239, 68, 68, 0.5)',
-            tension: 0.3
-        }]
-    };
-
-    const config = {
-        type: 'line',
-        data: data,
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
-    };
-
-
-    if (inventoryChart) {
-        inventoryChart.destroy();
-    }
-    inventoryChart = new Chart(ctx, config);
-}
-
-
-// ================= INIZIALIZZAZIONE =================
-
-function initApp() {
-    currentUser = null; 
-    
-    // ⭐ RIGA CRITICA MANCANTE: INIZIALIZZAZIONE BACKENDLESS ⭐
-    Backendless.initApp(APP_ID, API_KEY); 
-
-    updateUIScreen();
-    
-    switchAuthTab('login');
-    
-    // Configura tutti gli event listeners
-    document.getElementById('carico-barcode').addEventListener('input', (e) => {
-        checkArticleForCarico(e.target.value.trim());
-    });
-    
-    document.getElementById('scarico-barcode').addEventListener('input', (e) => {
-        const filterText = e.target.value.trim().toLowerCase();
-        const filtered = allArticles.filter(a => 
-            a.barcode.toLowerCase().includes(filterText) || 
-            (a.article && a.article.toLowerCase().includes(filterText)) // Usa 'article'
-        );
-        refreshScaricoSelect(filtered);
-    });
-    
-    document.getElementById('scarico-select').addEventListener('change', (e) => {
-        const barcode = e.target.value;
-        document.getElementById('scarico-barcode').value = barcode;
-    });
-    
-    // Altri listener (ad esempio per l'aggiornamento automatico della giacenza)
-    document.getElementById('scarico-select').addEventListener('change', (e) => {
-        const selectedItem = allArticles.find(a => a.barcode === e.target.value);
-        document.getElementById('scarico-giacenza-display').textContent = selectedItem ? `Giacenza Attuale: ${selectedItem.quantity}` : 'Giacenza Attuale: -';
-        document.getElementById('scarico-barcode').value = e.target.value;
-    });
-    
-    // Listener per la scansione (gestito in un altro punto, ma assicurati che esista)
-    // startQrScanner('qr-reader', 'qr-result'); 
-}
-
-window.addEventListener('load', initApp);
-// Funzione di inizializzazione corretta per Lucide (come ti avevo indicato)
-    window.addEventListener('load', () => {
-        // ... Logica per Lucide ...
-        if (window.lucide && lucide.createIcons) {
-             lucide.createIcons();
-        }
-    });
-
- </script>
-
-
+</script>
 </body>
 </html>
-
 
