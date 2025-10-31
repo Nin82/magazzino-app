@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestione Magazzino v1</title>
+<title>Gestione Magazzino v2</title>
 
 <!-- ================= PWA SETTINGS ================= -->
 <link rel="manifest" href="manifest.json">
@@ -107,151 +107,105 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
    
 
     <!-- ================= LAYOUT PRINCIPALE ================= -->
-    <header class="bg-white shadow-md p-4 flex justify-between items-center z-10">
-        <h1 class="text-2xl font-bold text-indigo-600">Gestione Magazzino</h1>
-        <div id="auth-status" class="flex items-center space-x-4 hidden">
-            <span id="user-display" class="text-sm font-medium text-gray-700"></span>
-            <button id="logout-btn" onclick="logout()" class="px-3 py-1 bg-red-500 text-white text-sm font-semibold rounded-lg hover:bg-red-600">
-                <i data-lucide="log-out" class="h-4 w-4 inline-block mr-1"></i>
-                Logout
-            </button>
-        </div>
-    </header>
+<header class="bg-white shadow-md p-4 flex justify-between items-center z-10">
+    <h1 class="text-2xl font-bold text-indigo-600">Gestione Magazzino</h1>
+    <div id="auth-status" class="flex items-center space-x-4 hidden">
+        <span id="user-display" class="text-sm font-medium text-gray-700"></span>
+        <button id="logout-btn" onclick="logout()" class="px-3 py-1 bg-red-500 text-white text-sm font-semibold rounded-lg hover:bg-red-600">
+            <i data-lucide="log-out" class="h-4 w-4 inline-block mr-1"></i>
+            Logout
+        </button>
+    </div>
+</header>
 
-    <main id="view-container" class="flex-grow p-4 md:p-8">
-        
-        <!-- Vista Login & Register -->
-        <div id="login-view" class="view-content hidden">
-            <div class="max-w-md mx-auto my-12 p-8 bg-white rounded-xl card space-y-4">
-                <h2 class="text-3xl font-extrabold text-gray-900 text-center">Autenticazione Backendless</h2>
-                
-                <!-- Tab Selector -->
-                <div class="flex border-b border-gray-200 mb-6">
-                    <button id="auth-tab-login" onclick="switchAuthTab('login')" class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150 tab-active">
-                        Accedi
-                    </button>
-                    <button id="auth-tab-register" onclick="switchAuthTab('register')" class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150">
-                        Registrati
-                    </button>
-                </div>
-                
-                <!-- Contenuto Tab Login -->
-                <div id="auth-content-login" class="space-y-4">
-                    <input type="email" id="login-email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                    <input type="password" id="login-password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded-lg input-focus" onkeydown="if(event.key==='Enter') login()">
-                    
-                    <button onclick="login()" class="w-full btn-primary bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center">
-                        <i data-lucide="log-in" class="h-5 w-5 mr-2"></i>
-                        Accedi
-                    </button>
-                    
-                    <button onclick="handlePasswordResetRequest()" class="w-full text-indigo-600 text-sm py-2 hover:underline">
-                        Password dimenticata?
-                    </button>
-                </div>
-
-                <!-- Contenuto Tab Registrazione -->
-                <div id="auth-content-register" class="space-y-4 hidden">
-                    <p class="text-sm text-gray-600 text-center">Crea un nuovo account per accedere al magazzino.</p>
-                    <input type="email" id="register-email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                    <input type="password" id="register-password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                    <input type="password" id="register-password-confirm" placeholder="Conferma Password" class="w-full p-3 border border-gray-300 rounded-lg input-focus" onkeydown="if(event.key==='Enter') registerUser()">
-                    
-                    <button onclick="registerUser()" class="w-full btn-primary bg-green-600 text-white p-3 rounded-lg font-bold hover:bg-green-700 flex items-center justify-center">
-                        <i data-lucide="user-plus" class="h-5 w-5 mr-2"></i>
-                        Registrati
-                    </button>
-                </div>
+<main id="view-container" class="flex-grow p-4 md:p-8">
+    
+    <div id="login-view" class="view-content hidden">
+        <div class="max-w-md mx-auto my-12 p-8 bg-white rounded-xl card space-y-4">
+            <h2 class="text-3xl font-extrabold text-gray-900 text-center">Autenticazione Backendless</h2>
+            
+            <div class="flex border-b border-gray-200 mb-6">
+                <button id="auth-tab-login" onclick="switchAuthTab('login')" class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150 tab-active">
+                    Accedi
+                </button>
+                <button id="auth-tab-register" onclick="switchAuthTab('register')" class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150">
+                    Registrati
+                </button>
             </div>
-        </div>
-        
-        <!-- Modal di Modifica Articolo -->
-        <div id="edit-modal" class="modal-overlay hidden">
-            <div class="modal-content space-y-4">
-                <h3 class="text-xl font-bold text-gray-900 flex items-center"><i data-lucide="edit" class="h-5 w-5 mr-2 text-indigo-600"></i> Modifica Articolo</h3>
-                <input type="hidden" id="edit-objectId">
+            
+            <div id="auth-content-login" class="space-y-4">
+                <input type="email" id="login-email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                <input type="password" id="login-password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded-lg input-focus" onkeydown="if(event.key==='Enter') login()">
                 
-                <label class="block text-sm font-medium text-gray-700">Nome Articolo</label>
-                <input type="text" id="edit-article" placeholder="Nome Articolo" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                
-                <label class="block text-sm font-medium text-gray-700">Barcode</label>
-                <input type="text" id="edit-barcode" placeholder="Barcode" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                
-                <label class="block text-sm font-medium text-gray-700">Quantità in Stock</label>
-                <input type="number" id="edit-quantity" placeholder="Quantità" min="0" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                
-                <button onclick="saveEdit()" class="w-full btn-primary bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center">
-                    <i data-lucide="save" class="h-5 w-5 mr-2"></i>
-                    Salva Modifiche
+                <button onclick="login()" class="w-full btn-primary bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center">
+                    <i data-lucide="log-in" class="h-5 w-5 mr-2"></i>
+                    Accedi
                 </button>
                 
-                <button onclick="deleteItem()" class="w-full btn-primary bg-red-500 text-white p-3 rounded-lg font-bold hover:bg-red-600 flex items-center justify-center">
-                    <i data-lucide="trash-2" class="h-5 w-5 mr-2"></i>
-                    Elimina Articolo
+                <button onclick="handlePasswordResetRequest()" class="w-full text-indigo-600 text-sm py-2 hover:underline">
+                    Password dimenticata?
                 </button>
-                
-                <button onclick="closeModal('edit-modal')" class="w-full text-sm py-2 text-gray-600 hover:text-gray-800">Annulla</button>
             </div>
-        </div>
-        
-        
-        <!-- Vista Dashboard -->
-        <div id="dashboard-view" class="view-content hidden space-y-8">
-            <div class="max-w-6xl mx-auto">
-                
-               <!-- TAB STATISTICHE -->
-<div id="dashboard-stats-tab" class="hidden">
-    <div class="bg-white p-6 rounded-xl card mb-8">
-        <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-            <i data-lucide="pie-chart" class="h-5 w-5 mr-2 text-indigo-600"></i>
-            Statistiche di Magazzino
-        </h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <!-- Stat 1: Totale Articoli -->
-            <div class="bg-indigo-50 p-4 rounded-lg flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-indigo-700 font-medium">Articoli Unici</p>
-                    <p id="stat-total-items" class="text-3xl font-bold text-indigo-800">0</p>
-                </div>
-                <i data-lucide="boxes" class="h-8 w-8 text-indigo-400"></i>
-            </div>
-            <!-- Stat 2: Totale Quantità -->
-            <div class="bg-green-50 p-4 rounded-lg flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-green-700 font-medium">Unità Totali in Stock</p>
-                    <p id="stat-total-qty" class="text-3xl font-bold text-green-800">0</p>
-                </div>
-                <i data-lucide="package" class="h-8 w-8 text-green-400"></i>
-            </div>
-            <!-- Stat 3: Articoli Basso Stock -->
-            <div class="bg-yellow-50 p-4 rounded-lg flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-yellow-700 font-medium">Articoli Sotto Soglia (<=5)</p>
-                    <p id="stat-low-stock" class="text-3xl font-bold text-yellow-800">0</p>
-                </div>
-                <i data-lucide="alert-triangle" class="h-8 w-8 text-yellow-400"></i>
-            </div>
-        </div>
 
-        <div id="chart-container" class="h-96">
-            <canvas id="inventory-chart"></canvas>
+            <div id="auth-content-register" class="space-y-4 hidden">
+                <p class="text-sm text-gray-600 text-center">Crea un nuovo account per accedere al magazzino.</p>
+                <input type="email" id="register-email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                <input type="password" id="register-password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+                <input type="password" id="register-password-confirm" placeholder="Conferma Password" class="w-full p-3 border border-gray-300 rounded-lg input-focus" onkeydown="if(event.key==='Enter') registerUser()">
+                
+                <button onclick="registerUser()" class="w-full btn-primary bg-green-600 text-white p-3 rounded-lg font-bold hover:bg-green-700 flex items-center justify-center">
+                    <i data-lucide="user-plus" class="h-5 w-5 mr-2"></i>
+                    Registrati
+                </button>
+            </div>
         </div>
     </div>
-</div>
-		
+    
+    <div id="edit-modal" class="modal-overlay hidden">
+        <div class="modal-content space-y-4">
+            <h3 class="text-xl font-bold text-gray-900 flex items-center"><i data-lucide="edit" class="h-5 w-5 mr-2 text-indigo-600"></i> Modifica Articolo</h3>
+            <input type="hidden" id="edit-objectId">
+            
+            <label class="block text-sm font-medium text-gray-700">Nome Articolo</label>
+            <input type="text" id="edit-article" placeholder="Nome Articolo" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+            
+            <label class="block text-sm font-medium text-gray-700">Barcode</label>
+            <input type="text" id="edit-barcode" placeholder="Barcode" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+            
+            <label class="block text-sm font-medium text-gray-700">Quantità in Stock</label>
+            <input type="number" id="edit-quantity" placeholder="Quantità" min="0" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+            
+            <button onclick="saveEdit()" class="w-full btn-primary bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center">
+                <i data-lucide="save" class="h-5 w-5 mr-2"></i>
+                Salva Modifiche
+            </button>
+            
+            <button onclick="deleteItem()" class="w-full btn-primary bg-red-500 text-white p-3 rounded-lg font-bold hover:bg-red-600 flex items-center justify-center">
+                <i data-lucide="trash-2" class="h-5 w-5 mr-2"></i>
+                Elimina Articolo
+            </button>
+            
+            <button onclick="closeModal('edit-modal')" class="w-full text-sm py-2 text-gray-600 hover:text-gray-800">Annulla</button>
+        </div>
+    </div>
+    
+    
+    <div id="dashboard-view" class="view-content hidden space-y-8">
+        <div class="max-w-6xl mx-auto">
+            
+            <div class="flex border-b border-gray-200 mb-6">
+                <button id="tab-dashboard-main" onclick="showDashboardTab('main')" 
+                     class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150 tab-active">
+                     Magazzino
+                </button>
+                <button id="tab-dashboard-stats" onclick="showDashboardTab('stats')" 
+                    class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150">
+                    Statistiche
+                </button>
+            </div>
+            
+            <div id="dashboard-main-content">
 
-		<div class="flex border-b border-gray-200 mb-6">
-    			<button id="tab-dashboard-main" onclick="showDashboardTab('main')" 
-           		 class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150 tab-active">
-       			 Magazzino
-    			</button>
-    			<button id="tab-dashboard-stats" onclick="showDashboardTab('stats')" 
-         		class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150">
-        		Statistiche
-   			 </button>
-		</div>				
-
-                <!-- Scanner QR -->
                 <div class="p-6 bg-white rounded-xl card mb-8">
                     <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
                         <i data-lucide="qrcode" class="h-5 w-5 mr-2 text-indigo-600"></i>
@@ -261,7 +215,6 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                     <input type="text" id="qr-result" placeholder="Risultato Scansione" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-gray-100" readonly>
                 </div>
 
-                <!-- CARICO / SCARICO TAB -->
                 <div class="flex border-b border-gray-200 mb-6">
                     <button id="tab-carico" onclick="switchMode('carico')" class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150 tab-active">
                         <i data-lucide="package-plus" class="h-5 w-5 inline-block mr-1"></i>
@@ -273,85 +226,101 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                     </button>
                 </div>
 
-                <!-- Modulo Carico -->
                 <div id="form-carico" class="bg-white p-6 rounded-xl card space-y-4">
                     <h3 class="text-lg font-semibold">Modulo di Carico</h3>
-                    
-                    <!-- Campo Barcode -->
                     <input type="text" id="carico-barcode" placeholder="Barcode (Scannerizza o Inserisci)" 
                            class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                           
                     <p id="giacenza-display" class="text-sm font-medium text-indigo-600">Giacenza Attuale: -</p>
-                    
                     <input type="text" id="carico-article" placeholder="Nome Articolo (Auto-compilato o Nuovo)" 
                            class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                           
                     <input type="number" id="carico-qty" placeholder="Quantità da Caricare" value="1" min="1" 
                            class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                           
                     <button onclick="doCarico()" class="w-full btn-primary bg-green-600 text-white p-3 rounded-lg font-bold hover:bg-green-700 flex items-center justify-center">
                         <i data-lucide="save" class="h-5 w-5 mr-2"></i>
                         Conferma Carico
                     </button>
                 </div>
 
-                <!-- Modulo Scarico -->
                 <div id="form-scarico" class="bg-white p-6 rounded-xl card space-y-4 hidden">
                     <h3 class="text-lg font-semibold">Modulo di Scarico</h3>
-                    
-                    <!-- Input per la scansione/filtro barcode -->
                     <input type="text" id="scarico-barcode" placeholder="Scannerizza Barcode o Inserisci per filtrare" 
                            class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                           
-                    <!-- Seleziona Articolo (popolato da refreshScaricoSelect) -->
                     <select id="scarico-select" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
                         <option value="">-- Seleziona Articolo o Scansiona --</option>
                     </select>
-
                     <p id="scarico-giacenza-display" class="text-sm font-medium text-red-600">Giacenza Attuale: -</p>
-                    
                     <input type="number" id="scarico-qty" placeholder="Quantità da Scaricare" value="1" min="1" 
                            class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                           
                     <button onclick="doScarico()" class="w-full btn-primary bg-red-600 text-white p-3 rounded-lg font-bold hover:bg-red-700 flex items-center justify-center">
                         <i data-lucide="package-minus" class="h-5 w-5 mr-2"></i>
                         Conferma Scarico
                     </button>
                 </div>
-                
-                <!-- Lista Inventario -->
+
                 <div class="mt-8 bg-white p-6 rounded-xl card">
                     <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
                         <i data-lucide="list-checks" class="h-5 w-5 mr-2 text-indigo-600"></i>
                         Stock Corrente in Magazzino
                     </h3>
                     <div id="magazzino-list" class="space-y-3">
-                        <!-- Lista articoli caricata da loadDashboardData -->
-                    </div>
+                        </div>
                     <button onclick="loadDashboardData()" class="mt-4 w-full p-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
                         <i data-lucide="refresh-cw" class="h-4 w-4 inline-block mr-1"></i>
                         Aggiorna Lista
                     </button>
                 </div>
-
+                
             </div>
-        </div>
+            <div id="dashboard-stats-tab" class="hidden">
+                <div class="bg-white p-6 rounded-xl card mb-8">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i data-lucide="pie-chart" class="h-5 w-5 mr-2 text-indigo-600"></i>
+                        Statistiche di Magazzino
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-indigo-50 p-4 rounded-lg flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-indigo-700 font-medium">Articoli Unici</p>
+                                <p id="stat-total-items" class="text-3xl font-bold text-indigo-800">0</p>
+                            </div>
+                            <i data-lucide="boxes" class="h-8 w-8 text-indigo-400"></i>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-green-700 font-medium">Unità Totali in Stock</p>
+                                <p id="stat-total-qty" class="text-3xl font-bold text-green-800">0</p>
+                            </div>
+                            <i data-lucide="package" class="h-8 w-8 text-green-400"></i>
+                        </div>
+                        <div class="bg-yellow-50 p-4 rounded-lg flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-yellow-700 font-medium">Articoli Sotto Soglia (<=5)</p>
+                                <p id="stat-low-stock" class="text-3xl font-bold text-yellow-800">0</p>
+                            </div>
+                            <i data-lucide="alert-triangle" class="h-8 w-8 text-yellow-400"></i>
+                        </div>
+                    </div>
 
-    </main>
-    
-    <!-- Loader Overlay -->
-    <div id="loading-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white p-6 rounded-lg flex items-center">
-            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span>Caricamento...</span>
-        </div>
+                    <div id="chart-container" class="h-96">
+                        <canvas id="inventory-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+            </div>
     </div>
-    
-    <!-- Notification Box -->
-    <div id="notification-box"></div>
+    </main>
+
+<div id="loading-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white p-6 rounded-lg flex items-center">
+        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span>Caricamento...</span>
+    </div>
+</div>
+
+<div id="notification-box"></div>
 
 </div>
 
