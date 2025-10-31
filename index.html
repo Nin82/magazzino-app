@@ -9,8 +9,20 @@
     <meta name="theme-color" content="#4f46e5">
 
     <script src="https://cdn.tailwindcss.com"></script>
-    
-//</script>
+
+   <!-- Icone Lucide -->
+<script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/lucide.min.js"></script>
+<script>
+window.addEventListener('load', () => {
+  if (window.lucide && lucide.createIcons) {
+    lucide.createIcons({ icons: lucide.icons });
+    console.log('✅ Icone Lucide inizializzate correttamente');
+  } else {
+    console.error('❌ Errore: libreria Lucide non caricata correttamente.');
+  }
+});
+</script>
+
     <style>
         body {
             background-color: #f3f4f6; /* gray-100 */
@@ -945,19 +957,7 @@ function initApp() {
 window.addEventListener('load', initApp);
 </script>
 
-   <!-- Icone Lucide -->
-<script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/lucide.min.js"></script>
-<script>
-window.addEventListener('load', () => {
-  if (window.lucide && lucide.createIcons) {
-    lucide.createIcons({ icons: lucide.icons });
-    console.log('✅ Icone Lucide inizializzate correttamente');
-  } else {
-    console.error('❌ Errore: libreria Lucide non caricata correttamente.');
-  }
-});
 
 </body>
 </html>
-
 
