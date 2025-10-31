@@ -288,7 +288,7 @@
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.9/html5-qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 
-//<script>
+<script>
 
 // ================= CONFIGURAZIONE =================
 // >>>>>>> SOSTITUISCI CON LE TUE CHIAVI BACKENDLESS <<<<<<<
@@ -300,11 +300,11 @@ const INVENTORY_TABLE = 'Magazzino'; // CORRETTO: Usa il nome della tua tabella 
 //const MOVEMENT_TABLE = 'Movimenti';  // Assumiamo che la tabella dei movimenti si chiami così
 
 // Inizializzazione Backendless
-if (typeof Backendless !== 'undefined') {
-    Backendless.initApp(APP_ID, API_KEY);
-} else {
-    console.error("Backendless SDK non caricato. L'app non funzionerà correttamente.");
-}
+//if (typeof Backendless !== 'undefined') {
+//    Backendless.initApp(APP_ID, API_KEY);
+//} else {
+//    console.error("Backendless SDK non caricato. L'app non funzionerà correttamente.");
+//}
 
 // Stato Globale
 let currentUser = null;
@@ -914,6 +914,10 @@ function updateInventoryChart() {
 
 function initApp() {
     currentUser = null; 
+    
+    // ⭐ RIGA ESSENZIALE AGGIUNTA ⭐
+    // Questa riga usa le costanti APP_ID e API_KEY definite sopra.
+    Backendless.initApp(APP_ID, API_KEY); 
 
     updateUIScreen();
     
