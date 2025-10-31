@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestione Magazzino Backendless</title>
+<title>Gestione Magazzino v1</title>
 
 <!-- ================= PWA SETTINGS ================= -->
 <link rel="manifest" href="manifest.json">
@@ -11,14 +11,21 @@
 
 <!-- Tailwind CSS CDN -->
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
 
-
-<!-- Icone Lucide (versione compatta UMD) -->
 <script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script>
 <script>
+    // La versione CDN/UMD non sempre esporta 'icons' come proprietà diretta
+    // ma createIcons dovrebbe funzionare senza parametri in questo caso.
+    // Se non funziona, forziamo un'esecuzione al sicuro da problemi di rendering
     window.addEventListener('load', () => {
-        lucide.createIcons({ icons: lucide.icons });
+         // Esegui la creazione delle icone, idealmente senza argomenti per UMD
+        lucide.createIcons(); 
     });
+
+    // Questo blocco nel tuo codice suggerisce un tentativo di correzione 
+    // che potrebbe interferire se non è più presente (linee 10-12 del tuo snippet posteriore):
+    // window.requestAnimationFrame(() => createIcons());
 </script>
 
 <style>
@@ -905,7 +912,7 @@ async function handlePasswordResetRequest() {
             document.getElementById('edit-barcode').value = barcode;
             document.getElementById('edit-quantity').value = quantity;
             showModal('edit-modal');
-            window.requestAnimationFrame(() => createIcons()); // Render icona edit
+            window.requestAnimationFrame(() => lucide.createIcons({ icons: lucide.icons || {} })); // Render icona edit
         }
 
         async function saveEdit() {
