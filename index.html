@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestione Magazzino v2</title>
+<title>Gestione Magazzino v3</title>
 
 <!-- ================= PWA SETTINGS ================= -->
 <link rel="manifest" href="manifest.json">
@@ -1094,22 +1094,24 @@ async function handlePasswordResetRequest() {
         }
 
 
-	function showDashboardTab(tab) {
+function showDashboardTab(tab) {
     const dashboardStats = document.getElementById('dashboard-stats-tab');
-    const dashboardMain = document.getElementById('dashboard-view'); // o se hai una sezione principale separata
+    // Puntiamo al NUOVO contenitore del contenuto del Magazzino
+    const dashboardMain = document.getElementById('dashboard-main-content'); 
 
     if (tab === 'stats') {
         dashboardStats.classList.remove('hidden');
         dashboardMain.classList.add('hidden');
+        
     } else {
         dashboardStats.classList.add('hidden');
         dashboardMain.classList.remove('hidden');
     }
 
+    // Gestione delle classi 'tab-active' sui pulsanti
     document.getElementById('tab-dashboard-main').classList.toggle('tab-active', tab === 'main');
     document.getElementById('tab-dashboard-stats').classList.toggle('tab-active', tab === 'stats');
 }
-
         // =========================================================================
         // STARTUP
         // =========================================================================
