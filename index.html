@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestione Magazzino Backendless</title>
+    <title>Gestione Magazzino v1</title>
 
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#4f46e5">
@@ -11,18 +11,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
    <!-- Icone Lucide -->
-<script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/lucide.min.js"></script>
-<script>
-window.addEventListener('load', () => {
-  if (window.lucide && lucide.createIcons) {
-    lucide.createIcons({ icons: lucide.icons });
-    console.log('✅ Icone Lucide inizializzate correttamente');
-  } else {
-    console.error('❌ Errore: libreria Lucide non caricata correttamente.');
-  }
-});
-</script>
 
+<script type="module">
+    // Importa e inizializza le icone Lucide
+    import { createIcons } from 'https://cdn.jsdelivr.net/npm/lucide@latest/dist/esm/lucide.js'; 
+    window.addEventListener('load', () => createIcons());
+</script>
     <style>
         body {
             background-color: #f3f4f6; /* gray-100 */
@@ -927,14 +921,14 @@ function updateInventoryChart() {
 function initApp() {
     currentUser = null; 
     
-    // ⭐ RIGA ESSENZIALE AGGIUNTA ⭐
-    // Questa riga usa le costanti APP_ID e API_KEY definite sopra.
+    // ⭐ RIGA CRITICA MANCANTE: INIZIALIZZAZIONE BACKENDLESS ⭐
     Backendless.initApp(APP_ID, API_KEY); 
 
     updateUIScreen();
     
     switchAuthTab('login');
     
+    // Configura tutti gli event listeners
     document.getElementById('carico-barcode').addEventListener('input', (e) => {
         checkArticleForCarico(e.target.value.trim());
     });
@@ -952,12 +946,21 @@ function initApp() {
         const barcode = e.target.value;
         document.getElementById('scarico-barcode').value = barcode;
     });
+    
+    // Altri listener (ad esempio per l'aggiornamento automatico della giacenza)
+    document.getElementById('scarico-select').addEventListener('change', (e) => {
+        const selectedItem = allArticles.find(a => a.barcode === e.target.value);
+        document.getElementById('scarico-giacenza-display').textContent = selectedItem ? `Giacenza Attuale: ${selectedItem.quantity}` : 'Giacenza Attuale: -';
+        document.getElementById('scarico-barcode').value = e.target.value;
+    });
+    
+    // Listener per la scansione (gestito in un altro punto, ma assicurati che esista)
+    // startQrScanner('qr-reader', 'qr-result'); 
 }
 
 window.addEventListener('load', initApp);
+
 </script>
-
-
 </body>
 </html>
 
