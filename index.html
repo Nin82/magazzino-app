@@ -897,7 +897,34 @@ async function handlePasswordResetRequest() {
         // =========================================================================
         
         // Prepara il modal di modifica con i dati dell'articolo
-   V
+   function openEditModal(objectId) {
+    // [LOG DI DEBUG] Verifica l'ID ricevuto
+    console.log("Tentativo di aprire il modale per objectId:", objectId);
+
+    // Cerca l'articolo nella cache dei dati globali (già filtrata per ownerId)
+    const item = magazzinoData.find(i => i.objectId === objectId); // 
+    
+    if (!item) {
+        // [LOG DI DEBUG] Indica se l'oggetto non è stato trovato
+        console.error("ERRORE: Articolo non trovato in magazzinoData. Verifica la cache o l'objectId.");
+        showNotification('Articolo non trovato o non posseduto. Prova ad aggiornare la lista.', 'error'); // [cite: 901]
+        return;
+    }
+    
+    // [LOG DI DEBUG] Oggetto trovato
+    console.log("Articolo trovato:", item);
+
+    document.getElementById('edit-objectId').value = item.objectId; // [cite: 901]
+    document.getElementById('edit-article').value = item.article; // [cite: 902]
+    document.getElementById('edit-barcode').value = item.barcode; // [cite: 902]
+    document.getElementById('edit-quantity').value = item.quantity || 0; // [cite: 902]
+    
+    // Funzione che apre il modale (rimuove la classe 'hidden')
+    showModal('edit-modal'); // [cite: 902, 1035]
+    
+    // Rigenera le icone lucide all'interno del modale
+    window.requestAnimationFrame(() => lucide.createIcons()); // [cite: 902]
+}
 
         async function saveEdit() {
     if (!currentUser) return;
