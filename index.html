@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestione Magazzino v5</title>
+<title>Gestione Magazzino v6</title>
 
 <!-- ================= PWA SETTINGS ================= -->
 <link rel="manifest" href="manifest.json">
@@ -927,28 +927,28 @@ async function handlePasswordResetRequest() {
         // =========================================================================
         
         // Prepara il modal di modifica con i dati dell'articolo
- function openEditModal(objectId, article, barcode, quantity) {
+function openEditModal(objectId, article, barcode, quantity) {
     
-    // 1. Popola i campi del modale con il valore corretto
-    document.getElementById('edit-objectId').value = objectId; // <--- OK
-    document.getElementById('edit-article').value = article;   // <--- OK
-    document.getElementById('edit-barcode').value = barcode;   // <--- OK
-    document.getElementById('edit-quantity').value = parseFloat(quantity) || 0; // <--- OK
+    // DEBUG: Stampa i dati per verificare se sono corretti
+    console.log(`Tentativo di modifica: ID=${objectId}, Articolo=${article}, Qty=${quantity}`);
     
-    // 2. Apri il modale (Se la funzione ha i dati giusti, si aprirà)
+    // 1. Popola i campi del modale, rispettando l'ordine del bottone
+    document.getElementById('edit-objectId').value = objectId;
+    document.getElementById('edit-article').value = article;
+    document.getElementById('edit-barcode').value = barcode;
+    document.getElementById('edit-quantity').value = parseFloat(quantity) || 0; 
+    
+    // 2. Apri il modale (Questa riga DEVE essere raggiunta)
+    // Se non si apre, il problema è qui sotto o nel CSS/HTML del modale.
     showModal('edit-modal');
     
-    // 3. Rigenera le icone all'interno del modale
+    // 3. Rigenera le icone
     window.requestAnimationFrame(() => {
         if (typeof lucide !== 'undefined' && lucide.createIcons) {
              lucide.createIcons();
         }
     });
-    
-    // Debug: Verifica se la modale è aperta
-    console.log(`Tentativo di aprire il modale per ID: ${objectId}, Articolo: ${article}`);
 }
-
         async function saveEdit() {
     if (!currentUser) return;
 
