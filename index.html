@@ -8,11 +8,11 @@
 <!-- ================= PWA SETTINGS ================= -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#4f46e5">
+<script src="https://unpkg.com/html5-qrcode"></script>
 
 <!-- Tailwind CSS CDN -->
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/html5-qrcode"></script>
-
+<script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script>
 <script>
     // Usa DOMContentLoaded, più veloce e sufficiente per le icone.
     document.addEventListener('DOMContentLoaded', () => {
@@ -893,26 +893,20 @@ async function handlePasswordResetRequest() {
         // =========================================================================
         
         // Prepara il modal di modifica con i dati dell'articolo
-   function openEditModal(objectId) {
-    // Cerca l'articolo nella cache dei dati globali
-    const item = magazzinoData.find(i => i.objectId === objectId);
-
-    if (!item) {
-        console.error("ERRORE CRITICO: Articolo non trovato per ID:", objectId);
-        showNotification('Articolo non trovato in magazzinoData. Aggiorna la lista.', 'error');
-        return; // <--- SE ARRIVA QUI, LA MODALE NON SI APRE
-    }
+   function openEditModal(objectId, article, barcode, quantity) {
     
-    // Popola i campi
-    document.getElementById('edit-objectId').value = item.objectId;
-    document.getElementById('edit-article').value = item.article;
-    document.getElementById('edit-barcode').value = item.barcode;
-    document.getElementById('edit-quantity').value = item.quantity || 0;
+    // **NON ESEGUIRE PIÙ LA RICERCA CON magazzinoData.find()**
     
-    // Apri il modale: questa linea ora viene raggiunta solo se 'item' esiste
+    // 1. Popola i campi del modale con i dati già passati
+    document.getElementById('edit-objectId').value = objectId;
+    document.getElementById('edit-article').value = article;
+    document.getElementById('edit-barcode').value = barcode;
+    document.getElementById('edit-quantity').value = parseFloat(quantity) || 0; // Assicura che sia un numero valido
+    
+    // 2. Apri il modale (Questa riga ora è garantita essere raggiunta)
     showModal('edit-modal');
     
-    // Rimuove l'errore createIcons all'interno del modale (fix sicuro)
+    // 3. Rigenera le icone all'interno del modale
     window.requestAnimationFrame(() => {
         if (typeof lucide !== 'undefined' && lucide.createIcons) {
              lucide.createIcons();
@@ -1180,6 +1174,16 @@ function showDashboardTab(tab) {
             document.getElementById('scarico-select').addEventListener('change', updateScaricoGiacenza);
             
             switchMode('carico');
+
+            // 🌟 NUOVA CORREZIONE SICURA PER LUCI ICONS 🌟
+            // Esegui la creazione delle icone solo dopo che TUTTO è caricato.
+            // La riga 1147 era probabilmente una chiamata a lucide.createIcons() ripetuta
+            // che ora non è più necessaria.
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                 lucide.createIcons();
+            } else {
+                 console.warn("Lucide Icons non è stato caricato correttamente o la chiamata è fallita.");
+            }
         };
         
     </script>
