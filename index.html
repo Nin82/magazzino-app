@@ -99,6 +99,7 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
 <!-- Backendless SDK (Importante!) -->
 <script src="https://unpkg.com/backendless/dist/backendless.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.9/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
 
 <div id="app" class="min-h-screen flex flex-col">
@@ -607,28 +608,43 @@ async function handlePasswordResetRequest() {
         }
 
         function stopQrScanner() {
-    if (html5QrcodeScanner) {
-        try {
-            // Prova a fermare lo stream video se è attivo
-            if (html5QrcodeScanner.html5Qrcode && html5QrcodeScanner.html5Qrcode.stop) {
-                html5QrcodeScanner.html5Qrcode.stop()
-                    .then(() => console.log("Scanner QR fermato correttamente."))
-                    .catch(err => console.warn("Errore durante stop dello scanner:", err));
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.html5Qrcode.stop().catch(err => console.error("Errore nello stop dello scanner:", err));
+                html5QrcodeScanner = null;
             }
-
-            // Pulisce l'area video e libera le risorse (alcune versioni richiedono clear())
-            if (typeof html5QrcodeScanner.clear === 'function') {
-                html5QrcodeScanner.clear()
-                    .then(() => console.log("Scanner QR pulito e risorse rilasciate."))
-                    .catch(err => console.warn("Errore durante clear dello scanner:", err));
-            }
-        } catch (e) {
-            console.error("Errore nello stopQrScanner():", e);
-        } finally {
-            html5QrcodeScanner = null;
         }
-    }
-}
+        
+        function onScanSuccess(decodedText, decodedResult) {
+            if (decodedText === lastScanned) return; 
+            lastScanned = decodedText;
+            handleQrData(decodedText);
+            setTimeout(() => lastScanned = '', 500);
+        }
+        
+        function onScanFailure(error) {
+            // Ignora gli errori comuni di scansione (es. "No code found")
+        }
+        
+        function switchMode(mode) {
+            isCaricoMode = (mode === 'carico');
+            
+            document.getElementById('tab-carico').classList.toggle('tab-active', isCaricoMode);
+            document.getElementById('tab-scarico').classList.toggle('tab-active', !isCaricoMode);
+            
+            document.getElementById('form-carico').classList.toggle('hidden', !isCaricoMode);
+            document.getElementById('form-scarico').classList.toggle('hidden', isCaricoMode);
+
+            // Resetta i campi
+            document.getElementById('carico-barcode').value = '';
+            document.getElementById('scarico-barcode').value = '';
+            document.getElementById('qr-result').value = '';
+            
+            showNotification(`Modalità cambiata in: ${isCaricoMode ? 'Carico' : 'Scarico'}`, 'info');
+            
+            if (!isCaricoMode) {
+                refreshScaricoSelect();
+            }
+        }
         
         async function handleQrData(qrCode) {
     if (!currentUser || !currentUser.objectId) {
@@ -1112,7 +1128,7 @@ async function handlePasswordResetRequest() {
                                 ${quantity}
                             </div>
                             <!-- Pulsante Modifica -->
-                            <button onclick="openEditModal('${objectId}', '${item.article.replace(/'/g, "\\'")}', '${item.barcode.replace(/'/g, "\\'")}', ${quantity})"
+                            <button onclick="openEditModal('${objectId}', '${item.article.replace(/'/g, "\\'")}', '${item.barcode.replace(/'/g, "\\'")}', ${quantity})" 
                                     class="p-2 bg-indigo-500 text-white rounded-full hover:bg-indigo-600 transition-colors">
                                 <i data-lucide="edit-3" class="h-4 w-4"></i>
                             </button>
@@ -1123,7 +1139,7 @@ async function handlePasswordResetRequest() {
 
             listContainer.innerHTML = inventoryHtml;
             // Rende le icone Lucide dopo aver popolato l'HTML
-            window.requestAnimationFrame(() => lucide.createIcons());
+            window.requestAnimationFrame(() => createIcons());
         }
 
 
