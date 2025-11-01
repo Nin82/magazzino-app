@@ -1112,7 +1112,7 @@ async function handlePasswordResetRequest() {
                                 ${quantity}
                             </div>
                             <!-- Pulsante Modifica -->
-                            <button onclick="openEditModal('${objectId}')"
+                            <button onclick="openEditModal('${objectId}', '${item.article.replace(/'/g, "\\'")}', '${item.barcode.replace(/'/g, "\\'")}', ${quantity})"
                                     class="p-2 bg-indigo-500 text-white rounded-full hover:bg-indigo-600 transition-colors">
                                 <i data-lucide="edit-3" class="h-4 w-4"></i>
                             </button>
