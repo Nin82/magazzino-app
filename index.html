@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestione Magazzino v6</title>
+<title>Gestione Magazzino v5</title>
 
 <!-- ================= PWA SETTINGS ================= -->
 <link rel="manifest" href="manifest.json">
@@ -927,23 +927,26 @@ async function handlePasswordResetRequest() {
         // =========================================================================
         
         // Prepara il modal di modifica con i dati dell'articolo
- function openEditModal(objectId) {
-    const item = magazzinoData.find(i => i.objectId === objectId);
-
-    if (!item) {
-        showNotification('Articolo non trovato o non posseduto. Prova ad aggiornare la lista.', 'error');
-        return;
-    }
-
-    document.getElementById('edit-objectId').value = item.objectId || '';
-    document.getElementById('edit-article').value = item.article || '';
-    document.getElementById('edit-barcode').value = item.barcode || '';
-    document.getElementById('edit-quantity').value = item.quantity || 0;
-
+ function openEditModal(objectId, article, barcode, quantity) {
+    
+    // 1. Popola i campi del modale con il valore corretto
+    document.getElementById('edit-objectId').value = objectId; // <--- OK
+    document.getElementById('edit-article').value = article;   // <--- OK
+    document.getElementById('edit-barcode').value = barcode;   // <--- OK
+    document.getElementById('edit-quantity').value = parseFloat(quantity) || 0; // <--- OK
+    
+    // 2. Apri il modale (Se la funzione ha i dati giusti, si aprirà)
     showModal('edit-modal');
-
-    // Aggiorna le icone del modal in modo sicuro
-    safeCreateIcons();
+    
+    // 3. Rigenera le icone all'interno del modale
+    window.requestAnimationFrame(() => {
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+             lucide.createIcons();
+        }
+    });
+    
+    // Debug: Verifica se la modale è aperta
+    console.log(`Tentativo di aprire il modale per ID: ${objectId}, Articolo: ${article}`);
 }
 
         async function saveEdit() {
@@ -1152,7 +1155,7 @@ async function handlePasswordResetRequest() {
                     <div class="flex items-center px-3 py-1 rounded-full font-bold ${stockClass} min-w-[70px] justify-center text-sm">
                         ${quantity}
                     </div>
-                    <button onclick="openEditModal('${objectId}')" 
+                    <button <button onclick="openEditModal('${objectId}', '${item.article.replace(/'/g, "\\'")}', '${item.barcode.replace(/'/g, "\\'")}', ${quantity})" ...>
                             class="p-2 bg-indigo-500 text-white rounded-full hover:bg-indigo-600 transition-colors" title="Modifica">
                         <i data-lucide="edit-3" class="h-4 w-4"></i>
                     </button>
