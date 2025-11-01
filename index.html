@@ -343,6 +343,22 @@ function safeCreateIcons() {
         // =========================================================================
         // UTILITY E UI MANAGEMENT
         // =========================================================================
+	
+function showLoginView() {
+    document.getElementById('auth-view').classList.remove('hidden');
+    document.getElementById('dashboard-view').classList.add('hidden');
+    // Nascondi anche l'edit modal se per caso era aperto
+    closeModal('edit-modal');
+}
+
+/**
+ * Mostra la Dashboard e nasconde la vista di Login/Registrazione.
+ */
+function showAuthenticatedView() {
+    document.getElementById('auth-view').classList.add('hidden');
+    document.getElementById('dashboard-view').classList.remove('hidden');
+}
+
 
         function showNotification(message, type = 'info', duration = 3000) {
             const container = document.getElementById('notification-box');
