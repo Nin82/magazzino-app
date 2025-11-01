@@ -410,13 +410,13 @@ function showAuthenticatedView() {
         }
         
         function showModal(modalId) {
-            document.getElementById(modalId).classList.remove('hidden');
-        }
-
-        function closeModal(modalId) {
-            document.getElementById(modalId).classList.add('hidden');
-        }
-        
+    // Rimuove la classe 'hidden' dall'elemento
+    document.getElementById(modalId).classList.remove('hidden'); 
+}
+function closeModal(modalId) {
+    // Aggiunge la classe 'hidden' all'elemento
+    document.getElementById(modalId).classList.add('hidden'); 
+}    
         // =========================================================================
         // GESTIONE AUTENTICAZIONE (Backendless)
         // =========================================================================
@@ -436,14 +436,16 @@ function showAuthenticatedView() {
             return true;
         }
         
-        async function checkAuth() {
+  async function checkAuth() {
     toggleLoading(true);
     try {
         const user = await Backendless.UserService.getCurrentUser();
         if (user) {
             currentUser = user;
             showAuthenticatedView();
-            await loadDashboardData(); 
+            // ✅ CORREZIONE AGGIUNTA: Aggiorna l'UI dell'header per mostrare l'utente e il pulsante Logout.
+            updateAuthUI(currentUser); 
+            await loadDashboardData();
             showNotification(`Benvenuto, ${currentUser.email}`, 'success');
         } else {
             currentUser = null;
@@ -920,25 +922,28 @@ async function handlePasswordResetRequest() {
         // =========================================================================
         
         // Prepara il modal di modifica con i dati dell'articolo
-        function openEditModal(objectId) {
-    const item = magazzinoData.find(i => i.objectId === objectId);
+function openEditModal(objectId) { 
+    // Trova l'articolo nella cache (magazzinoData)
+    const item = magazzinoData.find(i => i.objectId === objectId); 
 
     if (!item) {
         showNotification('Articolo non trovato. Aggiorna la lista.', 'error');
         return;
     }
     
+    // Popola i campi
     document.getElementById('edit-objectId').value = item.objectId;
     document.getElementById('edit-article').value = item.article;
     document.getElementById('edit-barcode').value = item.barcode;
-    document.getElementById('edit-quantity').value = item.quantity || 0;
+    // Assicurati che la quantità sia un numero o 0
+    document.getElementById('edit-quantity').value = item.quantity || 0; 
     
+    // Mostra il modale
     showModal('edit-modal'); 
     
-    // ✅ SICUREZZA: Chiamiamo Lucide QUI per disegnare le icone del modale
+    // ✅ CHIAMATA LUCIDE: Importante per disegnare le icone all'interno del modale
     safeCreateIcons(); 
 }
-
         async function saveEdit() {
     if (!currentUser) return;
 
