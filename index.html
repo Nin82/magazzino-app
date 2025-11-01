@@ -897,23 +897,7 @@ async function handlePasswordResetRequest() {
         // =========================================================================
         
         // Prepara il modal di modifica con i dati dell'articolo
-        function openEditModal(objectId) {
-    // Cerca l'articolo nella cache dei dati globali (già filtrata per ownerId)
-    const item = magazzinoData.find(i => i.objectId === objectId);
-
-    if (!item) {
-        showNotification('Articolo non trovato o non posseduto. Prova ad aggiornare la lista.', 'error');
-        return;
-    }
-    
-    document.getElementById('edit-objectId').value = item.objectId;
-    document.getElementById('edit-article').value = item.article;
-    document.getElementById('edit-barcode').value = item.barcode;
-    document.getElementById('edit-quantity').value = item.quantity || 0;
-    
-    showModal('edit-modal'); 
-    window.requestAnimationFrame(() => lucide.createIcons()); 
-}
+   V
 
         async function saveEdit() {
     if (!currentUser) return;
