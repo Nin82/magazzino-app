@@ -817,17 +817,23 @@ async function handlePasswordResetRequest() {
 }
         
         function updateScaricoGiacenza() {
-             const selectElement = document.getElementById('scarico-select');
-             const giacenzaDisplay = document.getElementById('scarico-giacenza-display');
-             
-             if (selectElement.value) {
-                const selectedOption = selectElement.options[selectElement.selectedIndex];
-                const stock = selectedOption.getAttribute('data-quantity');
-                giacenzaDisplay.textContent = `Giacenza Attuale: ${stock} unità`;
-             } else {
-                giacenzaDisplay.textContent = 'Giacenza Attuale: -';
-             }
-        }
+    const selectElement = document.getElementById('scarico-select');
+    const displayElement = document.getElementById('scarico-giacenza-display');
+    const selectedObjectId = selectElement.value;
+
+    if (!selectedObjectId) {
+        displayElement.textContent = 'Giacenza Attuale: -';
+        return;
+    }
+    
+    // Cerca l'articolo DENTRO la cache dei dati globali (magazzinoData),
+    // che è già stata filtrata per l'utente corrente da loadDashboardData.
+    const selectedItem = magazzinoData.find(item => item.objectId === selectedObjectId);
+    
+    const qty = selectedItem ? (selectedItem.quantity || 0) : 0;
+    
+    displayElement.textContent = `Giacenza Attuale: ${qty} unità`;
+}
 
         async function doScarico() {
     if (!currentUser) {
@@ -891,73 +897,90 @@ async function handlePasswordResetRequest() {
         // =========================================================================
         
         // Prepara il modal di modifica con i dati dell'articolo
-        function openEditModal(objectId, article, barcode, quantity) {
-            document.getElementById('edit-objectId').value = objectId;
-            document.getElementById('edit-article').value = article;
-            document.getElementById('edit-barcode').value = barcode;
-            document.getElementById('edit-quantity').value = quantity;
-            showModal('edit-modal');
-            window.requestAnimationFrame(() => lucide.createIcons({ icons: lucide.icons || {} })); // Render icona edit
-        }
+        function openEditModal(objectId) {
+    // Cerca l'articolo nella cache dei dati globali (già filtrata per ownerId)
+    const item = magazzinoData.find(i => i.objectId === objectId);
+
+    if (!item) {
+        showNotification('Articolo non trovato o non posseduto. Prova ad aggiornare la lista.', 'error');
+        return;
+    }
+    
+    document.getElementById('edit-objectId').value = item.objectId;
+    document.getElementById('edit-article').value = item.article;
+    document.getElementById('edit-barcode').value = item.barcode;
+    document.getElementById('edit-quantity').value = item.quantity || 0;
+    
+    showModal('edit-modal'); 
+    window.requestAnimationFrame(() => lucide.createIcons()); 
+}
 
         async function saveEdit() {
-            const objectId = document.getElementById('edit-objectId').value;
-            const article = document.getElementById('edit-article').value.trim();
-            const barcode = document.getElementById('edit-barcode').value.trim();
-            const quantity = parseInt(document.getElementById('edit-quantity').value, 10);
+    if (!currentUser) return;
 
-            if (!objectId || !article || !barcode || isNaN(quantity) || quantity < 0) {
-                showNotification('Compila tutti i campi in modo valido.', 'error');
-                return;
-            }
+    const objectId = document.getElementById('edit-objectId').value;
+    const newArticle = document.getElementById('edit-article').value.trim();
+    const newBarcode = document.getElementById('edit-barcode').value.trim();
+    const newQuantity = parseInt(document.getElementById('edit-quantity').value, 10);
+    
+    if (!newArticle || !newBarcode || isNaN(newQuantity) || newQuantity < 0) {
+        showNotification('Compila tutti i campi correttamente.', 'warning');
+        return;
+    }
+    
+    toggleLoading(true);
 
-            toggleLoading(true);
-            try {
-                const itemToUpdate = {
-                    objectId: objectId, // Cruciale per l'update in Backendless
-                    article: article,
-                    barcode: barcode,
-                    quantity: quantity
-                };
-
-                await Backendless.Data.of(MAGAZZINO_TABLE_NAME).save(itemToUpdate);
-                
-                showNotification(`Articolo "${article}" aggiornato con successo.`, 'success');
-                closeModal('edit-modal');
-                
-            } catch (error) {
-                showNotification(`Errore durante l'aggiornamento: ${error.message || 'Errore sconosciuto.'}`, 'error');
-                console.error("Errore di Edit Backendless:", error);
-            } finally {
-                toggleLoading(false);
-                await loadDashboardData();
-            }
-        }
+    const updateObject = {
+        objectId: objectId,
+        article: newArticle,
+        barcode: newBarcode,
+        quantity: newQuantity
+        // Non è necessario inviare ownerId, è implicito.
+    };
+    
+    try {
+        await Backendless.Data.of(MAGAZZINO_TABLE_NAME).save(updateObject);
+        showNotification(`Articolo "${newArticle}" aggiornato con successo.`, 'success');
+        closeModal('edit-modal');
+        await loadDashboardData(); 
+        
+    } catch (error) {
+        // Se l'utente non è il proprietario e tenta di forzare l'aggiornamento, Backendless respingerà la richiesta.
+        showNotification(`Errore nell'aggiornamento: ${error.message}. Verifica i permessi.`, 'error');
+        console.error("Errore saveEdit:", error);
+    } finally {
+        toggleLoading(false);
+    }
+}
 
         async function deleteItem() {
-            const objectId = document.getElementById('edit-objectId').value;
-            const article = document.getElementById('edit-article').value.trim();
+    if (!currentUser) return;
+    
+    const objectId = document.getElementById('edit-objectId').value;
+    const articleName = document.getElementById('edit-article').value.trim();
 
-            if (!confirm(`Sei sicuro di voler eliminare definitivamente l'articolo "${article}"?`)) {
-                return;
-            }
+    if (!confirm(`Sei sicuro di voler eliminare l'articolo "${articleName}"? L'operazione è irreversibile.`)) {
+        return;
+    }
+    
+    toggleLoading(true);
 
-            toggleLoading(true);
-            try {
-                // Elimina il documento usando objectId
-                await Backendless.Data.of(MAGAZZINO_TABLE_NAME).remove({ objectId: objectId });
-                
-                showNotification(`Articolo "${article}" eliminato con successo.`, 'success');
-                closeModal('edit-modal');
-                
-            } catch (error) {
-                showNotification(`Errore durante l'eliminazione: ${error.message || 'Errore sconosciuto.'}`, 'error');
-                console.error("Errore di Delete Backendless:", error);
-            } finally {
-                toggleLoading(false);
-                await loadDashboardData();
-            }
-        }
+    try {
+        // L'oggetto da eliminare contiene solo l'objectId
+        await Backendless.Data.of(MAGAZZINO_TABLE_NAME).remove({ objectId: objectId });
+        
+        showNotification(`Articolo "${articleName}" eliminato con successo.`, 'success');
+        closeModal('edit-modal');
+        await loadDashboardData();
+        
+    } catch (error) {
+        // Anche qui, l'errore indica che l'utente non aveva il permesso di cancellare il record.
+        showNotification(`Errore nell'eliminazione: ${error.message}.`, 'error');
+        console.error("Errore deleteItem:", error);
+    } finally {
+        toggleLoading(false);
+    }
+}
         
         // =========================================================================
         // DASHBOARD E LISTA
