@@ -18,7 +18,10 @@
     // La versione CDN/UMD non sempre esporta 'icons' come proprietà diretta
     // ma createIcons dovrebbe funzionare senza parametri in questo caso.
     // Se non funziona, forziamo un'esecuzione al sicuro da problemi di rendering
-    
+    window.addEventListener('load', () => {
+         // Esegui la creazione delle icone, idealmente senza argomenti per UMD
+        lucide.createIcons(); 
+    });
 
     // Questo blocco nel tuo codice suggerisce un tentativo di correzione 
     // che potrebbe interferire se non è più presente (linee 10-12 del tuo snippet posteriore):
@@ -340,7 +343,6 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
         let chartInstance = null; // Per Chart.js
         let magazzinoData = []; // Cache dei dati
 	let currentScannedItem = null;
-        const escapeStringForJs = (str) => String(str).replace(/'/g, "\\'").replace(/"/g, '\\"');
         // =========================================================================
         // UTILITY E UI MANAGEMENT
         // =========================================================================
@@ -402,29 +404,38 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
         }
         
         async function checkAuth() {
+    if (!initBackendless()) return;
     toggleLoading(true);
+
     try {
-        const user = await Backendless.UserService.getCurrentUser();
-        if (user) {
-            currentUser = user;
-            showAuthenticatedView();
-            // Carica i dati DOPO l'autenticazione
-            await loadDashboardData(); 
-            showNotification(`Benvenuto, ${currentUser.email}`, 'success');
+        const storedUser = await Backendless.UserService.getCurrentUser();
+
+        if (storedUser && storedUser.objectId) {
+            // Verifica se il token è ancora valido
+            try {
+                await Backendless.Data.of("Users").findById(storedUser.objectId);
+                currentUser = storedUser;
+                updateAuthUI(currentUser);
+                showView('dashboard-view');
+                initializeQrScanner();
+                await loadDashboardData();
+            } catch (tokenError) {
+                console.warn("Token scaduto, richiedo nuovo login.");
+                await Backendless.UserService.logout();
+                showView('login-view');
+                switchAuthTab('login');
+                showNotification('Sessione scaduta, effettua nuovamente il login.', 'info');
+            }
         } else {
-            currentUser = null;
-            showLoginView();
-            showNotification('Effettua il login per accedere al magazzino.', 'info');
+            showView('login-view');
+            switchAuthTab('login');
         }
     } catch (error) {
-        // Se c'è un errore di sessione o login
-        currentUser = null;
-        showLoginView();
-        console.error("Errore di autenticazione:", error);
+        console.error("Errore checkAuth Backendless:", error);
+        showView('login-view');
+        switchAuthTab('login');
     } finally {
         toggleLoading(false);
-        // ✅ FIX FINALE: Inizializza Lucide DOPO che tutti gli elementi (inclusi quelli del login/dashboard) sono stati iniettati
-        lucide.createIcons(); 
     }
 }
 
@@ -887,6 +898,7 @@ async function handlePasswordResetRequest() {
         
         // Prepara il modal di modifica con i dati dell'articolo
         function openEditModal(objectId) {
+    // Cerca l'articolo nella cache dei dati globali (già filtrata per ownerId)
     const item = magazzinoData.find(i => i.objectId === objectId);
 
     if (!item) {
@@ -900,6 +912,7 @@ async function handlePasswordResetRequest() {
     document.getElementById('edit-quantity').value = item.quantity || 0;
     
     showModal('edit-modal'); 
+    window.requestAnimationFrame(() => lucide.createIcons()); 
 }
 
         async function saveEdit() {
@@ -973,7 +986,7 @@ async function handlePasswordResetRequest() {
         // DASHBOARD E LISTA
         // =========================================================================
         
-async function loadDashboardData() {
+        async function loadDashboardData() {
     if (!currentUser || !currentUser.objectId) {
         document.getElementById('magazzino-list').innerHTML = '<p class="text-center text-gray-500 p-4">Effettua il login per vedere il magazzino.</p>';
         renderDashboardStats([]);
@@ -1001,8 +1014,6 @@ async function loadDashboardData() {
         console.error("Errore di Backendless Dashboard:", error);
     } finally {
         toggleLoading(false);
-        // ✅ FIX LUCIDE: Assicurati che le icone siano create dopo che l'HTML è stato iniettato
-        lucide.createIcons(); 
     }
 }
         
@@ -1082,49 +1093,55 @@ async function loadDashboardData() {
 
         
         function renderInventoryList(inventoryData) {
-    const listContainer = document.getElementById('magazzino-list');
-    listContainer.innerHTML = '';
-    
-    if (inventoryData.length === 0) {
-        listContainer.innerHTML = '<p class="text-center text-gray-500 p-4">Nessun articolo in magazzino.</p>';
-    }
-    
-    inventoryData.forEach(item => {
-        const quantity = Number(item.quantity || 0);
-        let stockClass = 'bg-gray-100 text-gray-700';
-        if (quantity > 5) {
-            stockClass = 'bg-green-100 text-green-700';
-        } else if (quantity > 0) {
-            stockClass = 'bg-yellow-100 text-yellow-700';
-        } else {
-            stockClass = 'bg-red-100 text-red-700'; 
+            const listContainer = document.getElementById('magazzino-list');
+            
+            if (inventoryData.length === 0) {
+                listContainer.innerHTML = `<p class="text-gray-500 text-center py-4">Nessun prodotto in magazzino.</p>`;
+                return;
+            }
+            
+            const inventoryHtml = inventoryData.map(item => {
+                const quantity = item.quantity || 0;
+                const isLow = quantity <= 5 && quantity > 0;
+                const isZero = quantity === 0;
+                
+                let stockClass = 'bg-green-100 text-green-700';
+                if (isLow) stockClass = 'bg-yellow-100 text-yellow-700';
+                if (isZero) stockClass = 'bg-red-100 text-red-700';
+
+                // Backendless usa objectId
+                const objectId = item.objectId; 
+                
+                return `
+                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-all">
+                        
+                        <!-- Dettagli Prodotto -->
+                        <div class="mb-2 md:mb-0 md:w-1/2">
+                            <div class="font-semibold text-gray-900">${item.article} <span class="text-xs text-gray-500 ml-2">(${item.barcode})</span></div>
+                            <p class="text-xs text-gray-600">ID: ${objectId}</p>
+                        </div>
+                        
+                        <!-- Stock e Controlli -->
+                        <div class="flex items-center space-x-3 w-full md:w-auto mt-2 md:mt-0">
+                            <!-- Display Stock -->
+                            <div class="flex items-center px-3 py-1 rounded-full font-bold ${stockClass} min-w-[70px] justify-center text-sm">
+                                ${quantity}
+                            </div>
+                            <!-- Pulsante Modifica -->
+                            <button onclick="openEditModal('${objectId}', '${item.article.replace(/'/g, "\\'")}', '${item.barcode.replace(/'/g, "\\'")}', ${quantity})" 
+                                    class="p-2 bg-indigo-500 text-white rounded-full hover:bg-indigo-600 transition-colors">
+                                <i data-lucide="edit-3" class="h-4 w-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            listContainer.innerHTML = inventoryHtml;
+            // Rende le icone Lucide dopo aver popolato l'HTML
+            window.requestAnimationFrame(() => createIcons());
         }
 
-        const objectId = item.objectId;
-        // Usa l'helper per rendere l'objectId sicuro per JS
-        const escapedObjectId = escapeStringForJs(objectId); 
-        
-        const itemHtml = `
-            <div class="flex flex-col md:flex-row items-start md:items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-all">
-                <div class="mb-2 md:mb-0 md:w-1/2">
-                    <div class="font-semibold text-gray-900">${item.article} <span class="text-xs text-gray-500 ml-2">(${item.barcode})</span></div>
-                    <p class="text-xs text-gray-600">ID: ${objectId}</p>
-                </div>
-                <div class="flex items-center space-x-3 w-full md:w-auto mt-2 md:mt-0">
-                    <div class="flex items-center px-3 py-1 rounded-full font-bold ${stockClass} min-w-[70px] justify-center text-sm">
-                        ${quantity}
-                    </div>
-                    <button onclick="openEditModal('${escapedObjectId}')" class="p-2 text-indigo-600 hover:bg-indigo-100 rounded-full">
-                        <i data-lucide="edit" class="h-5 w-5"></i>
-                    </button>
-                </div>
-            </div>
-        `;
-        listContainer.insertAdjacentHTML('beforeend', itemHtml);
-    });
-    
-    // Non chiamiamo lucide.createIcons() qui, lo fa loadDashboardData.
-}
 
 function showDashboardTab(tab) {
     const dashboardStats = document.getElementById('dashboard-stats-tab');
