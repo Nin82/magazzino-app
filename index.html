@@ -1189,29 +1189,40 @@ function showDashboardTab(tab) {
         // =========================================================================
         // STARTUP
         // =========================================================================
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("Pagina caricata. Inizializzazione Lucide Icons...");
-    safeCreateIcons();
+window.onload = function() {
+            // Log che l'app sta partendo
+            console.log("Applicazione avviata. Inizio inizializzazione...");
 
-    // 🔹 Se l'utente è già loggato, recupera la sessione
-    if (typeof initUserSession === 'function') {
-        initUserSession();
-    }
+            // 1. Inizializzazione di Backendless
+            if (typeof initBackendless === 'function') {
+                if (!initBackendless()) return;
+            }
 
-    // 🔹 Imposta la modalità di default (Carico)
-    if (typeof switchMode === 'function') {
-        switchMode('carico');
-    }
+            // 2. Controllo autenticazione e sessione
+            if (typeof checkAuth === 'function') {
+                checkAuth();
+            }
 
-    // 🔹 Aggiorna la lista del magazzino
-    if (typeof refreshInventory === 'function') {
-        refreshInventory();
-    }
+            // 3. Setup degli Event Listener
+            document.getElementById('carico-barcode').addEventListener('keydown', handleBarcodeInput);
+            document.getElementById('scarico-barcode').addEventListener('keydown', handleBarcodeInput);
+            document.getElementById('scarico-select').addEventListener('change', updateScaricoGiacenza);
+            
+            // 4. Imposta la modalità di default
+            if (typeof switchMode === 'function') {
+                switchMode('carico');
+            }
 
-    // 🔹 (Facoltativo) Avvia altri setup iniziali se previsti
-    console.log("Applicazione inizializzata.");
-});
-
+            // 5. Inizializzazione Sicura Lucide Icons (per l'ultima volta)
+            // L'errore a riga 23 è già stato risolto dal DOMContentLoaded che hai lasciato,
+            // ma lo manteniamo qui per sicurezza, anche se non dovrebbe più essere necessario.
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                 lucide.createIcons();
+                 console.log("Lucide Icons ricaricato con successo in onload.");
+            }
+            
+            console.log("Applicazione inizializzata completamente.");
+        };
 </script>
 
 </body>
