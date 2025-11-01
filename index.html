@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestione Magazzino v5</title>
+<title>Gestione Magazzino v6</title>
 
 <!-- ================= PWA SETTINGS ================= -->
 <link rel="manifest" href="manifest.json">
@@ -1189,11 +1189,28 @@ function showDashboardTab(tab) {
         // =========================================================================
         // STARTUP
         // =========================================================================
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', () => {
     console.log("Pagina caricata. Inizializzazione Lucide Icons...");
     safeCreateIcons();
-});
 
+    // 🔹 Se l'utente è già loggato, recupera la sessione
+    if (typeof initUserSession === 'function') {
+        initUserSession();
+    }
+
+    // 🔹 Imposta la modalità di default (Carico)
+    if (typeof switchMode === 'function') {
+        switchMode('carico');
+    }
+
+    // 🔹 Aggiorna la lista del magazzino
+    if (typeof refreshInventory === 'function') {
+        refreshInventory();
+    }
+
+    // 🔹 (Facoltativo) Avvia altri setup iniziali se previsti
+    console.log("Applicazione inizializzata.");
+});
 
 </script>
 
