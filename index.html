@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestione Magazzino v6</title>
+<title>Gestione Magazzino v5</title>
 
 <!-- ================= PWA SETTINGS ================= -->
 <link rel="manifest" href="manifest.json">
@@ -1158,6 +1158,7 @@ function openEditModal(objectId, article, barcode, quantity) {
                     <button <button onclick="openEditModal('${objectId}', '${item.article.replace(/'/g, "\\'")}', '${item.barcode.replace(/'/g, "\\'")}', ${quantity})" ...>
                             class="p-2 bg-indigo-500 text-white rounded-full hover:bg-indigo-600 transition-colors" title="Modifica">
                         <i data-lucide="edit-3" class="h-4 w-4"></i>
+			<span>Modifica</span>
                     </button>
                 </div>
             </div>
