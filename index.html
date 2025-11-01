@@ -5,6 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gestione Magazzino v3</title>
 
+<div id="dashboard-view" class="container mx-auto p-4 hidden">
+
+    <header class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-indigo-700">Magazzino</h1>
+        
+        <button onclick="doLogout()" 
+                class="flex items-center space-x-2 px-3 py-1 bg-white border border-gray-300 rounded-lg text-red-600 hover:bg-red-50 transition-colors">
+            <i data-lucide="log-out" class="h-5 w-5"></i>
+            <span class="font-medium hidden sm:inline">Logout</span>
+        </button>
+        
+    </header>
+
+    </div>
+
 <!-- ================= PWA SETTINGS ================= -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#4f46e5">
@@ -909,7 +924,7 @@ async function handlePasswordResetRequest() {
     const item = magazzinoData.find(i => i.objectId === objectId);
 
     if (!item) {
-        showNotification('Articolo non trovato o non posseduto. Prova ad aggiornare la lista.', 'error');
+        showNotification('Articolo non trovato. Aggiorna la lista.', 'error');
         return;
     }
     
@@ -919,7 +934,9 @@ async function handlePasswordResetRequest() {
     document.getElementById('edit-quantity').value = item.quantity || 0;
     
     showModal('edit-modal'); 
-    // 🚨 RIMOSSO: Nessuna chiamata a createIcons/safeCreateIcons qui
+    
+    // ✅ SICUREZZA: Chiamiamo Lucide QUI per disegnare le icone del modale
+    safeCreateIcons(); 
 }
 
         async function saveEdit() {
