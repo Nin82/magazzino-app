@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestione Magazzino v6</title>
+<title>Gestione Magazzino v5</title>
 
 <!-- ================= PWA SETTINGS ================= -->
 <link rel="manifest" href="manifest.json">
@@ -206,7 +206,7 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
 
                 <div class="p-6 bg-white rounded-xl card mb-8">
                     <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-                        <i data-lucide="qrcode" class="h-5 w-5 mr-2 text-indigo-600"></i>
+                        <i data-lucide="qr-code" class="h-5 w-5 mr-2 text-indigo-600"></i>
                         Scanner QR/Barcode
                     </h3>
                     <div id="qr-reader" class="mb-4"></div>
@@ -336,11 +336,12 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
 
 // ---------- Helper per Lucide (chiamare dopo ogni modifica dinamica del DOM) ----------
 function safeCreateIcons() {
-    // Usa requestAnimationFrame per dare tempo al browser di disegnare il nuovo DOM
     window.requestAnimationFrame(() => {
         try {
             if (window.lucide && typeof window.lucide.createIcons === 'function') {
-                window.lucide.createIcons();
+                window.lucide.createIcons({ 
+                    attrs: { 'aria-hidden': 'true' } // non blocca se mancano icone
+                });
             } else {
                 console.warn("safeCreateIcons: lucide.createIcons non disponibile (forse non ancora caricato).");
             }
@@ -348,8 +349,7 @@ function safeCreateIcons() {
             console.warn("safeCreateIcons: errore durante l'esecuzione di lucide.createIcons()", err);
         }
     });
-}
-        
+}        
         let currentUser = null;
         let html5QrcodeScanner = null;
         let lastScanned = '';
