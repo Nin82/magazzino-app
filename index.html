@@ -13,6 +13,7 @@
 <!-- Tailwind CSS CDN -->
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script>
+
 <script>
     // Usa DOMContentLoaded, più veloce e sufficiente per le icone.
     document.addEventListener('DOMContentLoaded', () => {
@@ -895,18 +896,18 @@ async function handlePasswordResetRequest() {
         // Prepara il modal di modifica con i dati dell'articolo
    function openEditModal(objectId, article, barcode, quantity) {
     
-    // **NON ESEGUIRE PIÙ LA RICERCA CON magazzinoData.find()**
+    // Non cerchiamo più nell'array magazzinoData, ma usiamo i dati passati:
     
-    // 1. Popola i campi del modale con i dati già passati
+    // 1. Popola i campi del modale [cite: 907, 908]
     document.getElementById('edit-objectId').value = objectId;
     document.getElementById('edit-article').value = article;
     document.getElementById('edit-barcode').value = barcode;
-    document.getElementById('edit-quantity').value = parseFloat(quantity) || 0; // Assicura che sia un numero valido
+    document.getElementById('edit-quantity').value = parseFloat(quantity) || 0; 
     
-    // 2. Apri il modale (Questa riga ora è garantita essere raggiunta)
+    // 2. Apri il modale (Questa riga ora viene raggiunta sempre) [cite: 909]
     showModal('edit-modal');
     
-    // 3. Rigenera le icone all'interno del modale
+    // 3. Rigenera le icone all'interno del modale in modo sicuro [cite: 910]
     window.requestAnimationFrame(() => {
         if (typeof lucide !== 'undefined' && lucide.createIcons) {
              lucide.createIcons();
@@ -1175,12 +1176,11 @@ function showDashboardTab(tab) {
             
             switchMode('carico');
 
-            // 🌟 NUOVA CORREZIONE SICURA PER LUCI ICONS 🌟
+            // 🌟 INIZIALIZZAZIONE SICURA LUCI ICONS 🌟
             // Esegui la creazione delle icone solo dopo che TUTTO è caricato.
-            // La riga 1147 era probabilmente una chiamata a lucide.createIcons() ripetuta
-            // che ora non è più necessaria.
             if (typeof lucide !== 'undefined' && lucide.createIcons) {
                  lucide.createIcons();
+                 console.log("Lucide Icons caricato con successo in onload.");
             } else {
                  console.warn("Lucide Icons non è stato caricato correttamente o la chiamata è fallita.");
             }
