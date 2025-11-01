@@ -18,10 +18,7 @@
     // La versione CDN/UMD non sempre esporta 'icons' come proprietà diretta
     // ma createIcons dovrebbe funzionare senza parametri in questo caso.
     // Se non funziona, forziamo un'esecuzione al sicuro da problemi di rendering
-    window.addEventListener('load', () => {
-         // Esegui la creazione delle icone, idealmente senza argomenti per UMD
-        lucide.createIcons(); 
-    });
+    
 
     // Questo blocco nel tuo codice suggerisce un tentativo di correzione 
     // che potrebbe interferire se non è più presente (linee 10-12 del tuo snippet posteriore):
@@ -343,6 +340,7 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
         let chartInstance = null; // Per Chart.js
         let magazzinoData = []; // Cache dei dati
 	let currentScannedItem = null;
+        const escapeStringForJs = (str) => String(str).replace(/'/g, "\\'").replace(/"/g, '\\"');
         // =========================================================================
         // UTILITY E UI MANAGEMENT
         // =========================================================================
@@ -404,38 +402,29 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
         }
         
         async function checkAuth() {
-    if (!initBackendless()) return;
     toggleLoading(true);
-
     try {
-        const storedUser = await Backendless.UserService.getCurrentUser();
-
-        if (storedUser && storedUser.objectId) {
-            // Verifica se il token è ancora valido
-            try {
-                await Backendless.Data.of("Users").findById(storedUser.objectId);
-                currentUser = storedUser;
-                updateAuthUI(currentUser);
-                showView('dashboard-view');
-                initializeQrScanner();
-                await loadDashboardData();
-            } catch (tokenError) {
-                console.warn("Token scaduto, richiedo nuovo login.");
-                await Backendless.UserService.logout();
-                showView('login-view');
-                switchAuthTab('login');
-                showNotification('Sessione scaduta, effettua nuovamente il login.', 'info');
-            }
+        const user = await Backendless.UserService.getCurrentUser();
+        if (user) {
+            currentUser = user;
+            showAuthenticatedView();
+            // Carica i dati DOPO l'autenticazione
+            await loadDashboardData(); 
+            showNotification(`Benvenuto, ${currentUser.email}`, 'success');
         } else {
-            showView('login-view');
-            switchAuthTab('login');
+            currentUser = null;
+            showLoginView();
+            showNotification('Effettua il login per accedere al magazzino.', 'info');
         }
     } catch (error) {
-        console.error("Errore checkAuth Backendless:", error);
-        showView('login-view');
-        switchAuthTab('login');
+        // Se c'è un errore di sessione o login
+        currentUser = null;
+        showLoginView();
+        console.error("Errore di autenticazione:", error);
     } finally {
         toggleLoading(false);
+        // ✅ FIX FINALE: Inizializza Lucide DOPO che tutti gli elementi (inclusi quelli del login/dashboard) sono stati iniettati
+        lucide.createIcons(); 
     }
 }
 
