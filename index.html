@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestione Magazzino v5</title>
+<title>Gestione Magazzino v6</title>
 
 <!-- ================= PWA SETTINGS ================= -->
 <link rel="manifest" href="manifest.json">
@@ -12,7 +12,20 @@
 
 <!-- Tailwind CSS CDN -->
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script>
+
+<!-- Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+  // Attendi il caricamento di Lucide
+  window.addEventListener('DOMContentLoaded', () => {
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+      window.lucide.createIcons();
+      console.log("Lucide Icons caricato correttamente.");
+    } else {
+      console.warn("Lucide non è ancora pronto al DOMContentLoaded.");
+    }
+  });
+</script>
 
 <style>
 /* ================= STILE ================= */
@@ -1176,19 +1189,13 @@ function showDashboardTab(tab) {
         // =========================================================================
         // STARTUP
         // =========================================================================
-window.onload = function () {
+document.addEventListener('DOMContentLoaded', function () {
     console.log("Pagina caricata. Inizializzazione Lucide Icons...");
-
-    // Usa il helper centralizzato che gestisce errori e timing
     safeCreateIcons();
+});
 
-    // Se hai altre funzioni di avvio (es: caricamento iniziale dati), aggiungile qui
-    // Esempio:
-    // loadInventoryData();
-    // setupUserSession();
-};
-        
-    </script>
+
+</script>
 
 </body>
 </html>
