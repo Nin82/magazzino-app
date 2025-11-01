@@ -162,33 +162,45 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
         </div>
     </div>
     
-    <div id="edit-modal" class="modal-overlay hidden">
-        <div class="modal-content space-y-4">
-            <h3 class="text-xl font-bold text-gray-900 flex items-center"><i data-lucide="edit" class="h-5 w-5 mr-2 text-indigo-600"></i> Modifica Articolo</h3>
-            <input type="hidden" id="edit-objectId">
+   <div id="edit-modal" class="fixed inset-0 z-50 overflow-y-auto hidden">
+    
+    <div class="flex items-center justify-center min-h-screen px-4 py-10">
+    
+        <div class="bg-white rounded-lg shadow-xl transform transition-all sm:w-full sm:max-w-lg p-6 space-y-4">
             
+            <div class="flex justify-between items-center pb-3 border-b border-gray-100">
+                <h3 class="text-xl font-bold text-gray-900 flex items-center">
+                    <i data-lucide="edit" class="h-5 w-5 mr-2 text-indigo-600"></i> Modifica Articolo
+                </h3>
+                <button onclick="closeModal('edit-modal')" class="text-gray-400 hover:text-gray-600">
+                    <i data-lucide="x" class="h-6 w-6"></i>
+                </button>
+            </div>
+            
+            <input type="hidden" id="edit-objectId">
             <label class="block text-sm font-medium text-gray-700">Nome Articolo</label>
-            <input type="text" id="edit-article" placeholder="Nome Articolo" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+            <input type="text" id="edit-article" placeholder="Nome Articolo" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
             
             <label class="block text-sm font-medium text-gray-700">Barcode</label>
-            <input type="text" id="edit-barcode" placeholder="Barcode" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+            <input type="text" id="edit-barcode" placeholder="Barcode" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
             
             <label class="block text-sm font-medium text-gray-700">Quantità in Stock</label>
-            <input type="number" id="edit-quantity" placeholder="Quantità" min="0" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+            <input type="number" id="edit-quantity" placeholder="Quantità" min="0" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
             
-            <button onclick="saveEdit()" class="w-full btn-primary bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center">
-                <i data-lucide="save" class="h-5 w-5 mr-2"></i>
-                Salva Modifiche
-            </button>
-            
-            <button onclick="deleteItem()" class="w-full btn-primary bg-red-500 text-white p-3 rounded-lg font-bold hover:bg-red-600 flex items-center justify-center">
-                <i data-lucide="trash-2" class="h-5 w-5 mr-2"></i>
-                Elimina Articolo
-            </button>
-            
-            <button onclick="closeModal('edit-modal')" class="w-full text-sm py-2 text-gray-600 hover:text-gray-800">Annulla</button>
+            <div class="pt-4 flex justify-between space-x-4">
+                <button onclick="saveEdit()" class="flex-1 btn-primary bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center">
+                    <i data-lucide="save" class="h-5 w-5 mr-2"></i> Salva Modifiche
+                </button>
+                
+                <button onclick="deleteItem()" class="flex-1 btn-primary bg-red-500 text-white p-3 rounded-lg font-bold hover:bg-red-600 flex items-center justify-center">
+                    <i data-lucide="trash-2" class="h-5 w-5 mr-2"></i> Elimina Articolo
+                </button>
+            </div>
+            <button onclick="closeModal('edit-modal')" class="w-full text-sm py-2 text-gray-600 hover:text-gray-800 mt-2">Annulla</button>
         </div>
+        
     </div>
+</div>
     
     
     <div id="dashboard-view" class="view-content hidden space-y-8">
