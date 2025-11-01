@@ -5,16 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gestione Magazzino v3</title>
 
-
 <!-- ================= PWA SETTINGS ================= -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#4f46e5">
 
 <!-- Tailwind CSS CDN -->
-<script src="https://cdn.tailwindcss.com?plugins=forms"></script> 
+<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
 
-<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script>
+<script>
+    // La versione CDN/UMD non sempre esporta 'icons' come proprietà diretta
+    // ma createIcons dovrebbe funzionare senza parametri in questo caso.
+    // Se non funziona, forziamo un'esecuzione al sicuro da problemi di rendering
+    window.addEventListener('load', () => {
+         // Esegui la creazione delle icone, idealmente senza argomenti per UMD
+        lucide.createIcons(); 
+    });
+
+    // Questo blocco nel tuo codice suggerisce un tentativo di correzione 
+    // che potrebbe interferire se non è più presente (linee 10-12 del tuo snippet posteriore):
+    // window.requestAnimationFrame(() => createIcons());
+</script>
 
 <style>
 /* ================= STILE ================= */
@@ -87,6 +99,7 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
 <!-- Backendless SDK (Importante!) -->
 <script src="https://unpkg.com/backendless/dist/backendless.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.9/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
 
 <div id="app" class="min-h-screen flex flex-col">
@@ -148,45 +161,33 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
         </div>
     </div>
     
-   <div id="edit-modal" class="fixed inset-0 z-50 overflow-y-auto hidden">
-    
-    <div class="flex items-center justify-center min-h-screen px-4 py-10">
-    
-        <div class="bg-white rounded-lg shadow-xl transform transition-all sm:w-full sm:max-w-lg p-6 space-y-4">
-            
-            <div class="flex justify-between items-center pb-3 border-b border-gray-100">
-                <h3 class="text-xl font-bold text-gray-900 flex items-center">
-                    <i data-lucide="edit" class="h-5 w-5 mr-2 text-indigo-600"></i> Modifica Articolo
-                </h3>
-                <button onclick="closeModal('edit-modal')" class="text-gray-400 hover:text-gray-600">
-                    <i data-lucide="x" class="h-6 w-6"></i>
-                </button>
-            </div>
-            
+    <div id="edit-modal" class="modal-overlay hidden">
+        <div class="modal-content space-y-4">
+            <h3 class="text-xl font-bold text-gray-900 flex items-center"><i data-lucide="edit" class="h-5 w-5 mr-2 text-indigo-600"></i> Modifica Articolo</h3>
             <input type="hidden" id="edit-objectId">
+            
             <label class="block text-sm font-medium text-gray-700">Nome Articolo</label>
-            <input type="text" id="edit-article" placeholder="Nome Articolo" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+            <input type="text" id="edit-article" placeholder="Nome Articolo" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
             
             <label class="block text-sm font-medium text-gray-700">Barcode</label>
-            <input type="text" id="edit-barcode" placeholder="Barcode" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+            <input type="text" id="edit-barcode" placeholder="Barcode" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
             
             <label class="block text-sm font-medium text-gray-700">Quantità in Stock</label>
-            <input type="number" id="edit-quantity" placeholder="Quantità" min="0" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+            <input type="number" id="edit-quantity" placeholder="Quantità" min="0" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
             
-            <div class="pt-4 flex justify-between space-x-4">
-                <button onclick="saveEdit()" class="flex-1 btn-primary bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center">
-                    <i data-lucide="save" class="h-5 w-5 mr-2"></i> Salva Modifiche
-                </button>
-                
-                <button onclick="deleteItem()" class="flex-1 btn-primary bg-red-500 text-white p-3 rounded-lg font-bold hover:bg-red-600 flex items-center justify-center">
-                    <i data-lucide="trash-2" class="h-5 w-5 mr-2"></i> Elimina Articolo
-                </button>
-            </div>
-            <button onclick="closeModal('edit-modal')" class="w-full text-sm py-2 text-gray-600 hover:text-gray-800 mt-2">Annulla</button>
+            <button onclick="saveEdit()" class="w-full btn-primary bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center">
+                <i data-lucide="save" class="h-5 w-5 mr-2"></i>
+                Salva Modifiche
+            </button>
+            
+            <button onclick="deleteItem()" class="w-full btn-primary bg-red-500 text-white p-3 rounded-lg font-bold hover:bg-red-600 flex items-center justify-center">
+                <i data-lucide="trash-2" class="h-5 w-5 mr-2"></i>
+                Elimina Articolo
+            </button>
+            
+            <button onclick="closeModal('edit-modal')" class="w-full text-sm py-2 text-gray-600 hover:text-gray-800">Annulla</button>
         </div>
-        
     </div>
-</div>
     
     
     <div id="dashboard-view" class="view-content hidden space-y-8">
@@ -334,7 +335,6 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
         // Il nome della tabella di magazzino in Backendless (ATTENZIONE: case-sensitive)
         const MAGAZZINO_TABLE_NAME = 'Magazzino'; 
         
-
         let currentUser = null;
         let html5QrcodeScanner = null;
         let lastScanned = '';
@@ -343,42 +343,9 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
         let chartInstance = null; // Per Chart.js
         let magazzinoData = []; // Cache dei dati
 	let currentScannedItem = null;
-
-
-// ✅ AGGIUNTA MANCANTE: Funzione helper per evitare problemi di stringa/quote
-        const escapeStringForJs = (str) => String(str).replace(/'/g, "\\'").replace(/"/g, '\\"');
-	// ---------- Helper per Lucide (chiamare dopo ogni modifica dinamica del DOM) ----------
-function safeCreateIcons() {
-    if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
-        lucide.createIcons();
-    } else {
-        console.warn('safeCreateIcons: lucide.createIcons non disponibile (forse non ancora caricato).');
-    }
-}
-
         // =========================================================================
         // UTILITY E UI MANAGEMENT
         // =========================================================================
-	
-function showLoginView() {
-    // 1. Mostra il Login (che parte con classe hidden)
-    document.getElementById('login-view').classList.remove('hidden'); 
-    // 2. Nasconde la Dashboard
-    document.getElementById('dashboard-view').classList.add('hidden');
-    // 3. Nasconde il Modale di Edit
-    closeModal('edit-modal'); 
-}
-/**
- * Mostra la Dashboard e nasconde la vista di Login/Registrazione ('login-view').
- */
-function showAuthenticatedView() {
-    // 1. Nasconde il Login
-    document.getElementById('login-view').classList.add('hidden');
-    // 2. Mostra la Dashboard (che parte con classe hidden)
-    document.getElementById('dashboard-view').classList.remove('hidden');
-    // 3. Inizializza lo scanner QR dopo che la vista è visibile
-    initQrScanner(); 
-}
 
         function showNotification(message, type = 'info', duration = 3000) {
             const container = document.getElementById('notification-box');
@@ -410,13 +377,13 @@ function showAuthenticatedView() {
         }
         
         function showModal(modalId) {
-    // Rimuove la classe 'hidden' dall'elemento
-    document.getElementById(modalId).classList.remove('hidden'); 
-}
-function closeModal(modalId) {
-    // Aggiunge la classe 'hidden' all'elemento
-    document.getElementById(modalId).classList.add('hidden'); 
-}    
+            document.getElementById(modalId).classList.remove('hidden');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+        
         // =========================================================================
         // GESTIONE AUTENTICAZIONE (Backendless)
         // =========================================================================
@@ -436,31 +403,39 @@ function closeModal(modalId) {
             return true;
         }
         
-  async function checkAuth() {
+        async function checkAuth() {
+    if (!initBackendless()) return;
     toggleLoading(true);
+
     try {
-        const user = await Backendless.UserService.getCurrentUser();
-       if (user) {
-    currentUser = user;
-    showAuthenticatedView(); // Deve essere qui!
-    updateAuthUI(currentUser); 
-    await loadDashboardData();
-    showNotification(`Benvenuto, ${currentUser.email}`, 'success');
-}
+        const storedUser = await Backendless.UserService.getCurrentUser();
+
+        if (storedUser && storedUser.objectId) {
+            // Verifica se il token è ancora valido
+            try {
+                await Backendless.Data.of("Users").findById(storedUser.objectId);
+                currentUser = storedUser;
+                updateAuthUI(currentUser);
+                showView('dashboard-view');
+                initializeQrScanner();
+                await loadDashboardData();
+            } catch (tokenError) {
+                console.warn("Token scaduto, richiedo nuovo login.");
+                await Backendless.UserService.logout();
+                showView('login-view');
+                switchAuthTab('login');
+                showNotification('Sessione scaduta, effettua nuovamente il login.', 'info');
+            }
         } else {
-            currentUser = null;
-            showLoginView();
-            showNotification('Effettua il login per accedere al magazzino.', 'info');
+            showView('login-view');
+            switchAuthTab('login');
         }
     } catch (error) {
-        // L'errore di logout è risolto non bloccando il JS con l'errore Infinity
-        currentUser = null;
-        showLoginView();
-        console.error("Errore di autenticazione:", error);
+        console.error("Errore checkAuth Backendless:", error);
+        showView('login-view');
+        switchAuthTab('login');
     } finally {
         toggleLoading(false);
-        // ✅ FIX: Inizializza le icone in modo sicuro dopo l'autenticazione.
-        safeCreateIcons(); 
     }
 }
 
@@ -922,28 +897,24 @@ async function handlePasswordResetRequest() {
         // =========================================================================
         
         // Prepara il modal di modifica con i dati dell'articolo
-function openEditModal(objectId) { 
-    // Trova l'articolo nella cache (magazzinoData)
-    const item = magazzinoData.find(i => i.objectId === objectId); 
+        function openEditModal(objectId) {
+    // Cerca l'articolo nella cache dei dati globali (già filtrata per ownerId)
+    const item = magazzinoData.find(i => i.objectId === objectId);
 
     if (!item) {
-        showNotification('Articolo non trovato. Aggiorna la lista.', 'error');
+        showNotification('Articolo non trovato o non posseduto. Prova ad aggiornare la lista.', 'error');
         return;
     }
     
-    // Popola i campi
     document.getElementById('edit-objectId').value = item.objectId;
     document.getElementById('edit-article').value = item.article;
     document.getElementById('edit-barcode').value = item.barcode;
-    // Assicurati che la quantità sia un numero o 0
-    document.getElementById('edit-quantity').value = item.quantity || 0; 
+    document.getElementById('edit-quantity').value = item.quantity || 0;
     
-    // Mostra il modale
     showModal('edit-modal'); 
-    
-    // ✅ CHIAMATA LUCIDE: Importante per disegnare le icone all'interno del modale
-    safeCreateIcons(); 
+    window.requestAnimationFrame(() => lucide.createIcons()); 
 }
+
         async function saveEdit() {
     if (!currentUser) return;
 
@@ -1167,10 +1138,9 @@ function openEditModal(objectId) {
             }).join('');
 
             listContainer.innerHTML = inventoryHtml;
-
-// Rende le icone Lucide dopo aver popolato l'HTML
-safeCreateIcons();
-}
+            // Rende le icone Lucide dopo aver popolato l'HTML
+            window.requestAnimationFrame(() => createIcons());
+        }
 
 
 function showDashboardTab(tab) {
