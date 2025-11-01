@@ -342,6 +342,8 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
         let currentAuthTab = 'login'; // 'login' o 'register'
         let chartInstance = null; // Per Chart.js
         let magazzinoData = []; // Cache dei dati
+        let currentScannedItem = null;
+	let isCaricoMode = true;
 
         // =========================================================================
         // UTILITY E UI MANAGEMENT
@@ -626,190 +628,266 @@ async function handlePasswordResetRequest() {
         }
         
         function switchMode(mode) {
-            isCaricoMode = (mode === 'carico');
-            
-            document.getElementById('tab-carico').classList.toggle('tab-active', isCaricoMode);
-            document.getElementById('tab-scarico').classList.toggle('tab-active', !isCaricoMode);
-            
-            document.getElementById('form-carico').classList.toggle('hidden', !isCaricoMode);
-            document.getElementById('form-scarico').classList.toggle('hidden', isCaricoMode);
+    isCaricoMode = (mode === 'carico');
+    const caricoForm = document.getElementById('form-carico');
+    const scaricoForm = document.getElementById('form-scarico');
+    const tabCarico = document.getElementById('tab-carico');
+    const tabScarico = document.getElementById('tab-scarico');
 
-            // Resetta i campi
-            document.getElementById('carico-barcode').value = '';
-            document.getElementById('scarico-barcode').value = '';
-            document.getElementById('qr-result').value = '';
-            
-            showNotification(`Modalità cambiata in: ${isCaricoMode ? 'Carico' : 'Scarico'}`, 'info');
-            
-            if (!isCaricoMode) {
-                refreshScaricoSelect();
-            }
-        }
+    if (isCaricoMode) {
+        caricoForm.classList.remove('hidden');
+        scaricoForm.classList.add('hidden');
+        tabCarico.classList.add('tab-active');
+        tabScarico.classList.remove('tab-active');
+        document.getElementById('carico-barcode').focus();
+    } else {
+        caricoForm.classList.add('hidden');
+        scaricoForm.classList.remove('hidden');
+        tabCarico.classList.remove('tab-active');
+        tabScarico.classList.add('tab-active');
+        document.getElementById('scarico-barcode').focus();
         
-        async function handleQrData(qrCode) {
-            const caricoBarcode = document.getElementById('carico-barcode');
-            const caricoArticle = document.getElementById('carico-article');
-            const giacenzaDisplay = document.getElementById('giacenza-display');
-            const scaricoBarcode = document.getElementById('scarico-barcode');
-            
-            document.getElementById('qr-result').value = qrCode; 
-            
-            toggleLoading(true);
-            try {
-                // 1. Configura la query per cercare il barcode
-                const queryBuilder = Backendless.DataQueryBuilder.create()
-                    .setWhereClause(`barcode = '${qrCode.replace(/'/g, "\\'")}'`) // Evita SQL Injection base
-                    .setPageSize(1);
-                
-                // 2. Esegui la ricerca
-                const results = await Backendless.Data.of(MAGAZZINO_TABLE_NAME).find(queryBuilder);
-                const existing = results.length > 0 ? results[0] : null;
+        // 🚨 CRUCIALE: Popola la lista di scarico (senza filtri)
+        refreshScaricoSelect(''); 
+    }
+}
+        
+ async function handleQrData(qrCode) {
+    if (!currentUser || !currentUser.objectId) {
+        showNotification('Devi essere loggato per scansionare articoli.', 'warning');
+        return;
+    }
 
-                if (isCaricoMode) {
-                    caricoBarcode.value = qrCode;
-                    
-                    if (existing) {
-                        caricoArticle.value = existing.article;
-                        giacenzaDisplay.textContent = `Giacenza Attuale: ${existing.quantity || 0} unità`;
-                        showNotification(`Barcode agganciato: ${qrCode}`, 'success');
-                    } else {
-                        caricoArticle.value = '';
-                        giacenzaDisplay.textContent = 'Nuovo Articolo (Giacenza: 0)';
-                        showNotification('Nuovo articolo, inserisci il nome', 'success');
-                    }
-                    
-                    document.getElementById('carico-qty').focus();
-                    
-                } else {
-                    scaricoBarcode.value = qrCode; 
-                    await refreshScaricoSelect(qrCode);
-                    showNotification(`Barcode inserito nello Scarico: ${qrCode}`, 'success');
-                    document.getElementById('scarico-qty').focus();
-                }
-            } catch (error) {
-                showNotification(`Errore di ricerca Backendless: ${error.message || 'Verifica la tabella Magazzino.'}`, 'error');
-                console.error("Errore di Backendless:", error);
-            } finally {
-                 toggleLoading(false);
-                 setTimeout(() => lastScanned = '', 500);
-            }
-        }
+    const caricoBarcode = document.getElementById('carico-barcode');
+    const caricoArticle = document.getElementById('carico-article');
+    const giacenzaDisplay = document.getElementById('giacenza-display');
+    const scaricoBarcode = document.getElementById('scarico-barcode');
+    
+    document.getElementById('qr-result').value = qrCode; 
+    
+    toggleLoading(true);
+
+    // 🚨 Resetta la cache dell'articolo scansionato
+    currentScannedItem = null; 
+    
+    try {
+        // 1. Configura la query per cercare il barcode
+        // ✅ FILTRO CRUCIALE: Cerca SOLO nel magazzino dell'utente corrente
+        const whereClause = `barcode = '${qrCode.replace(/'/g, "\\'")}' AND ownerId = '${currentUser.objectId}'`; 
+
+        const queryBuilder = Backendless.DataQueryBuilder.create()
+            .setWhereClause(whereClause) 
+            .setPageSize(1);
+
+        // 2. Esegui la ricerca
+        const results = await Backendless.Data.of(MAGAZZINO_TABLE_NAME).find(queryBuilder);
+        const existing = results.length > 0 ? results[0] : null;
         
-        function handleBarcodeInput(event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                const barcode = event.target.value.trim();
-                if (barcode) {
-                    handleQrData(barcode);
-                }
+        // 🚨 Salva l'articolo trovato nella variabile globale
+        currentScannedItem = existing; 
+
+        // 3. Logica in base alla modalità (Carico o Scarico)
+        if (isCaricoMode) {
+            caricoBarcode.value = qrCode;
+            if (existing) {
+                caricoArticle.value = existing.article;
+                giacenzaDisplay.textContent = `Giacenza Attuale: ${existing.quantity || 0} unità`;
+                showNotification(`Barcode agganciato: ${qrCode}`, 'success');
+            } else {
+                caricoArticle.value = '';
+                giacenzaDisplay.textContent = 'Nuovo Articolo (Giacenza: 0)';
+                showNotification('Nuovo articolo per il tuo magazzino, inserisci il nome', 'info');
             }
+            document.getElementById('carico-qty').focus();
+        } else {
+            scaricoBarcode.value = qrCode;
+            // 🚨 Nel modo Scarico, aggiorna e filtra la select con l'ownerId
+            await refreshScaricoSelect(qrCode); 
+            showNotification(`Barcode inserito nello Scarico: ${qrCode}`, 'success');
+            document.getElementById('scarico-qty').focus();
         }
+    } catch (error) {
+        showNotification(`Errore di ricerca Backendless: ${error.message}`, 'error');
+        console.error("Errore di Backendless:", error);
+    } finally {
+         toggleLoading(false);
+         // Assicurati che il codice di gestione scanner esterno (se presente) non si attivi subito dopo
+         setTimeout(() => lastScanned = '', 500); 
+    }
+}
 
         // =========================================================================
         // LOGICA CARICO E SCARICO (Backendless)
         // =========================================================================
 
-        async function doCarico() {
-            const barcode = document.getElementById('carico-barcode').value.trim();
-            const article = document.getElementById('carico-article').value.trim();
-            const quantity = parseInt(document.getElementById('carico-qty').value, 10);
+  async function doCarico() {
+    if (!currentUser || !currentUser.objectId) {
+        showNotification('Devi essere loggato per effettuare un Carico.', 'error');
+        return;
+    }
 
-            if (!barcode || !article || quantity <= 0 || isNaN(quantity)) {
-                showNotification('Compila tutti i campi: Barcode, Articolo e Quantità valida (> 0).', 'error');
-                return;
-            }
+    const barcode = document.getElementById('carico-barcode').value.trim();
+    const article = document.getElementById('carico-article').value.trim();
+    const qtyToAdd = parseInt(document.getElementById('carico-qty').value, 10);
 
-            toggleLoading(true);
-            try {
-                // 1. Cerca l'articolo esistente
-                const queryBuilder = Backendless.DataQueryBuilder.create()
-                    .setWhereClause(`barcode = '${barcode.replace(/'/g, "\\'")}'`)
-                    .setPageSize(1);
-                
-                const results = await Backendless.Data.of(MAGAZZINO_TABLE_NAME).find(queryBuilder);
-                const existing = results.length > 0 ? results[0] : null;
-                
-                let itemToSave = {
-                    article: article, 
-                    barcode: barcode,
-                    quantity: quantity
-                };
+    if (!barcode || !article || qtyToAdd <= 0 || isNaN(qtyToAdd)) {
+        showNotification('Compila tutti i campi: Barcode, Articolo e Quantità valida (> 0).', 'error');
+        return;
+    }
 
-                if (existing) {
-                    // AGGIORNA ESISTENTE
-                    itemToSave.objectId = existing.objectId; // Aggiunge l'ID per l'aggiornamento
-                    itemToSave.quantity = (existing.quantity || 0) + quantity;
-                    
-                    await Backendless.Data.of(MAGAZZINO_TABLE_NAME).save(itemToSave);
-                    
-                    showNotification(`Carico Riuscito: Aggiunte ${quantity} unità di ${article}. Nuova giacenza: ${itemToSave.quantity}.`, 'success');
-                } else {
-                    // CREA NUOVO
-                    await Backendless.Data.of(MAGAZZINO_TABLE_NAME).save(itemToSave);
-                    
-                    showNotification(`Carico Riuscito: Nuovo articolo "${article}" inserito con ${quantity} unità.`, 'success');
-                }
-                
-                // Pulisci e aggiorna l'UI
-                document.getElementById('carico-barcode').value = '';
-                document.getElementById('carico-article').value = '';
-                document.getElementById('carico-qty').value = 1;
-                document.getElementById('giacenza-display').textContent = 'Giacenza Attuale: -';
-                
-            } catch (error) {
-                showNotification(`Errore durante il Carico: ${error.message || 'Verifica i permessi di scrittura sulla tabella.'}`, 'error');
-                console.error("Errore di Carico Backendless:", error);
-            } finally {
-                toggleLoading(false);
-                await loadDashboardData(); 
-            }
-        }
+    toggleLoading(true);
+
+    let itemToSave = {};
+    
+    // Controlla se abbiamo un item esistente dalla scansione precedente (già filtrato per ownerId)
+    if (currentScannedItem && currentScannedItem.barcode === barcode) {
+        // ✅ AGGIORNA ESISTENTE
+        itemToSave = { ...currentScannedItem }; // Clona l'oggetto esistente
+        itemToSave.quantity = (currentScannedItem.quantity || 0) + qtyToAdd;
+        itemToSave.article = article; // Aggiorna il nome in caso di correzione
+    } else {
+        // ✅ CREA NUOVO
+        itemToSave = {
+            article: article, 
+            barcode: barcode,
+            quantity: qtyToAdd,
+            // 🚨 CRUCIALE: Assicura che il nuovo articolo sia associato all'utente corrente
+            ownerId: currentUser.objectId
+        };
+    }
+
+    try {
+        await Backendless.Data.of(MAGAZZINO_TABLE_NAME).save(itemToSave);
         
-        async function refreshScaricoSelect(filterBarcode = '') {
-            const selectElement = document.getElementById('scarico-select');
-            
-            const queryBuilder = Backendless.DataQueryBuilder.create()
-                .setSortBy(['article ASC'])
-                .setPageSize(100);
-
-            let whereClause = "quantity > 0";
-            if (filterBarcode) {
-                 whereClause += ` AND barcode = '${filterBarcode.replace(/'/g, "\\'")}'`;
-            }
-            queryBuilder.setWhereClause(whereClause);
-
-
-            toggleLoading(true);
-            try {
-                const data = await Backendless.Data.of(MAGAZZINO_TABLE_NAME).find(queryBuilder);
-            
-                selectElement.innerHTML = '<option value="">-- Seleziona Articolo --</option>';
-                data.forEach(item => {
-                    const option = document.createElement('option');
-                    option.value = item.objectId; // Usiamo objectId come valore
-                    option.setAttribute('data-barcode', item.barcode);
-                    option.setAttribute('data-quantity', item.quantity || 0);
-                    option.textContent = `${item.article} (${item.barcode}) - Stock: ${item.quantity || 0}`;
-                    selectElement.appendChild(option);
-                });
-                
-                // Se c'è un filtro barcode e abbiamo trovato un solo risultato, selezioniamolo
-                if (filterBarcode && data.length === 1 && data[0].barcode === filterBarcode) {
-                     selectElement.value = data[0].objectId;
-                } else {
-                     selectElement.value = '';
-                }
-
-                updateScaricoGiacenza();
-                
-            } catch (error) {
-                showNotification(`Errore nel caricamento lista Scarico: ${error.message || 'Verifica la tabella Magazzino.'}`, 'error');
-                console.error("Errore di Backendless Scarico:", error);
-            } finally {
-                toggleLoading(false);
-            }
-        }
+        showNotification(`Carico Riuscito: Aggiunte ${qtyToAdd} unità di ${article}. Nuova giacenza: ${itemToSave.quantity || qtyToAdd}.`, 'success');
         
+        // Pulisci e aggiorna l'UI
+        document.getElementById('carico-barcode').value = '';
+        document.getElementById('carico-article').value = '';
+        document.getElementById('carico-qty').value = 1;
+        document.getElementById('giacenza-display').textContent = 'Giacenza Attuale: -';
+        currentScannedItem = null; // Resetta la cache
+        
+    } catch (error) {
+        showNotification(`Errore durante il Carico: ${error.message || 'Verifica i permessi di scrittura sulla tabella.'}`, 'error');
+        console.error("Errore di Carico Backendless:", error);
+    } finally {
+        toggleLoading(false);
+        await loadDashboardData(); // Ricarica la lista filtrata per l'utente corrente
+    }
+}
+
+        
+ async function doScarico() {
+    if (!currentUser) {
+        showNotification('Devi essere loggato per effettuare uno Scarico.', 'error');
+        return;
+    }
+    
+    const objectIdFromSelect = document.getElementById('scarico-select').value;
+    const qtyToSubtract = parseInt(document.getElementById('scarico-qty').value, 10);
+
+    // Usa l'articolo scansionato/digitato O quello selezionato dalla lista
+    const itemToUpdate = currentScannedItem || magazzinoData.find(i => i.objectId === objectIdFromSelect);
+    
+    if (!itemToUpdate) {
+        showNotification('Nessun articolo selezionato o trovato per lo Scarico.', 'warning');
+        return;
+    }
+    
+    const currentQty = itemToUpdate.quantity || 0;
+
+    if (qtyToSubtract <= 0 || qtyToSubtract > currentQty || isNaN(qtyToSubtract)) {
+        showNotification(`Quantità non valida. Disponibili: ${currentQty}.`, 'warning');
+        return;
+    }
+
+    toggleLoading(true);
+
+    const newQty = currentQty - qtyToSubtract;
+    const updateObject = {
+        objectId: itemToUpdate.objectId, 
+        quantity: newQty
+        // L'oggetto ha già l'ownerId corretto, quindi lo aggiorniamo direttamente
+    };
+
+    try {
+        await Backendless.Data.of(MAGAZZINO_TABLE_NAME).save(updateObject);
+        showNotification(`Scarico Riuscito: Rimosse ${qtyToSubtract} unità di ${itemToUpdate.article}. Nuova giacenza: ${newQty}`, 'success');
+        
+        // Pulizia e Aggiornamento
+        document.getElementById('scarico-barcode').value = '';
+        document.getElementById('scarico-qty').value = 1;
+        document.getElementById('scarico-select').value = '';
+        document.getElementById('scarico-giacenza-display').textContent = 'Giacenza Attuale: -';
+        currentScannedItem = null;
+
+        await loadDashboardData(); 
+        
+    } catch (error) {
+        showNotification(`Errore durante lo Scarico: ${error.message}`, 'error');
+        console.error("Errore doScarico:", error);
+    } finally {
+        toggleLoading(false);
+    }
+}
+   
+
+async function refreshScaricoSelect(filterBarcode = '') {
+    const selectElement = document.getElementById('scarico-select');
+    const displayGiacenza = document.getElementById('scarico-giacenza-display');
+    selectElement.innerHTML = '<option value="">-- Seleziona Articolo --</option>';
+    displayGiacenza.textContent = 'Giacenza Attuale: -';
+    
+    if (!currentUser || !currentUser.objectId) {
+        return;
+    }
+
+    const queryBuilder = Backendless.DataQueryBuilder.create()
+        .setSortBy(['article ASC'])
+        .setPageSize(100);
+        
+    // 🚨 CRUCIALE: Filtra per quantità > 0 E per ownerId
+    let whereClause = `quantity > 0 AND ownerId = '${currentUser.objectId}'`; 
+    
+    if (filterBarcode) {
+         // Se è stato fornito un barcode, cerca solo quello
+         whereClause += ` AND barcode = '${filterBarcode.replace(/'/g, "\\'")}'`;
+    }
+    queryBuilder.setWhereClause(whereClause);
+
+
+    toggleLoading(true);
+    try {
+        const data = await Backendless.Data.of(MAGAZZINO_TABLE_NAME).find(queryBuilder);
+        
+        data.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.objectId; 
+            // Usiamo data-attributes per memorizzare i dettagli dell'articolo
+            option.setAttribute('data-barcode', item.barcode);
+            option.setAttribute('data-quantity', item.quantity || 0);
+            option.textContent = `${item.article} (${item.barcode}) - Stock: ${item.quantity || 0}`;
+            selectElement.appendChild(option);
+        });
+
+        // Se c'è un filtro barcode e abbiamo trovato un solo risultato, lo selezioniamo
+        if (filterBarcode && data.length === 1 && data[0].barcode === filterBarcode) {
+             selectElement.value = data[0].objectId;
+             // Aggiorna la giacenza subito
+             updateScaricoGiacenza(); 
+        }
+
+    } catch (error) {
+        showNotification(`Errore nel caricamento lista Scarico: ${error.message}`, 'error');
+        console.error("Errore di Backendless Scarico:", error);
+    } finally {
+        toggleLoading(false);
+    }
+}
+
+
+     
         function updateScaricoGiacenza() {
              const selectElement = document.getElementById('scarico-select');
              const giacenzaDisplay = document.getElementById('scarico-giacenza-display');
@@ -875,14 +953,23 @@ async function handlePasswordResetRequest() {
         // =========================================================================
         
         // Prepara il modal di modifica con i dati dell'articolo
-        function openEditModal(objectId, article, barcode, quantity) {
-            document.getElementById('edit-objectId').value = objectId;
-            document.getElementById('edit-article').value = article;
-            document.getElementById('edit-barcode').value = barcode;
-            document.getElementById('edit-quantity').value = quantity;
-            showModal('edit-modal');
-            window.requestAnimationFrame(() => lucide.createIcons({ icons: lucide.icons || {} })); // Render icona edit
-        }
+      function openEditModal(objectId) {
+    // Cerca l'articolo nella cache dei dati globali
+    const item = magazzinoData.find(i => i.objectId === objectId);
+
+    if (!item) {
+        showNotification('Articolo non trovato per la modifica. Prova ad aggiornare la lista.', 'error');
+        return;
+    }
+    
+    document.getElementById('edit-objectId').value = item.objectId;
+    document.getElementById('edit-article').value = item.article;
+    document.getElementById('edit-barcode').value = item.barcode;
+    document.getElementById('edit-quantity').value = item.quantity || 0;
+    
+    showModal('edit-modal'); 
+    window.requestAnimationFrame(() => lucide.createIcons()); 
+}
 
         async function saveEdit() {
             const objectId = document.getElementById('edit-objectId').value;
@@ -947,26 +1034,39 @@ async function handlePasswordResetRequest() {
         // DASHBOARD E LISTA
         // =========================================================================
         
-        async function loadDashboardData() {
-            toggleLoading(true);
-            try {
-                // Recupera tutti i documenti (fino al limite massimo di Backendless)
-                const queryBuilder = Backendless.DataQueryBuilder.create()
-                    .setSortBy(['article ASC'])
-                    .setPageSize(100); 
+async function loadDashboardData() {
+    // ⚠️ Protezione: Se non c'è utente, esce.
+    if (!currentUser || !currentUser.objectId) {
+        document.getElementById('magazzino-list').innerHTML = '<p class="text-center text-gray-500 p-4">Effettua il login per vedere il magazzino.</p>';
+        renderDashboardStats([]);
+        return; 
+    }
+    
+    toggleLoading(true);
+    try {
+        // ✅ FILTRO CRUCIALE: Prende solo gli articoli di proprietà dell'utente corrente
+        const whereClause = `ownerId = '${currentUser.objectId}'`; 
 
-                magazzinoData = await Backendless.Data.of(MAGAZZINO_TABLE_NAME).find(queryBuilder);
-                
-                renderDashboardStats(magazzinoData);
-                renderInventoryList(magazzinoData);
-                refreshScaricoSelect();
-            } catch (error) {
-                showNotification(`Errore nel caricamento della lista magazzino: ${error.message || 'Verifica i permessi di lettura della tabella.'}`, 'error');
-                console.error("Errore di Backendless Dashboard:", error);
-            } finally {
-                toggleLoading(false);
-            }
-        }
+        const queryBuilder = Backendless.DataQueryBuilder.create()
+            .setWhereClause(whereClause) // Aggiunge il filtro per ownerId
+            .setSortBy(['article ASC', 'barcode ASC'])
+            .setPageSize(100); 
+
+        // 1. Carica i dati
+        const data = await Backendless.Data.of(MAGAZZINO_TABLE_NAME).find(queryBuilder);
+        magazzinoData = data; // Aggiorna la cache
+        
+        // 2. Renderizza UI
+        renderInventoryList(magazzinoData);
+        renderDashboardStats(magazzinoData);
+        
+    } catch (error) {
+        showNotification(`Errore nel caricamento della Dashboard: ${error.message || 'Verifica i permessi di lettura della tabella.'}`, 'error');
+        console.error("Errore di Backendless Dashboard:", error);
+    } finally {
+        toggleLoading(false);
+    }
+}
         
  function renderDashboardStats(inventoryData) {
     const chartContainer = document.getElementById('chart-container');
@@ -1043,55 +1143,53 @@ async function handlePasswordResetRequest() {
 }
 
         
-        function renderInventoryList(inventoryData) {
-            const listContainer = document.getElementById('magazzino-list');
-            
-            if (inventoryData.length === 0) {
-                listContainer.innerHTML = `<p class="text-gray-500 text-center py-4">Nessun prodotto in magazzino.</p>`;
-                return;
-            }
-            
-            const inventoryHtml = inventoryData.map(item => {
-                const quantity = item.quantity || 0;
-                const isLow = quantity <= 5 && quantity > 0;
-                const isZero = quantity === 0;
-                
-                let stockClass = 'bg-green-100 text-green-700';
-                if (isLow) stockClass = 'bg-yellow-100 text-yellow-700';
-                if (isZero) stockClass = 'bg-red-100 text-red-700';
+       function renderInventoryList(inventoryData) {
+    const listContainer = document.getElementById('magazzino-list');
+    listContainer.innerHTML = '';
+    
+    if (inventoryData.length === 0) {
+        listContainer.innerHTML = '<p class="text-center text-gray-500 p-4">Nessun articolo in magazzino.</p>';
+        return;
+    }
+    
+    // Funzione helper per evitare problemi di stringa/quote
+    const escapeStringForJs = (str) => String(str).replace(/'/g, "\\'").replace(/"/g, '\\"');
 
-                // Backendless usa objectId
-                const objectId = item.objectId; 
-                
-                return `
-                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-all">
-                        
-                        <!-- Dettagli Prodotto -->
-                        <div class="mb-2 md:mb-0 md:w-1/2">
-                            <div class="font-semibold text-gray-900">${item.article} <span class="text-xs text-gray-500 ml-2">(${item.barcode})</span></div>
-                            <p class="text-xs text-gray-600">ID: ${objectId}</p>
-                        </div>
-                        
-                        <!-- Stock e Controlli -->
-                        <div class="flex items-center space-x-3 w-full md:w-auto mt-2 md:mt-0">
-                            <!-- Display Stock -->
-                            <div class="flex items-center px-3 py-1 rounded-full font-bold ${stockClass} min-w-[70px] justify-center text-sm">
-                                ${quantity}
-                            </div>
-                            <!-- Pulsante Modifica -->
-                            <button onclick="openEditModal('${objectId}', '${item.article.replace(/'/g, "\\'")}', '${item.barcode.replace(/'/g, "\\'")}', ${quantity})" 
-                                    class="p-2 bg-indigo-500 text-white rounded-full hover:bg-indigo-600 transition-colors">
-                                <i data-lucide="edit-3" class="h-4 w-4"></i>
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            listContainer.innerHTML = inventoryHtml;
-            // Rende le icone Lucide dopo aver popolato l'HTML
-            window.requestAnimationFrame(() => createIcons());
+    inventoryData.forEach(item => {
+        const quantity = Number(item.quantity || 0);
+        let stockClass = 'bg-gray-100 text-gray-700'; // Default
+        if (quantity > 5) {
+            stockClass = 'bg-green-100 text-green-700';
+        } else if (quantity > 0) {
+            stockClass = 'bg-yellow-100 text-yellow-700';
+        } else {
+            stockClass = 'bg-red-100 text-red-700'; 
         }
+
+        const objectId = item.objectId;
+        
+        const itemHtml = `
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-all">
+                <div class="mb-2 md:mb-0 md:w-1/2">
+                    <div class="font-semibold text-gray-900">${item.article} <span class="text-xs text-gray-500 ml-2">(${item.barcode})</span></div>
+                    <p class="text-xs text-gray-600">ID: ${objectId}</p>
+                </div>
+                <div class="flex items-center space-x-3 w-full md:w-auto mt-2 md:mt-0">
+                    <div class="flex items-center px-3 py-1 rounded-full font-bold ${stockClass} min-w-[70px] justify-center text-sm">
+                        ${quantity}
+                    </div>
+                    <button onclick="openEditModal('${escapeStringForJs(objectId)}')" class="p-2 text-indigo-600 hover:bg-indigo-100 rounded-full">
+                        <i data-lucide="edit" class="h-5 w-5"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        listContainer.insertAdjacentHTML('beforeend', itemHtml);
+    });
+    
+    // Re-render icon
+    lucide.createIcons();
+}
 
 
 function showDashboardTab(tab) {
