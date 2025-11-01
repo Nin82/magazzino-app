@@ -322,6 +322,16 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
         const MAGAZZINO_TABLE_NAME = 'Magazzino'; 
         
 
+        let currentUser = null;
+        let html5QrcodeScanner = null;
+        let lastScanned = '';
+        let isCaricoMode = true; // True per Carico, False per Scarico
+        let currentAuthTab = 'login'; // 'login' o 'register'
+        let chartInstance = null; // Per Chart.js
+        let magazzinoData = []; // Cache dei dati
+	let currentScannedItem = null;
+
+
 // ✅ AGGIUNTA MANCANTE: Funzione helper per evitare problemi di stringa/quote
         const escapeStringForJs = (str) => String(str).replace(/'/g, "\\'").replace(/"/g, '\\"');
 	// ---------- Helper per Lucide (chiamare dopo ogni modifica dinamica del DOM) ----------
@@ -332,30 +342,25 @@ function safeCreateIcons() {
         console.warn('safeCreateIcons: lucide.createIcons non disponibile (forse non ancora caricato).');
     }
 }
-        let currentUser = null;
-        let html5QrcodeScanner = null;
-        let lastScanned = '';
-        let isCaricoMode = true; // True per Carico, False per Scarico
-        let currentAuthTab = 'login'; // 'login' o 'register'
-        let chartInstance = null; // Per Chart.js
-        let magazzinoData = []; // Cache dei dati
-	let currentScannedItem = null;
+
         // =========================================================================
         // UTILITY E UI MANAGEMENT
         // =========================================================================
 	
 function showLoginView() {
-    document.getElementById('auth-view').classList.remove('hidden');
+    // ✅ CORREZIONE: Usa 'login-view' per far corrispondere l'HTML
+    document.getElementById('login-view').classList.remove('hidden'); 
     document.getElementById('dashboard-view').classList.add('hidden');
     // Nascondi anche l'edit modal se per caso era aperto
     closeModal('edit-modal');
 }
 
 /**
- * Mostra la Dashboard e nasconde la vista di Login/Registrazione.
+ * Mostra la Dashboard e nasconde la vista di Login/Registrazione ('login-view').
  */
 function showAuthenticatedView() {
-    document.getElementById('auth-view').classList.add('hidden');
+    // ✅ CORREZIONE: Usa 'login-view' per far corrispondere l'HTML
+    document.getElementById('login-view').classList.add('hidden');
     document.getElementById('dashboard-view').classList.remove('hidden');
 }
 
