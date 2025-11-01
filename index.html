@@ -16,16 +16,13 @@
 <script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script>
 <script>
     // La versione CDN/UMD non sempre esporta 'icons' come proprietà diretta
-    // ma createIcons dovrebbe funzionare senza parametri in questo caso.
+   
     // Se non funziona, forziamo un'esecuzione al sicuro da problemi di rendering
-    window.requestAnimationFrame(() => {
-    if (window.lucide && typeof window.lucide.createIcons === 'function') {
-        window.lucide.createIcons();
-    }
+   window.addEventListener('load', () => {
+    safeCreateIcons();
 });
-    // Questo blocco nel tuo codice suggerisce un tentativo di correzione 
-    // che potrebbe interferire se non è più presente (linee 10-12 del tuo snippet posteriore):
-    // window.requestAnimationFrame(() => createIcons());
+
+
 </script>
 
 <style>
@@ -334,6 +331,24 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
         // Il nome della tabella di magazzino in Backendless (ATTENZIONE: case-sensitive)
         const MAGAZZINO_TABLE_NAME = 'Magazzino'; 
         
+
+	// ---------- Helper per Lucide (chiamare dopo ogni modifica dinamica del DOM) ----------
+function safeCreateIcons() {
+    // Usa requestAnimationFrame per dare tempo al browser di disegnare il nuovo DOM
+    window.requestAnimationFrame(() => {
+        try {
+            // Controlla che la libreria lucide sia disponibile e abbia il metodo createIcons()
+            if (window.lucide && typeof window.lucide.createIcons === 'function') {
+                window.lucide.createIcons();
+            } else {
+                console.warn("safeCreateIcons: lucide.createIcons non disponibile (forse non ancora caricato).");
+            }
+        } catch (err) {
+            console.warn("safeCreateIcons: errore durante l'esecuzione di lucide.createIcons()", err);
+        }
+    });
+}	
+
         let currentUser = null;
         let html5QrcodeScanner = null;
         let lastScanned = '';
@@ -607,28 +622,22 @@ async function handlePasswordResetRequest() {
         }
 
         function stopQrScanner() {
-    if (!html5QrcodeScanner) return;
-
-    try {
-        // Se esiste l'oggetto html5Qrcode e la sua stop()
-        if (html5QrcodeScanner.html5Qrcode && typeof html5QrcodeScanner.html5Qrcode.stop === 'function') {
-            html5QrcodeScanner.html5Qrcode.stop()
-                .then(() => console.log("Scanner QR fermato correttamente."))
-                .catch(err => console.warn("Errore durante stop dello scanner:", err));
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.html5Qrcode.stop().catch(err => console.error("Errore nello stop dello scanner:", err));
+                html5QrcodeScanner = null;
+            }
         }
-
-        // Alcune versioni richiedono clear() per liberare il container
-        if (typeof html5QrcodeScanner.clear === 'function') {
-            html5QrcodeScanner.clear()
-                .then(() => console.log("Scanner QR pulito e risorse rilasciate."))
-                .catch(err => console.warn("Errore durante clear dello scanner:", err));
+        
+        function onScanSuccess(decodedText, decodedResult) {
+            if (decodedText === lastScanned) return; 
+            lastScanned = decodedText;
+            handleQrData(decodedText);
+            setTimeout(() => lastScanned = '', 500);
         }
-    } catch (e) {
-        console.error("Errore nello stopQrScanner():", e);
-    } finally {
-        html5QrcodeScanner = null;
-    }
-}
+        
+        function onScanFailure(error) {
+            // Ignora gli errori comuni di scansione (es. "No code found")
+        }
         
         function switchMode(mode) {
             isCaricoMode = (mode === 'carico');
@@ -910,18 +919,18 @@ async function handlePasswordResetRequest() {
         showNotification('Articolo non trovato o non posseduto. Prova ad aggiornare la lista.', 'error');
         return;
     }
-    
+
     document.getElementById('edit-objectId').value = item.objectId;
     document.getElementById('edit-article').value = item.article;
     document.getElementById('edit-barcode').value = item.barcode;
     document.getElementById('edit-quantity').value = item.quantity || 0;
-    
-    showModal('edit-modal'); 
-   window.requestAnimationFrame(() => {
-    if (window.lucide && typeof window.lucide.createIcons === 'function') {
-        window.lucide.createIcons();
-    }
-});
+
+    // Mostra il modal
+    showModal('edit-modal');
+
+    // Aggiorna le icone Lucide in modo sicuro
+    safeCreateIcons();
+}
 
         async function saveEdit() {
     if (!currentUser) return;
@@ -1101,58 +1110,54 @@ async function handlePasswordResetRequest() {
 
         
         function renderInventoryList(inventoryData) {
-    const listContainer = document.getElementById('magazzino-list');
-    
-    if (inventoryData.length === 0) {
-        listContainer.innerHTML = `<p class="text-gray-500 text-center py-4">Nessun prodotto in magazzino.</p>`;
-        return;
-    }
-    
-    const inventoryHtml = inventoryData.map(item => {
-        const quantity = item.quantity || 0;
-        const isLow = quantity <= 5 && quantity > 0;
-        const isZero = quantity === 0;
-        
-        let stockClass = 'bg-green-100 text-green-700';
-        if (isLow) stockClass = 'bg-yellow-100 text-yellow-700';
-        if (isZero) stockClass = 'bg-red-100 text-red-700';
-
-        const objectId = item.objectId;
-
-        return `
-            <div class="flex flex-col md:flex-row items-start md:items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-all">
+            const listContainer = document.getElementById('magazzino-list');
+            
+            if (inventoryData.length === 0) {
+                listContainer.innerHTML = `<p class="text-gray-500 text-center py-4">Nessun prodotto in magazzino.</p>`;
+                return;
+            }
+            
+            const inventoryHtml = inventoryData.map(item => {
+                const quantity = item.quantity || 0;
+                const isLow = quantity <= 5 && quantity > 0;
+                const isZero = quantity === 0;
                 
-                <!-- Dettagli Prodotto -->
-                <div class="mb-2 md:mb-0 md:w-1/2">
-                    <div class="font-semibold text-gray-900">${item.article} <span class="text-xs text-gray-500 ml-2">(${item.barcode})</span></div>
-                    <p class="text-xs text-gray-600">ID: ${objectId}</p>
-                </div>
+                let stockClass = 'bg-green-100 text-green-700';
+                if (isLow) stockClass = 'bg-yellow-100 text-yellow-700';
+                if (isZero) stockClass = 'bg-red-100 text-red-700';
+
+                // Backendless usa objectId
+                const objectId = item.objectId; 
                 
-                <!-- Stock e Controlli -->
-                <div class="flex items-center space-x-3 w-full md:w-auto mt-2 md:mt-0">
-                    <!-- Display Stock -->
-                    <div class="flex items-center px-3 py-1 rounded-full font-bold ${stockClass} min-w-[70px] justify-center text-sm">
-                        ${quantity}
+                return `
+                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-all">
+                        
+                        <!-- Dettagli Prodotto -->
+                        <div class="mb-2 md:mb-0 md:w-1/2">
+                            <div class="font-semibold text-gray-900">${item.article} <span class="text-xs text-gray-500 ml-2">(${item.barcode})</span></div>
+                            <p class="text-xs text-gray-600">ID: ${objectId}</p>
+                        </div>
+                        
+                        <!-- Stock e Controlli -->
+                        <div class="flex items-center space-x-3 w-full md:w-auto mt-2 md:mt-0">
+                            <!-- Display Stock -->
+                            <div class="flex items-center px-3 py-1 rounded-full font-bold ${stockClass} min-w-[70px] justify-center text-sm">
+                                ${quantity}
+                            </div>
+                            <!-- Pulsante Modifica -->
+                            <button onclick="openEditModal('${objectId}', '${item.article.replace(/'/g, "\\'")}', '${item.barcode.replace(/'/g, "\\'")}', ${quantity})" 
+                                    class="p-2 bg-indigo-500 text-white rounded-full hover:bg-indigo-600 transition-colors">
+                                <i data-lucide="edit-3" class="h-4 w-4"></i>
+                            </button>
+                        </div>
                     </div>
-                    <!-- Pulsante Modifica -->
-                    <button onclick="openEditModal('${objectId}')" 
-                            class="p-2 bg-indigo-500 text-white rounded-full hover:bg-indigo-600 transition-colors">
-                        <i data-lucide="edit-3" class="h-4 w-4"></i>
-                    </button>
-                </div>
-            </div>
-        `;
-    }).join('');
+                `;
+            }).join('');
 
-    listContainer.innerHTML = inventoryHtml;
-    // Rende le icone Lucide dopo aver popolato l'HTML
-    window.requestAnimationFrame(() => {
-        if (window.lucide && typeof window.lucide.createIcons === 'function') {
-            window.lucide.createIcons();
-        } else {
-            console.warn("lucide.createIcons non disponibile");
-        }
-    });
+            listContainer.innerHTML = inventoryHtml;
+
+// Rende le icone Lucide dopo aver popolato l'HTML
+safeCreateIcons();
 }
 
 
