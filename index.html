@@ -934,6 +934,11 @@ function playBeep() {
     const qty = selectedItem ? (selectedItem.quantity || 0) : 0;
     
     displayElement.textContent = `Giacenza Attuale: ${qty} unità`;
+
+   barcodeInputElement.value = barcodeValue;	
+   barcodeInputElement.disabled = true;		
+
+
 }
 
         async function doScarico() {
