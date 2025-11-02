@@ -1205,6 +1205,7 @@ function updateScaricoGiacenza() {
         document.getElementById('scarico-qty').value = 1;
         document.getElementById('scarico-select').value = '';
         document.getElementById('scarico-giacenza-display').textContent = 'Giacenza Attuale: -';
+	document.getElementById('scarico-barcode').disabled = false;
         currentScannedItem = null; // Resetta la cache
         
         await loadDashboardData(); // Ricarica i dati per l'utente corrente
