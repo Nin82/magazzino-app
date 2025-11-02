@@ -441,7 +441,7 @@ function safeCreateIcons() {
                 currentUser = storedUser;
                 updateAuthUI(currentUser);
                 showView('dashboard-view');
-                initializeQrScanner();
+               // initializeQrScanner();
                 await loadDashboardData();
             } catch (tokenError) {
                 console.warn("Token scaduto, richiedo nuovo login.");
@@ -502,7 +502,7 @@ function safeCreateIcons() {
                 
                 updateAuthUI(currentUser);
                 showView('dashboard-view');
-                initializeQrScanner();
+                //initializeQrScanner();
                 await loadDashboardData();
                 showNotification('Login effettuato con successo.', 'success');
             } catch (error) {
