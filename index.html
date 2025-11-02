@@ -914,15 +914,18 @@ function handleCaricoArticleChange() {
     // Reset dello stato
     currentArticleByBarcode = null;
     barcodeInput.disabled = false;
-    articleInput.disabled = false; // Mantiene Articolo sbloccato se non c'è corrispondenza Barcode
+    articleInput.disabled = false;
     giacenzaDisplay.textContent = 'Giacenza Attuale: -';
 
+    // 🚨 Aggiunta della logica di reset se il campo è vuoto
     if (articleName.length === 0) {
-        barcodeInput.value = '';
+        barcodeInput.value = ''; // Pulisce il campo Barcode
         return;
     }
 
-    // Ricerca robusta per Nome Articolo (assumiamo univoco)
+    // ... (Il resto della logica di ricerca, blocco e popolamento rimane invariato)
+
+    // Ricerca robusta per Nome Articolo (univoco)
     const foundItem = magazzinoData.find(item => String(item.article).trim() === articleName);
 
     if (foundItem) {
@@ -932,19 +935,17 @@ function handleCaricoArticleChange() {
         barcodeInput.value = foundItem.barcode || '';
         giacenzaDisplay.textContent = `Giacenza Attuale: ${foundItem.quantity || 0} unità`;
         
-        // Il record è identificato, blocchiamo entrambi i campi
+        // Blocca entrambi i campi
         barcodeInput.disabled = true;
         articleInput.disabled = true; 
         
     } else {
         // NUOVO INSERIMENTO (Articolo non trovato)
-        // L'utente deve inserire anche il Barcode
         barcodeInput.disabled = false;
         giacenzaDisplay.textContent = 'Giacenza Attuale: 0 (NUOVO)';
+        // Non toccare barcodeInput.value
     }
 }
-
-
 
 
 function populateCaricoSelect() {
@@ -1016,44 +1017,45 @@ function handleCaricoBarcodeChange() {
 
     // Reset dello stato
     currentArticleByBarcode = null;
-    barcodeInput.disabled = false; // Manteniamo sbloccato per la digitazione!
+    barcodeInput.disabled = false;
     articleInput.disabled = false;
     giacenzaDisplay.textContent = 'Giacenza Attuale: -';
 
-    // Se il campo è vuoto, resettiamo
+    // 🚨 Aggiunta della logica di reset se il campo è vuoto
     if (barcodeValue.length === 0) {
-        articleInput.value = '';
+        articleInput.value = ''; // Pulisce il campo Articolo
         return;
     }
 
-    // 🚨 REGOLA: Il Barcode deve essere sufficientemente lungo per una ricerca valida.
-    // Usiamo una lunghezza minima ragionevole, ad esempio 4 caratteri (adatta questo al tuo caso)
-    // Se non vuoi nessuna lunghezza minima, rimuovi l'if.
-    if (barcodeValue.length < 3) { // Regola la lunghezza minima
+    // Qui inserisci la tua lunghezza minima opzionale per evitare il blocco prematuro
+    /*
+    if (barcodeValue.length < 3) {
         articleInput.value = '';
-        giacenzaDisplay.textContent = 'Giacenza Attuale: -';
         return;
     }
+    */
 
-    // Ricerca robusta per Barcode (come prima)
+    // ... (Il resto della logica di ricerca, blocco e popolamento rimane invariato)
+
+    // Ricerca robusta per Barcode
     const foundItem = magazzinoData.find(item => String(item.barcode).trim() === barcodeValue);
 
     if (foundItem) {
-        // Articolo ESISTENTE TROVATO (il Barcode è completo)
+        // Articolo ESISTENTE TROVATO
         currentArticleByBarcode = foundItem;
         
         articleInput.value = foundItem.article; 
         giacenzaDisplay.textContent = `Giacenza Attuale: ${foundItem.quantity || 0} unità`;
         
-        // Blocca ENTRAMBI i campi SOLO ORA che la corrispondenza è completa
+        // Blocca entrambi i campi quando la corrispondenza è completa
         articleInput.disabled = true;
         barcodeInput.disabled = true; 
 
     } else {
-        // Barcode non trovato o parziale. Lasciamo sbloccato per continuare a digitare.
+        // NUOVO INSERIMENTO (Barcode non trovato o parziale)
         articleInput.disabled = false; 
         giacenzaDisplay.textContent = 'Giacenza Attuale: 0 (NUOVO)';
-        // Non toccare articleInput.value per permettere all'utente di digitare il nome
+        // Non toccare articleInput.value
     }
 }
 
