@@ -1016,37 +1016,46 @@ function handleCaricoBarcodeChange() {
 
     // Reset dello stato
     currentArticleByBarcode = null;
-    barcodeInput.disabled = false;
+    barcodeInput.disabled = false; // Manteniamo sbloccato per la digitazione!
     articleInput.disabled = false;
     giacenzaDisplay.textContent = 'Giacenza Attuale: -';
 
+    // Se il campo è vuoto, resettiamo
     if (barcodeValue.length === 0) {
         articleInput.value = '';
         return;
     }
 
-    // Ricerca robusta per Barcode
+    // 🚨 REGOLA: Il Barcode deve essere sufficientemente lungo per una ricerca valida.
+    // Usiamo una lunghezza minima ragionevole, ad esempio 4 caratteri (adatta questo al tuo caso)
+    // Se non vuoi nessuna lunghezza minima, rimuovi l'if.
+    if (barcodeValue.length < 3) { // Regola la lunghezza minima
+        articleInput.value = '';
+        giacenzaDisplay.textContent = 'Giacenza Attuale: -';
+        return;
+    }
+
+    // Ricerca robusta per Barcode (come prima)
     const foundItem = magazzinoData.find(item => String(item.barcode).trim() === barcodeValue);
 
     if (foundItem) {
-        // Articolo ESISTENTE TROVATO
+        // Articolo ESISTENTE TROVATO (il Barcode è completo)
         currentArticleByBarcode = foundItem;
         
         articleInput.value = foundItem.article; 
         giacenzaDisplay.textContent = `Giacenza Attuale: ${foundItem.quantity || 0} unità`;
         
-        // Blocca entrambi i campi
+        // Blocca ENTRAMBI i campi SOLO ORA che la corrispondenza è completa
         articleInput.disabled = true;
         barcodeInput.disabled = true; 
 
     } else {
-        // NUOVO INSERIMENTO (Barcode non trovato)
+        // Barcode non trovato o parziale. Lasciamo sbloccato per continuare a digitare.
         articleInput.disabled = false; 
         giacenzaDisplay.textContent = 'Giacenza Attuale: 0 (NUOVO)';
-        // L'utente deve ora digitare il nome dell'articolo
+        // Non toccare articleInput.value per permettere all'utente di digitare il nome
     }
 }
-
 
         async function refreshScaricoSelect(filterBarcode = '') {
     const selectElement = document.getElementById('scarico-select');
