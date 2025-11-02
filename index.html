@@ -233,9 +233,10 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                 <div id="form-carico" class="bg-white p-6 rounded-xl card space-y-4">
     <h3 class="text-lg font-semibold">Modulo di Carico</h3>
     
-    <input type="text" id="carico-barcode" placeholder="Barcode (Scannerizza o Inserisci)" 
-           oninput="handleCaricoBarcodeChange()"
-           class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+  <input type="text" id="carico-article" list="article-suggestions" 
+       placeholder="Nome Articolo (Auto-compilato o Nuovo)" 
+       oninput="populateCaricoSelect()" 
+       class="w-full p-3 border border-gray-300 rounded-lg input-focus relative z-10">
            
     <p id="giacenza-display" class="text-sm font-medium text-indigo-600">Giacenza Attuale: -</p>
     
@@ -903,7 +904,39 @@ async function doCarico() {
     }
 }      
 
+function populateCaricoSelect() {
+    const articleInput = document.getElementById('carico-article');
+    const barcodeInput = document.getElementById('carico-barcode');
+    const giacenzaDisplay = document.getElementById('giacenza-display');
+    const articleName = articleInput.value.trim();
 
+    if (articleName.length === 0) {
+        // Articolo vuoto, reset
+        barcodeInput.value = '';
+        giacenzaDisplay.textContent = 'Giacenza Attuale: -';
+        return;
+    }
+
+    // Ricerca dell'articolo tramite il nome (che ora è univoco)
+    const foundItem = magazzinoData.find(item => String(item.article).trim() === articleName);
+
+    if (foundItem) {
+        // Articolo Trovato: Popola Barcode e Giacenza
+        
+        // 🚨 Il Barcode si popola in base all'articolo scelto!
+        barcodeInput.value = foundItem.barcode || '';
+        giacenzaDisplay.textContent = `Giacenza Attuale: ${foundItem.quantity || 0} unità`;
+        
+        // Blocchiamo il Barcode se l'articolo è stato selezionato dal datalist
+        barcodeInput.disabled = true;
+
+    } else {
+        // Articolo NON Trovato (Nuovo Articolo)
+        barcodeInput.disabled = false; // Sblocca il Barcode per l'inserimento manuale
+        barcodeInput.value = '';
+        giacenzaDisplay.textContent = 'Giacenza Attuale: 0 (NUOVO Articolo)';
+    }
+}
 
 function populateDatalist(inventoryData) {
     const datalist = document.getElementById('article-suggestions');
@@ -937,42 +970,38 @@ function handleCaricoBarcodeChange() {
     const giacenzaDisplay = document.getElementById('giacenza-display');
     const barcodeValue = barcodeInput.value.trim();
 
-    // 1. Reset e default
+    // Reset generale
     currentArticleByBarcode = null;
-    articleInput.disabled = false;
     giacenzaDisplay.textContent = 'Giacenza Attuale: -';
-    
+    articleInput.disabled = false; // Manteniamo sempre sbloccato l'Articolo
+
     if (barcodeValue.length === 0) {
         articleInput.value = '';
+        barcodeInput.disabled = false;
         return;
     }
 
-    // 💡 MODIFICA CHIAVE: Ricerca robusta che confronta stringhe pulite.
-    const foundItem = magazzinoData.find(item => {
-        // Assicuriamo che il valore del DB (item.barcode) sia una stringa e la confrontiamo con il valore inserito (barcodeValue)
-        return String(item.barcode).trim() === barcodeValue;
-    });
-
-    // Per ulteriore debug, puoi rimettere questo:
-    // console.log("Articolo Trovato nel Carico (dopo fix):", foundItem);
+    const foundItem = magazzinoData.find(item => String(item.barcode).trim() === barcodeValue);
 
     if (foundItem) {
         // Barcode Trovato!
-        currentArticleByBarcode = foundItem; 
+        currentArticleByBarcode = foundItem;
         
-        // Autocompilazione Articolo e Giacenza
+        // Popola l'Articolo
         articleInput.value = foundItem.article; 
         giacenzaDisplay.textContent = `Giacenza Attuale: ${foundItem.quantity || 0} unità`;
         
-        // Blocca l'input Articolo
-        articleInput.disabled = true; 
+        // 🚨 Blocca l'input Barcode: ora è la chiave di riferimento
+        barcodeInput.disabled = true;
 
     } else {
-        // Barcode NON Trovato: Nuovo articolo
-        articleInput.disabled = false;
+        // Barcode NON Trovato: Sblocca tutto, è un nuovo articolo
+        barcodeInput.disabled = false;
         giacenzaDisplay.textContent = 'Giacenza Attuale: 0 (NUOVO Articolo)';
+        articleInput.value = ''; // Pulisci l'articolo se il Barcode non è valido
     }
 }
+
 
         async function refreshScaricoSelect(filterBarcode = '') {
     const selectElement = document.getElementById('scarico-select');
