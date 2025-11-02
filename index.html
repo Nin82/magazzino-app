@@ -246,6 +246,11 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
     <datalist id="article-suggestions">
         </datalist>
             
+<button onclick="resetCaricoFields()" 
+        class="w-full mt-2 bg-gray-100 text-gray-700 p-3 rounded-lg font-semibold hover:bg-gray-200 flex items-center justify-center">
+    <i data-lucide="rotate-ccw" class="h-5 w-5 mr-2"></i>
+    Reset Campi
+</button>
     <p id="giacenza-display" class="text-sm font-medium text-indigo-600">Giacenza Attuale: -</p>
             
     <input type="number" id="carico-qty" placeholder="Quantità da Caricare" value="1" min="1" 
@@ -256,11 +261,7 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
         Conferma Carico
     </button>
 
-	<button onclick="resetCaricoFields()" 
-        class="w-full mt-2 bg-gray-100 text-gray-700 p-3 rounded-lg font-semibold hover:bg-gray-200 flex items-center justify-center">
-    <i data-lucide="rotate-ccw" class="h-5 w-5 mr-2"></i>
-    Reset Campi
-</button>
+	
 </div>
 
                 <div id="form-scarico" class="bg-white p-6 rounded-xl card space-y-4 hidden">
@@ -1028,30 +1029,26 @@ function handleCaricoBarcodeChange() {
         return;
     }
 
-    // 🔍 Filtra barcode che contengono la stringa digitata
-    const partialMatches = magazzinoData.filter(item =>
-        String(item.barcode).includes(barcodeValue)
-    );
-
-    // ✅ Se c’è una corrispondenza esatta → autocompila e blocca
+    // 🔍 Cerca corrispondenza esatta solo se la stringa completa coincide con un barcode esistente
     const foundItem = magazzinoData.find(item =>
         String(item.barcode).trim() === barcodeValue
     );
 
     if (foundItem) {
+        // ✅ Solo se il valore digitato è esattamente uguale (non un prefisso)
         currentArticleByBarcode = foundItem;
         articleInput.value = foundItem.article || '';
         giacenzaDisplay.textContent = `Giacenza Attuale: ${foundItem.quantity || 0} unità`;
 
+        // Blocca solo dopo match completo
         barcodeInput.disabled = true;
         articleInput.disabled = true;
     } else {
-        // Nessun match esatto → mostra "Nuovo articolo"
+        // Nessun match esatto → lascia digitare
         giacenzaDisplay.textContent = 'Giacenza Attuale: 0 (NUOVO Articolo)';
         articleInput.disabled = false;
     }
 }
-
 
 function resetCaricoFields() {
     const barcodeInput = document.getElementById('carico-barcode');
