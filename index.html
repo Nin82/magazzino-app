@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestione Magazzino v1</title>
+<title>Gestione Magazzino v2</title>
 
 <!-- ================= PWA SETTINGS ================= -->
 <link rel="manifest" href="manifest.json">
@@ -241,7 +241,7 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
     
     <input type="text" id="carico-article" list="article-suggestions" 
            placeholder="Nome Articolo (Auto-compilato o Nuovo)" 
-           class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+           class="w-full p-3 border border-gray-300 rounded-lg input-focus relative z-10">
            
     <datalist id="article-suggestions">
         </datalist>
@@ -948,6 +948,9 @@ function handleCaricoBarcodeChange() {
     // [Assumi che magazzinoData sia globale e popolato]
     const foundItem = magazzinoData.find(item => item.barcode === barcodeValue);
 
+console.log("Valore Barcode Inserito:", barcodeValue);
+    console.log("Articolo Trovato nel Carico:", foundItem);
+
     if (foundItem) {
         // Barcode Trovato!
         currentArticleByBarcode = foundItem; 
@@ -1028,7 +1031,7 @@ function updateScaricoGiacenza() {
     
     // Cerca l'articolo completo nella cache globale
     const selectedItem = magazzinoData.find(item => item.objectId === selectedObjectId);
-    
+    console.log("Articolo Selezionato (Scarico):", selectedItem);
     if (selectedItem) {
         const qty = selectedItem.quantity || 0;
         
