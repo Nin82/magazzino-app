@@ -1160,6 +1160,29 @@ function updateScaricoGiacenza() {
     }
 }
 
+
+function resetCaricoFields() {
+    const barcodeInput = document.getElementById('carico-barcode');
+    const articleInput = document.getElementById('carico-article');
+    const giacenzaDisplay = document.getElementById('giacenza-display');
+    const qtyInput = document.getElementById('carico-qty');
+
+    // 🔹 Blocca eventuale debounce attivo
+    if (barcodeTypingTimer) clearTimeout(barcodeTypingTimer);
+
+    // 🔹 Reset campi
+    barcodeInput.value = '';
+    articleInput.value = '';
+    qtyInput.value = 1;
+    barcodeInput.disabled = false;
+    articleInput.disabled = false;
+    giacenzaDisplay.textContent = 'Giacenza Attuale: -';
+    currentArticleByBarcode = null;
+
+    // 🔹 Ripopoliamo il datalist completo
+    populateDatalist(magazzinoData);
+}
+
         async function doScarico() {
     if (!currentUser) {
         showNotification('Devi essere loggato per effettuare uno Scarico.', 'error');
