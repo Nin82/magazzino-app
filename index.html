@@ -204,25 +204,30 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
             
             <div id="dashboard-main-content">
 
-                <div class="p-6 bg-white rounded-xl card mb-8">
-                    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-                        <i data-lucide="qr-code" class="h-5 w-5 mr-2 text-indigo-600"></i>
-                        Scanner QR/Barcode
-                    </h3>
-                    <div id="qr-reader" class="mb-4"></div>
-                    <input type="text" id="qr-result" placeholder="Risultato Scansione" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-gray-100" readonly>
-                </div>
-
+                <div id="scanner-card" class="p-6 bg-white rounded-xl card mb-8 hidden"> <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                  <i data-lucide="qr-code" class="h-5 w-5 mr-2 text-indigo-600"></i>
+                  Scanner QR/Barcode
+                  </h3>
+                <div id="reader" class="mb-4"></div> 
+    
+               <input type="text" id="qr-result" placeholder="Risultato Scansione" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-gray-100" readonly>
+           </div>
                 <div class="flex border-b border-gray-200 mb-6">
-                    <button id="tab-carico" onclick="switchMode('carico')" class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150 tab-active">
-                        <i data-lucide="package-plus" class="h-5 w-5 inline-block mr-1"></i>
-                        Carico (Entrata)
-                    </button>
-                    <button id="tab-scarico" onclick="switchMode('scarico')" class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150">
-                        <i data-lucide="package-minus" class="h-5 w-5 inline-block mr-1"></i>
-                        Scarico (Uscita)
-                    </button>
-                </div>
+    <button id="tab-carico" onclick="switchMode('carico')" 
+            class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150 tab-active flex items-center justify-center">
+        <i data-lucide="package-plus" class="h-5 w-5 inline-block mr-1"></i>
+        <span class="hidden sm:inline">Carico</span> </button>
+    
+    <button id="tab-scarico" onclick="switchMode('scarico')" 
+            class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150 flex items-center justify-center">
+        <i data-lucide="package-minus" class="h-5 w-5 inline-block mr-1"></i>
+        <span class="hidden sm:inline">Scarico</span> </button>
+
+    <button id="toggle-scanner-btn" onclick="toggleScanner()" 
+            class="px-4 py-2 bg-indigo-500 text-white font-semibold transition-colors duration-150 hover:bg-indigo-600 flex items-center justify-center rounded-lg ml-2">
+        <i data-lucide="scan" class="h-5 w-5"></i> 
+        <span class="hidden sm:inline ml-2">Scanner</span> </button>
+</div>
 
                 <div id="form-carico" class="bg-white p-6 rounded-xl card space-y-4">
                     <h3 class="text-lg font-semibold">Modulo di Carico</h3>
@@ -358,6 +363,10 @@ function safeCreateIcons() {
         let chartInstance = null; // Per Chart.js
         let magazzinoData = []; // Cache dei dati
 	let currentScannedItem = null;
+        let scannerActive = false;
+	const scannerCard = document.getElementById('scanner-card');
+	const qrResultInput = document.getElementById('qr-result');
+
         // =========================================================================
         // UTILITY E UI MANAGEMENT
         // =========================================================================
@@ -607,42 +616,55 @@ async function handlePasswordResetRequest() {
         // GESTIONE SCANNER QR/BARCODE
         // =========================================================================
         
-        function initializeQrScanner() {
-            if (html5QrcodeScanner) return;
-            
-            html5QrcodeScanner = new Html5QrcodeScanner(
-                "qr-reader", 
-                { fps: 10, qrbox: { width: 250, height: 250 } },
-                /* verbose= */ false
-            );
-            try {
-                 html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-            } catch (e) {
-                console.warn("Nessuna webcam trovata o errore di inizializzazione QR:", e);
-            }
-        }
+        function startScanner() {
+    if (scannerActive) return;
 
-        function stopQrScanner() {
-    if (!html5QrcodeScanner) return;
+    if (!html5QrcodeScanner) {
+        html5QrcodeScanner = new Html5Qrcode("reader"); 
+    }
 
-    try {
-        if (html5QrcodeScanner.html5Qrcode && typeof html5QrcodeScanner.html5Qrcode.stop === 'function') {
-            html5QrcodeScanner.html5Qrcode.stop()
-                .then(() => console.log("Scanner QR fermato correttamente."))
-                .catch(err => console.warn("Errore durante stop dello scanner:", err));
-        }
+    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+    
+    // Mostra la card
+    scannerCard.classList.remove('hidden');
 
-        if (typeof html5QrcodeScanner.clear === 'function') {
-            html5QrcodeScanner.clear()
-                .then(() => console.log("Scanner QR pulito e risorse rilasciate."))
-                .catch(err => console.warn("Errore durante clear dello scanner:", err));
-        }
-    } catch (e) {
-        console.error("Errore nello stopQrScanner():", e);
-    } finally {
-        html5QrcodeScanner = null;
+    html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess)
+        .then(() => {
+            scannerActive = true;
+            document.getElementById('toggle-scanner-btn').innerHTML = '<i data-lucide="scan-off" class="h-5 w-5"></i> <span class="hidden sm:inline ml-2">Nascondi Scanner</span>';
+            if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+        })
+        .catch(err => {
+            console.error("Errore nell'avvio dello scanner:", err);
+            scannerCard.classList.add('hidden');
+        });
+}
+
+function stopScanner() {
+    if (!scannerActive) return;
+
+    html5QrcodeScanner.stop().then(() => {
+        scannerActive = false;
+        // Nasconde la card
+        scannerCard.classList.add('hidden');
+        document.getElementById('toggle-scanner-btn').innerHTML = '<i data-lucide="scan" class="h-5 w-5"></i> <span class="hidden sm:inline ml-2">Scanner</span>';
+        if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+    }).catch(err => {
+        console.error("Errore nello stop dello scanner:", err);
+        scannerActive = false;
+        scannerCard.classList.add('hidden');
+    });
+}
+
+function toggleScanner() {
+    if (scannerActive) {
+        stopScanner();
+    } else {
+        startScanner();
     }
 }
+
+
         
         function onScanSuccess(decodedText, decodedResult) {
             if (decodedText === lastScanned) return; 
@@ -673,6 +695,9 @@ async function handlePasswordResetRequest() {
             
             if (!isCaricoMode) {
                 refreshScaricoSelect();
+            }
+	   if (typeof stopScanner === 'function') {
+            stopScanner();
             }
         }
         
@@ -921,7 +946,10 @@ async function handlePasswordResetRequest() {
         toggleLoading(false);
     }
 }
-        
+    
+
+
+    
         // =========================================================================
         // MODIFICA ARTICOLO (CRUD Management)
         // =========================================================================
@@ -1233,8 +1261,3 @@ window.onload = function() {
 
 </body>
 </html>
-
-
-
-
-
