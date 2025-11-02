@@ -667,13 +667,58 @@ function toggleScanner() {
 
 
         
-        function onScanSuccess(decodedText, decodedResult) {
-            if (decodedText === lastScanned) return; 
-            lastScanned = decodedText;
-            handleQrData(decodedText);
-            setTimeout(() => lastScanned = '', 500);
-        }
+       function onScanSuccess(decodedText, decodedResult) {
+    if (decodedText === lastScanned) return; 
+    
+    // =============================
+    // AGGIUNTA DEL BEEP QUI
+    playBeep(); 
+    // =============================
+    
+    lastScanned = decodedText;
+    handleQrData(decodedText);
+    setTimeout(() => lastScanned = '', 500);
+}
         
+
+function playBeep() {
+    // Verifica se il browser supporta l'API Web Audio
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) {
+        console.warn("Il browser non supporta l'API Web Audio per il beep.");
+        return;
+    }
+
+    try {
+        const audioCtx = new AudioContext();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        // Collega i nodi: Oscillator -> Gain -> Destination (speaker)
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        // Imposta le proprietà del suono
+        oscillator.type = 'square'; // Onda quadra per un suono più metallico/digitale
+        oscillator.frequency.setValueAtTime(800, audioCtx.currentTime); // Frequenza: 800 Hz (tono alto)
+        gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime); // Volume iniziale (0.5)
+
+        // Attiva il suono e lo spegne rapidamente
+        oscillator.start();
+        
+        // Decay (abbassa il volume subito dopo l'avvio)
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15); 
+
+        // Ferma l'oscillatore dopo 0.15 secondi
+        oscillator.stop(audioCtx.currentTime + 0.15);
+
+    } catch (e) {
+        console.error("Errore durante la riproduzione del beep:", e);
+    }
+}
+
+
+
         function onScanFailure(error) {
             // Ignora gli errori comuni di scansione (es. "No code found")
         }
