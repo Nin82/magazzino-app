@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestione Magazzino v5</title>
+<title>Gestione Magazzino v6</title>
 
 <!-- ================= PWA SETTINGS ================= -->
 <link rel="manifest" href="manifest.json">
@@ -566,7 +566,7 @@ function safeCreateIcons() {
         currentUser = null;
         updateAuthUI(null);
         showView('login-view');
-        stopQrScanner();
+        //stopQrScanner();
         showNotification('Logout effettuato con successo.', 'info');
     } catch (error) {
         showNotification(`Errore di Logout: ${error.message || 'Errore sconosciuto.'}`, 'error');
