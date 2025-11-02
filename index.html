@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestione Magazzino v7</title>
+<title>Gestione Magazzino v5</title>
 
 <!-- ================= PWA SETTINGS ================= -->
 <link rel="manifest" href="manifest.json">
@@ -231,19 +231,29 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
 </div>
 
                 <div id="form-carico" class="bg-white p-6 rounded-xl card space-y-4">
-                    <h3 class="text-lg font-semibold">Modulo di Carico</h3>
-                    <input type="text" id="carico-barcode" placeholder="Barcode (Scannerizza o Inserisci)" 
-                           class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                    <p id="giacenza-display" class="text-sm font-medium text-indigo-600">Giacenza Attuale: -</p>
-                    <input type="text" id="carico-article" placeholder="Nome Articolo (Auto-compilato o Nuovo)" 
-                           class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                    <input type="number" id="carico-qty" placeholder="Quantità da Caricare" value="1" min="1" 
-                           class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                    <button onclick="doCarico()" class="w-full btn-primary bg-green-600 text-white p-3 rounded-lg font-bold hover:bg-green-700 flex items-center justify-center">
-                        <i data-lucide="save" class="h-5 w-5 mr-2"></i>
-                        Conferma Carico
-                    </button>
-                </div>
+    <h3 class="text-lg font-semibold">Modulo di Carico</h3>
+    
+    <input type="text" id="carico-barcode" placeholder="Barcode (Scannerizza o Inserisci)" 
+           oninput="handleCaricoBarcodeChange()"
+           class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+           
+    <p id="giacenza-display" class="text-sm font-medium text-indigo-600">Giacenza Attuale: -</p>
+    
+    <input type="text" id="carico-article" list="article-suggestions" 
+           placeholder="Nome Articolo (Auto-compilato o Nuovo)" 
+           class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+           
+    <datalist id="article-suggestions">
+        </datalist>
+           
+    <input type="number" id="carico-qty" placeholder="Quantità da Caricare" value="1" min="1" 
+           class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+           
+    <button onclick="doCarico()" class="w-full btn-primary bg-green-600 text-white p-3 rounded-lg font-bold hover:bg-green-700 flex items-center justify-center">
+        <i data-lucide="save" class="h-5 w-5 mr-2"></i>
+        Conferma Carico
+    </button>
+</div>
 
                 <div id="form-scarico" class="bg-white p-6 rounded-xl card space-y-4 hidden">
                     <h3 class="text-lg font-semibold">Modulo di Scarico</h3>
@@ -365,8 +375,10 @@ function safeCreateIcons() {
         let magazzinoData = []; // Cache dei dati
 	let currentScannedItem = null;
         let scannerActive = false;
+	let currentArticleByBarcode = null;
 	const scannerCard = document.getElementById('scanner-card');
 	const qrResultInput = document.getElementById('qr-result');
+
 
         // =========================================================================
         // UTILITY E UI MANAGEMENT
@@ -817,61 +829,142 @@ function playBeep() {
         // LOGICA CARICO E SCARICO (Backendless)
         // =========================================================================
 
-        async function doCarico() {
-    if (!currentUser || !currentUser.objectId) {
-        showNotification('Devi essere loggato per effettuare un Carico.', 'error');
-        return;
+async function doCarico() {
+    if (!currentUser || !currentUser.objectId) { 
+        showNotification('Devi essere loggato per effettuare un Carico.', 'error'); 
+        return; 
     }
 
     const barcode = document.getElementById('carico-barcode').value.trim();
-    const article = document.getElementById('carico-article').value.trim();
+    const articleName = document.getElementById('carico-article').value.trim();
     const qtyToAdd = parseInt(document.getElementById('carico-qty').value, 10);
 
-    if (!barcode || !article || qtyToAdd <= 0 || isNaN(qtyToAdd)) {
-        showNotification('Compila tutti i campi: Barcode, Articolo e Quantità valida (> 0).', 'error');
+    // Usa 'articleName' come condizione, poiché il Barcode potrebbe esistere senza l'articolo.
+    if (!barcode || !articleName || qtyToAdd <= 0 || isNaN(qtyToAdd)) {
+        showNotification('Compila Barcode, Articolo e Quantità valida.', 'warning');
         return;
     }
 
     toggleLoading(true);
 
-    let itemToSave = {};
-    
-    if (currentScannedItem && currentScannedItem.barcode === barcode) {
-        // ✅ AGGIORNA ESISTENTE (già segregato per ownerId)
-        itemToSave = { ...currentScannedItem }; 
-        itemToSave.quantity = (currentScannedItem.quantity || 0) + qtyToAdd;
-        itemToSave.article = article; 
+    // Utilizza la variabile impostata da handleCaricoBarcodeChange()
+    const itemToUpdate = currentArticleByBarcode; 
+
+    let dataToSave = {};
+    let isNewItem = !itemToUpdate;
+    let currentQty = itemToUpdate ? (itemToUpdate.quantity || 0) : 0;
+    let newQty = currentQty + qtyToAdd;
+
+    if (itemToUpdate) {
+        // Articolo ESISTENTE: Aggiorna solo la quantità (mantiene lo stesso articleName/barcode)
+        dataToSave = {
+            objectId: itemToUpdate.objectId,
+            quantity: newQty
+        };
     } else {
-        // ✅ CREA NUOVO
-        itemToSave = {
-            article: article, 
+        // NUOVO Articolo: Crea il nuovo record
+        dataToSave = {
             barcode: barcode,
-            quantity: qtyToAdd,
-            // 🚨 CRUCIALE: Assicura l'ownerId per il nuovo articolo
-            ownerId: currentUser.objectId 
+            article: articleName,
+            quantity: newQty,
+            ownerId: currentUser.objectId // Collega all'utente loggato
         };
     }
 
     try {
-        await Backendless.Data.of(MAGAZZINO_TABLE_NAME).save(itemToSave);
+        await Backendless.Data.of(MAGAZZINO_TABLE_NAME).save(dataToSave);
         
-        showNotification(`Carico Riuscito: Aggiunte ${qtyToAdd} unità di ${article}.`, 'success');
+        const successMsg = isNewItem
+            ? `Carico Riuscito: Aggiunto nuovo articolo '${articleName}' con Barcode ${barcode}.`
+            : `Carico Riuscito: Aggiunte ${qtyToAdd} unità di ${articleName}. Nuova giacenza: ${newQty}`;
+
+        showNotification(successMsg, 'success');
         
-        // Pulizia e Aggiornamento
+        // Pulizia UI e reset della logica
         document.getElementById('carico-barcode').value = '';
         document.getElementById('carico-article').value = '';
         document.getElementById('carico-qty').value = 1;
         document.getElementById('giacenza-display').textContent = 'Giacenza Attuale: -';
-        currentScannedItem = null; 
+        
+        // 💡 CRUCIALE: Reset della variabile che gestisce lo stato del Barcode
+        currentArticleByBarcode = null; 
+        document.getElementById('carico-article').disabled = false; // Sblocca per l'operazione successiva
+        
+        await loadDashboardData(); // Ricarica dati e aggiorna datalist/lista
         
     } catch (error) {
-        showNotification(`Errore durante il Carico: ${error.message || 'Verifica i permessi di scrittura sulla tabella.'}`, 'error');
+        showNotification(`Errore durante il Carico: ${error.message}`, 'error');
+        console.error("Errore doCarico:", error);
     } finally {
         toggleLoading(false);
-        await loadDashboardData(); 
+    }
+}        
+
+
+
+function populateDatalist(inventoryData) {
+    const datalist = document.getElementById('article-suggestions');
+    if (!datalist) return;
+
+    // Svuota i suggerimenti precedenti
+    datalist.innerHTML = ''; 
+
+    // Estrai i nomi articolo unici
+    const uniqueArticles = new Set();
+    
+    inventoryData.forEach(item => {
+        if (item.article) {
+            uniqueArticles.add(item.article);
+        }
+    });
+
+    // Aggiungi ogni articolo come <option>
+    uniqueArticles.forEach(article => {
+        const option = document.createElement('option');
+        option.value = article;
+        datalist.appendChild(option);
+    });
+
+}
+
+
+function handleCaricoBarcodeChange() {
+    const barcodeInput = document.getElementById('carico-barcode');
+    const articleInput = document.getElementById('carico-article');
+    const giacenzaDisplay = document.getElementById('giacenza-display');
+    const barcodeValue = barcodeInput.value.trim();
+
+    // 1. Reset e default
+    currentArticleByBarcode = null;
+    articleInput.disabled = false;
+    giacenzaDisplay.textContent = 'Giacenza Attuale: -';
+    
+    if (barcodeValue.length === 0) {
+        articleInput.value = '';
+        return;
+    }
+
+    // 2. Cerca l'articolo per barcode nella lista globale
+    // [Assumi che magazzinoData sia globale e popolato]
+    const foundItem = magazzinoData.find(item => item.barcode === barcodeValue);
+
+    if (foundItem) {
+        // Barcode Trovato!
+        currentArticleByBarcode = foundItem; 
+        
+        articleInput.value = foundItem.article;
+        giacenzaDisplay.textContent = `Giacenza Attuale: ${foundItem.quantity || 0} unità`;
+        
+        // Blocca la modifica
+        articleInput.disabled = true; 
+
+    } else {
+        // Barcode NON Trovato: nuovo articolo.
+        articleInput.disabled = false;
+        giacenzaDisplay.textContent = 'Giacenza Attuale: 0 (NUOVO Articolo)';
     }
 }
-        
+
         async function refreshScaricoSelect(filterBarcode = '') {
     const selectElement = document.getElementById('scarico-select');
     const displayGiacenza = document.getElementById('scarico-giacenza-display');
@@ -1116,7 +1209,7 @@ function openEditModal(objectId, article, barcode, quantity) {
         // DASHBOARD E LISTA
         // =========================================================================
         
-        async function loadDashboardData() {
+ async function loadDashboardData() {
     if (!currentUser || !currentUser.objectId) {
         document.getElementById('magazzino-list').innerHTML = '<p class="text-center text-gray-500 p-4">Effettua il login per vedere il magazzino.</p>';
         renderDashboardStats([]);
@@ -1138,6 +1231,9 @@ function openEditModal(objectId, article, barcode, quantity) {
         
         renderInventoryList(magazzinoData);
         renderDashboardStats(magazzinoData);
+        
+        // 💡 PUNTO DI MODIFICA: Chiama la funzione per popolare l'autocompletamento
+        populateDatalist(magazzinoData); 
         
     } catch (error) {
         showNotification(`Errore nel caricamento della Dashboard: ${error.message || 'Verifica i permessi di lettura della tabella.'}`, 'error');
