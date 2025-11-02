@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestione Magazzino v3</title>
+<title>Gestione Magazzino v4</title>
 
 <!-- ================= PWA SETTINGS ================= -->
 <link rel="manifest" href="manifest.json">
@@ -213,11 +213,12 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
     
                <input type="text" id="qr-result" placeholder="Risultato Scansione" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-gray-100" readonly>
            </div>
-                <div class="flex border-b border-gray-200 mb-6">
-    <button id="tab-carico" onclick="switchMode('carico')" 
-            class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150 tab-active flex items-center justify-center">
-        <i data-lucide="package-plus" class="h-5 w-5 inline-block mr-1"></i>
-        <span class="hidden sm:inline">Carico</span> </button>
+               
+            <div class="flex border-b border-gray-200 mb-6">
+                   <button id="tab-carico" onclick="switchMode('carico')" 
+                   class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150 tab-active flex items-center justify-center">
+                   <i data-lucide="package-plus" class="h-5 w-5 inline-block mr-1"></i>
+                   <span class="hidden sm:inline">Carico</span> </button>
     
     <button id="tab-scarico" onclick="switchMode('scarico')" 
             class="flex-1 px-4 py-2 text-gray-700 transition-colors duration-150 flex items-center justify-center">
@@ -232,23 +233,24 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
 
                 <div id="form-carico" class="bg-white p-6 rounded-xl card space-y-4">
     <h3 class="text-lg font-semibold">Modulo di Carico</h3>
-    
+
     <input type="text" id="carico-barcode" placeholder="Barcode (Scannerizza o Inserisci)" 
            oninput="handleCaricoBarcodeChange()"
            class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-           
-    <p id="giacenza-display" class="text-sm font-medium text-indigo-600">Giacenza Attuale: -</p>
-    
+
     <input type="text" id="carico-article" list="article-suggestions" 
            placeholder="Nome Articolo (Auto-compilato o Nuovo)" 
+           oninput="handleCaricoArticleChange()" 
            class="w-full p-3 border border-gray-300 rounded-lg input-focus relative z-10">
-           
+            
     <datalist id="article-suggestions">
         </datalist>
-           
+            
+    <p id="giacenza-display" class="text-sm font-medium text-indigo-600">Giacenza Attuale: -</p>
+            
     <input type="number" id="carico-qty" placeholder="Quantità da Caricare" value="1" min="1" 
            class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-           
+            
     <button onclick="doCarico()" class="w-full btn-primary bg-green-600 text-white p-3 rounded-lg font-bold hover:bg-green-700 flex items-center justify-center">
         <i data-lucide="save" class="h-5 w-5 mr-2"></i>
         Conferma Carico
@@ -903,7 +905,82 @@ async function doCarico() {
     }
 }      
 
+function handleCaricoArticleChange() {
+    const barcodeInput = document.getElementById('carico-barcode');
+    const articleInput = document.getElementById('carico-article');
+    const giacenzaDisplay = document.getElementById('giacenza-display');
+    const articleName = articleInput.value.trim();
 
+    // Reset dello stato
+    currentArticleByBarcode = null;
+    barcodeInput.disabled = false;
+    articleInput.disabled = false; // Mantiene Articolo sbloccato se non c'è corrispondenza Barcode
+    giacenzaDisplay.textContent = 'Giacenza Attuale: -';
+
+    if (articleName.length === 0) {
+        barcodeInput.value = '';
+        return;
+    }
+
+    // Ricerca robusta per Nome Articolo (assumiamo univoco)
+    const foundItem = magazzinoData.find(item => String(item.article).trim() === articleName);
+
+    if (foundItem) {
+        // Articolo ESISTENTE TROVATO
+        currentArticleByBarcode = foundItem;
+        
+        barcodeInput.value = foundItem.barcode || '';
+        giacenzaDisplay.textContent = `Giacenza Attuale: ${foundItem.quantity || 0} unità`;
+        
+        // Il record è identificato, blocchiamo entrambi i campi
+        barcodeInput.disabled = true;
+        articleInput.disabled = true; 
+        
+    } else {
+        // NUOVO INSERIMENTO (Articolo non trovato)
+        // L'utente deve inserire anche il Barcode
+        barcodeInput.disabled = false;
+        giacenzaDisplay.textContent = 'Giacenza Attuale: 0 (NUOVO)';
+    }
+}
+
+
+
+
+function populateCaricoSelect() {
+    const articleInput = document.getElementById('carico-article');
+    const barcodeInput = document.getElementById('carico-barcode');
+    const giacenzaDisplay = document.getElementById('giacenza-display');
+    const articleName = articleInput.value.trim();
+
+    // 1. Reset Barcode e sblocco
+    barcodeInput.value = '';
+    barcodeInput.disabled = false;
+    giacenzaDisplay.textContent = 'Giacenza Attuale: -';
+
+    if (articleName.length === 0) {
+        return;
+    }
+
+    // 2. Ricerca per nome Articolo (univoco)
+    const foundItem = magazzinoData.find(item => String(item.article).trim() === articleName);
+
+    if (foundItem) {
+        // Articolo Trovato: Popola Barcode e Giacenza
+        
+        // 🚨 Autocompilazione del Barcode
+        barcodeInput.value = foundItem.barcode || '';
+        giacenzaDisplay.textContent = `Giacenza Attuale: ${foundItem.quantity || 0} unità`;
+        
+        // 3. Blocchiamo il Barcode (è stato selezionato)
+        barcodeInput.disabled = true;
+
+    } else {
+        // Articolo NON Trovato (Nuovo Articolo)
+        giacenzaDisplay.textContent = 'Giacenza Attuale: 0 (NUOVO Articolo)';
+        barcodeInput.disabled = false; // Permetti di inserire un nuovo Barcode
+    }
+}
 
 function populateDatalist(inventoryData) {
     const datalist = document.getElementById('article-suggestions');
@@ -937,42 +1014,39 @@ function handleCaricoBarcodeChange() {
     const giacenzaDisplay = document.getElementById('giacenza-display');
     const barcodeValue = barcodeInput.value.trim();
 
-    // 1. Reset e default
+    // Reset dello stato
     currentArticleByBarcode = null;
+    barcodeInput.disabled = false;
     articleInput.disabled = false;
     giacenzaDisplay.textContent = 'Giacenza Attuale: -';
-    
+
     if (barcodeValue.length === 0) {
         articleInput.value = '';
         return;
     }
 
-    // 💡 MODIFICA CHIAVE: Ricerca robusta che confronta stringhe pulite.
-    const foundItem = magazzinoData.find(item => {
-        // Assicuriamo che il valore del DB (item.barcode) sia una stringa e la confrontiamo con il valore inserito (barcodeValue)
-        return String(item.barcode).trim() === barcodeValue;
-    });
-
-    // Per ulteriore debug, puoi rimettere questo:
-    // console.log("Articolo Trovato nel Carico (dopo fix):", foundItem);
+    // Ricerca robusta per Barcode
+    const foundItem = magazzinoData.find(item => String(item.barcode).trim() === barcodeValue);
 
     if (foundItem) {
-        // Barcode Trovato!
-        currentArticleByBarcode = foundItem; 
+        // Articolo ESISTENTE TROVATO
+        currentArticleByBarcode = foundItem;
         
-        // Autocompilazione Articolo e Giacenza
         articleInput.value = foundItem.article; 
         giacenzaDisplay.textContent = `Giacenza Attuale: ${foundItem.quantity || 0} unità`;
         
-        // Blocca l'input Articolo
-        articleInput.disabled = true; 
+        // Blocca entrambi i campi
+        articleInput.disabled = true;
+        barcodeInput.disabled = true; 
 
     } else {
-        // Barcode NON Trovato: Nuovo articolo
-        articleInput.disabled = false;
-        giacenzaDisplay.textContent = 'Giacenza Attuale: 0 (NUOVO Articolo)';
+        // NUOVO INSERIMENTO (Barcode non trovato)
+        articleInput.disabled = false; 
+        giacenzaDisplay.textContent = 'Giacenza Attuale: 0 (NUOVO)';
+        // L'utente deve ora digitare il nome dell'articolo
     }
 }
+
 
         async function refreshScaricoSelect(filterBarcode = '') {
     const selectElement = document.getElementById('scarico-select');
