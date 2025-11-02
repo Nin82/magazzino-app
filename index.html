@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestione Magazzino v5</title>
+<title>Gestione Magazzino v1</title>
 
 <!-- ================= PWA SETTINGS ================= -->
 <link rel="manifest" href="manifest.json">
@@ -259,8 +259,8 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
                     <h3 class="text-lg font-semibold">Modulo di Scarico</h3>
                     <input type="text" id="scarico-barcode" placeholder="Scannerizza Barcode o Inserisci per filtrare" 
                            class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                    <select id="scarico-select" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                        <option value="">-- Seleziona Articolo o Scansiona --</option>
+                    <select id="scarico-select" class="w-full p-3 border border-gray-300 rounded-lg input-focus relative z-10">
+                           <option value="">-- Seleziona Articolo o Scansiona --</option>
                     </select>
                     <p id="scarico-giacenza-display" class="text-sm font-medium text-red-600">Giacenza Attuale: -</p>
                     <input type="number" id="scarico-qty" placeholder="Quantità da Scaricare" value="1" min="1" 
@@ -1009,42 +1009,43 @@ function handleCaricoBarcodeChange() {
         toggleLoading(false);
     }
 }
-        
+
 function updateScaricoGiacenza() {
     const selectElement = document.getElementById('scarico-select');
     const displayElement = document.getElementById('scarico-giacenza-display');
-    // 💡 Definisci l'input del Barcode qui!
+    // 💡 IMPORTANTE: Definiamo l'input del Barcode di Scarico
     const barcodeInputElement = document.getElementById('scarico-barcode'); 
     
     const selectedObjectId = selectElement.value;
 
     if (!selectedObjectId) {
-        // NESSUN ARTICOLO SELEZIONATO
+        // NESSUN ARTICOLO SELEZIONATO: Resetta i campi
         displayElement.textContent = 'Giacenza Attuale: -';
         barcodeInputElement.value = ''; 
-        // 1. Riabilita l'input quando il dropdown è vuoto
-        barcodeInputElement.disabled = false; 
+        barcodeInputElement.disabled = false; // Riabilita l'input
         return;
     }
     
+    // Cerca l'articolo completo nella cache globale
     const selectedItem = magazzinoData.find(item => item.objectId === selectedObjectId);
     
     if (selectedItem) {
         const qty = selectedItem.quantity || 0;
         
-        // 💡 Estrai il Barcode (VERIFICA che il campo si chiami 'barcode'!)
+        // Assumiamo che il campo si chiami 'barcode'. 
+        // Se non funziona, verifica il nome corretto (es. 'codice').
         const barcodeValue = selectedItem.barcode || ''; 
-        
+
         // 1. Aggiorna la giacenza
         displayElement.textContent = `Giacenza Attuale: ${qty} unità`;
         
-        // 2. Autocompila il campo Barcode
+        // 2. Autocompila il campo Barcode (Soluzione al tuo problema)
         barcodeInputElement.value = barcodeValue;
         
-        // 3. Inibisce l'input Barcode
+        // 3. Disabilita il campo Barcode per obbligare l'uso del dropdown
         barcodeInputElement.disabled = true; 
     } else {
-        // Fallback: Articolo non trovato in magazzinoData
+        // Fallback
         displayElement.textContent = 'Giacenza Attuale: 0';
         barcodeInputElement.value = '';
         barcodeInputElement.disabled = false;
