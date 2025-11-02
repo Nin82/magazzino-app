@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestione Magazzino v4</title>
+<title>Gestione Magazzino v3</title>
 
 <!-- ================= PWA SETTINGS ================= -->
 <link rel="manifest" href="manifest.json">
@@ -910,31 +910,32 @@ function populateCaricoSelect() {
     const giacenzaDisplay = document.getElementById('giacenza-display');
     const articleName = articleInput.value.trim();
 
+    // 1. Reset Barcode e sblocco
+    barcodeInput.value = '';
+    barcodeInput.disabled = false;
+    giacenzaDisplay.textContent = 'Giacenza Attuale: -';
+
     if (articleName.length === 0) {
-        // Articolo vuoto, reset
-        barcodeInput.value = '';
-        giacenzaDisplay.textContent = 'Giacenza Attuale: -';
         return;
     }
 
-    // Ricerca dell'articolo tramite il nome (che ora è univoco)
+    // 2. Ricerca per nome Articolo (univoco)
     const foundItem = magazzinoData.find(item => String(item.article).trim() === articleName);
 
     if (foundItem) {
         // Articolo Trovato: Popola Barcode e Giacenza
         
-        // 🚨 Il Barcode si popola in base all'articolo scelto!
+        // 🚨 Autocompilazione del Barcode
         barcodeInput.value = foundItem.barcode || '';
         giacenzaDisplay.textContent = `Giacenza Attuale: ${foundItem.quantity || 0} unità`;
         
-        // Blocchiamo il Barcode se l'articolo è stato selezionato dal datalist
+        // 3. Blocchiamo il Barcode (è stato selezionato)
         barcodeInput.disabled = true;
 
     } else {
         // Articolo NON Trovato (Nuovo Articolo)
-        barcodeInput.disabled = false; // Sblocca il Barcode per l'inserimento manuale
-        barcodeInput.value = '';
         giacenzaDisplay.textContent = 'Giacenza Attuale: 0 (NUOVO Articolo)';
+        barcodeInput.disabled = false; // Permetti di inserire un nuovo Barcode
     }
 }
 
@@ -970,17 +971,17 @@ function handleCaricoBarcodeChange() {
     const giacenzaDisplay = document.getElementById('giacenza-display');
     const barcodeValue = barcodeInput.value.trim();
 
-    // Reset generale
+    // Reset della variabile globale
     currentArticleByBarcode = null;
     giacenzaDisplay.textContent = 'Giacenza Attuale: -';
-    articleInput.disabled = false; // Manteniamo sempre sbloccato l'Articolo
 
     if (barcodeValue.length === 0) {
         articleInput.value = '';
-        barcodeInput.disabled = false;
+        barcodeInput.disabled = false; // Sblocca
         return;
     }
 
+    // Ricerca robusta per Barcode
     const foundItem = magazzinoData.find(item => String(item.barcode).trim() === barcodeValue);
 
     if (foundItem) {
@@ -992,16 +993,15 @@ function handleCaricoBarcodeChange() {
         giacenzaDisplay.textContent = `Giacenza Attuale: ${foundItem.quantity || 0} unità`;
         
         // 🚨 Blocca l'input Barcode: ora è la chiave di riferimento
-        barcodeInput.disabled = true;
+        barcodeInput.disabled = true; 
 
     } else {
-        // Barcode NON Trovato: Sblocca tutto, è un nuovo articolo
+        // Barcode NON Trovato
         barcodeInput.disabled = false;
         giacenzaDisplay.textContent = 'Giacenza Attuale: 0 (NUOVO Articolo)';
-        articleInput.value = ''; // Pulisci l'articolo se il Barcode non è valido
+        articleInput.value = ''; // Pulisci l'articolo per prepararlo all'inserimento manuale
     }
 }
-
 
         async function refreshScaricoSelect(filterBarcode = '') {
     const selectElement = document.getElementById('scarico-select');
