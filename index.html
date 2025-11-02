@@ -917,28 +917,45 @@ function playBeep() {
     }
 }
         
-        function updateScaricoGiacenza() {
+function updateScaricoGiacenza() {
     const selectElement = document.getElementById('scarico-select');
     const displayElement = document.getElementById('scarico-giacenza-display');
+    // 💡 Definisci l'input del Barcode qui!
+    const barcodeInputElement = document.getElementById('scarico-barcode'); 
+    
     const selectedObjectId = selectElement.value;
 
     if (!selectedObjectId) {
+        // NESSUN ARTICOLO SELEZIONATO
         displayElement.textContent = 'Giacenza Attuale: -';
+        barcodeInputElement.value = ''; 
+        // 1. Riabilita l'input quando il dropdown è vuoto
+        barcodeInputElement.disabled = false; 
         return;
     }
     
-    // Cerca l'articolo DENTRO la cache dei dati globali (magazzinoData),
-    // che è già stata filtrata per l'utente corrente da loadDashboardData.
     const selectedItem = magazzinoData.find(item => item.objectId === selectedObjectId);
     
-    const qty = selectedItem ? (selectedItem.quantity || 0) : 0;
-    
-    displayElement.textContent = `Giacenza Attuale: ${qty} unità`;
-
-   barcodeInputElement.value = barcodeValue;	
-   barcodeInputElement.disabled = true;		
-
-
+    if (selectedItem) {
+        const qty = selectedItem.quantity || 0;
+        
+        // 💡 Estrai il Barcode (VERIFICA che il campo si chiami 'barcode'!)
+        const barcodeValue = selectedItem.barcode || ''; 
+        
+        // 1. Aggiorna la giacenza
+        displayElement.textContent = `Giacenza Attuale: ${qty} unità`;
+        
+        // 2. Autocompila il campo Barcode
+        barcodeInputElement.value = barcodeValue;
+        
+        // 3. Inibisce l'input Barcode
+        barcodeInputElement.disabled = true; 
+    } else {
+        // Fallback: Articolo non trovato in magazzinoData
+        displayElement.textContent = 'Giacenza Attuale: 0';
+        barcodeInputElement.value = '';
+        barcodeInputElement.disabled = false;
+    }
 }
 
         async function doScarico() {
@@ -1332,4 +1349,3 @@ window.onload = function() {
 
 </body>
 </html>
-
