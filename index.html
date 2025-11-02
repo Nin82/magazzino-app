@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestione Magazzino v4</title>
+<title>Gestione Magazzino v5</title>
 
 <!-- ================= PWA SETTINGS ================= -->
 <link rel="manifest" href="manifest.json">
@@ -240,7 +240,8 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
 
     <input type="text" id="carico-article" list="article-suggestions" 
            placeholder="Nome Articolo (Auto-compilato o Nuovo)" 
-           oninput="handleCaricoArticleChange()" 
+           oninput="handleCaricoArticleChange()"
+	   onfocus="handleCaricoArticleFocus()" 
            class="w-full p-3 border border-gray-300 rounded-lg input-focus relative z-10">
             
     <datalist id="article-suggestions">
@@ -925,14 +926,14 @@ function handleCaricoArticleChange() {
     articleInput.disabled = false;
     giacenzaDisplay.textContent = 'Giacenza Attuale: -';
 
-    // Se vuoto → reset
+    // Se vuoto → ripristina il datalist completo e svuota barcode
     if (searchTerm.length === 0) {
         barcodeInput.value = '';
-        datalist.innerHTML = '';
+        populateDatalist(magazzinoData);
         return;
     }
 
-    // 🔎 Filtra articoli che contengono il testo digitato
+    // Filtra articoli che contengono il testo digitato
     const filtered = magazzinoData.filter(item =>
         item.article && item.article.toLowerCase().includes(searchTerm)
     );
@@ -945,9 +946,9 @@ function handleCaricoArticleChange() {
         datalist.appendChild(option);
     });
 
-    // ✅ Se l’utente ha digitato un nome esatto già presente → autocompila e blocca
+    // Se l’utente ha digitato un nome esatto già presente → autocompila e blocca
     const foundItem = magazzinoData.find(item =>
-        item.article.trim().toLowerCase() === searchTerm
+        item.article && item.article.trim().toLowerCase() === searchTerm
     );
 
     if (foundItem) {
@@ -957,6 +958,9 @@ function handleCaricoArticleChange() {
 
         barcodeInput.disabled = true;
         articleInput.disabled = true;
+
+        // (Opzionale) Manteniamo il datalist completo per future ricerche
+        populateDatalist(magazzinoData);
     } else {
         giacenzaDisplay.textContent = 'Giacenza Attuale: 0 (NUOVO Articolo)';
         barcodeInput.disabled = false;
@@ -1003,12 +1007,24 @@ function populateDatalist(inventoryData) {
     if (!datalist) return;
     datalist.innerHTML = '';
 
-    const uniqueArticles = [...new Set(inventoryData.map(item => item.article).filter(Boolean))];
+    const uniqueArticles = [...new Set(
+        inventoryData
+            .map(item => item.article)
+            .filter(Boolean)
+    )];
+
     uniqueArticles.forEach(article => {
         const option = document.createElement('option');
         option.value = article;
         datalist.appendChild(option);
     });
+}
+
+
+function handleCaricoArticleFocus() {
+    const articleInput = document.getElementById('carico-article');
+    if (articleInput.disabled) return;
+    populateDatalist(magazzinoData);
 }
 
 function handleCaricoBarcodeChange() {
@@ -1023,28 +1039,24 @@ function handleCaricoBarcodeChange() {
     barcodeInput.disabled = false;
     giacenzaDisplay.textContent = 'Giacenza Attuale: -';
 
-    // Se vuoto → reset
     if (barcodeValue.length === 0) {
         articleInput.value = '';
         return;
     }
 
-    // 🔍 Cerca corrispondenza esatta solo se la stringa completa coincide con un barcode esistente
+    // Cerca corrispondenza esatta solo quando la stringa completa coincide con un barcode esistente
     const foundItem = magazzinoData.find(item =>
         String(item.barcode).trim() === barcodeValue
     );
 
     if (foundItem) {
-        // ✅ Solo se il valore digitato è esattamente uguale (non un prefisso)
         currentArticleByBarcode = foundItem;
         articleInput.value = foundItem.article || '';
         giacenzaDisplay.textContent = `Giacenza Attuale: ${foundItem.quantity || 0} unità`;
 
-        // Blocca solo dopo match completo
         barcodeInput.disabled = true;
         articleInput.disabled = true;
     } else {
-        // Nessun match esatto → lascia digitare
         giacenzaDisplay.textContent = 'Giacenza Attuale: 0 (NUOVO Articolo)';
         articleInput.disabled = false;
     }
@@ -1063,7 +1075,11 @@ function resetCaricoFields() {
     articleInput.disabled = false;
     giacenzaDisplay.textContent = 'Giacenza Attuale: -';
     currentArticleByBarcode = null;
+
+    // IMPORTANTISSIMO: ripopoliamo il datalist con tutti gli articoli
+    populateDatalist(magazzinoData);
 }
+
 
         async function refreshScaricoSelect(filterBarcode = '') {
     const selectElement = document.getElementById('scarico-select');
