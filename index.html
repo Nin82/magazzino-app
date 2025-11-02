@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestione Magazzino v3</title>
+<title>Gestione Magazzino v4</title>
 
 <!-- ================= PWA SETTINGS ================= -->
 <link rel="manifest" href="manifest.json">
@@ -852,14 +852,17 @@ async function doCarico() {
 
     let dataToSave = {};
     let isNewItem = !itemToUpdate;
-    let currentQty = itemToUpdate ? (itemToUpdate.quantity || 0) : 0;
-    let newQty = currentQty + qtyToAdd;
+    
+    // ✅ CORREZIONE: Converte la quantità del DB (stringa) in numero intero (base 10).
+    let currentQty = itemToUpdate ? (parseInt(itemToUpdate.quantity, 10) || 0) : 0;
+    
+    let newQty = currentQty + qtyToAdd; // Ora esegue una somma matematica
 
     if (itemToUpdate) {
-        // Articolo ESISTENTE: Aggiorna solo la quantità (mantiene lo stesso articleName/barcode)
+        // Articolo ESISTENTE: Aggiorna solo la quantità
         dataToSave = {
             objectId: itemToUpdate.objectId,
-            quantity: newQty
+            quantity: newQty // Invierà il numero corretto a Backendless
         };
     } else {
         // NUOVO Articolo: Crea il nuovo record
@@ -867,7 +870,7 @@ async function doCarico() {
             barcode: barcode,
             article: articleName,
             quantity: newQty,
-            ownerId: currentUser.objectId // Collega all'utente loggato
+            ownerId: currentUser.objectId
         };
     }
 
@@ -886,11 +889,11 @@ async function doCarico() {
         document.getElementById('carico-qty').value = 1;
         document.getElementById('giacenza-display').textContent = 'Giacenza Attuale: -';
         
-        // 💡 CRUCIALE: Reset della variabile che gestisce lo stato del Barcode
+        // Reset della variabile globale
         currentArticleByBarcode = null; 
-        document.getElementById('carico-article').disabled = false; // Sblocca per l'operazione successiva
+        document.getElementById('carico-article').disabled = false;
         
-        await loadDashboardData(); // Ricarica dati e aggiorna datalist/lista
+        await loadDashboardData();
         
     } catch (error) {
         showNotification(`Errore durante il Carico: ${error.message}`, 'error');
@@ -898,7 +901,7 @@ async function doCarico() {
     } finally {
         toggleLoading(false);
     }
-}        
+}      
 
 
 
