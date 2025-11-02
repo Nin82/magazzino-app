@@ -1156,7 +1156,7 @@ function openEditModal(objectId, article, barcode, quantity) {
                         ${quantity}
                     </div>
                     <button <button onclick="openEditModal('${objectId}', '${item.article.replace(/'/g, "\\'")}', '${item.barcode.replace(/'/g, "\\'")}', ${quantity})" ...>
-                            //class="p-2 bg-indigo-500 text-white rounded-full hover:bg-indigo-600 transition-colors" title="Modifica">
+                            title="Modifica">
                         <i data-lucide="edit-3" class="h-4 w-4"></i>
 			<span>Modifica</span>
                     </button>
@@ -1231,3 +1231,4 @@ window.onload = function() {
 
 </body>
 </html>
+
