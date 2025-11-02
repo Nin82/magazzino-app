@@ -930,13 +930,13 @@ function populateDatalist(inventoryData) {
 
 function handleCaricoBarcodeChange() {
     const barcodeInput = document.getElementById('carico-barcode');
-    const articleInput = document.getElementById('carico-article');
+    const articleInput = document.getElementById('carico-article'); // 💡 Verifica questo ID
     const giacenzaDisplay = document.getElementById('giacenza-display');
     const barcodeValue = barcodeInput.value.trim();
 
     // 1. Reset e default
     currentArticleByBarcode = null;
-    articleInput.disabled = false;
+    articleInput.disabled = false; // Sblocca di default
     giacenzaDisplay.textContent = 'Giacenza Attuale: -';
     
     if (barcodeValue.length === 0) {
@@ -944,27 +944,25 @@ function handleCaricoBarcodeChange() {
         return;
     }
 
-    // 2. Cerca l'articolo per barcode nella lista globale
-    // [Assumi che magazzinoData sia globale e popolato]
+    // Ricerca, che sappiamo funzionare:
     const foundItem = magazzinoData.find(item => item.barcode === barcodeValue);
-
-console.log("Valore Barcode Inserito:", barcodeValue);
-    console.log("Articolo Trovato nel Carico:", foundItem);
 
     if (foundItem) {
         // Barcode Trovato!
         currentArticleByBarcode = foundItem; 
         
-        articleInput.value = foundItem.article;
+        // 💡 QUESTO È IL PUNTO CRITICO: Autocompilazione Articolo e Giacenza
+        articleInput.value = foundItem.article; // Deve usare foundItem.article
         giacenzaDisplay.textContent = `Giacenza Attuale: ${foundItem.quantity || 0} unità`;
         
-        // Blocca la modifica
+        // Blocca l'input Articolo (per evitare modifiche a un articolo esistente)
         articleInput.disabled = true; 
 
     } else {
-        // Barcode NON Trovato: nuovo articolo.
+        // Barcode NON Trovato: Nuovo articolo
         articleInput.disabled = false;
         giacenzaDisplay.textContent = 'Giacenza Attuale: 0 (NUOVO Articolo)';
+        // Non toccare articleInput.value in questo blocco
     }
 }
 
