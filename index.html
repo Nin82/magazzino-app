@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestione Magazzino v2</title>
+<title>Gestione Magazzino v3</title>
 
 <!-- ================= PWA SETTINGS ================= -->
 <link rel="manifest" href="manifest.json">
@@ -930,13 +930,13 @@ function populateDatalist(inventoryData) {
 
 function handleCaricoBarcodeChange() {
     const barcodeInput = document.getElementById('carico-barcode');
-    const articleInput = document.getElementById('carico-article'); // 💡 Verifica questo ID
+    const articleInput = document.getElementById('carico-article');
     const giacenzaDisplay = document.getElementById('giacenza-display');
     const barcodeValue = barcodeInput.value.trim();
 
     // 1. Reset e default
     currentArticleByBarcode = null;
-    articleInput.disabled = false; // Sblocca di default
+    articleInput.disabled = false;
     giacenzaDisplay.textContent = 'Giacenza Attuale: -';
     
     if (barcodeValue.length === 0) {
@@ -944,25 +944,30 @@ function handleCaricoBarcodeChange() {
         return;
     }
 
-    // Ricerca, che sappiamo funzionare:
-    const foundItem = magazzinoData.find(item => item.barcode === barcodeValue);
+    // 💡 MODIFICA CHIAVE: Ricerca robusta che confronta stringhe pulite.
+    const foundItem = magazzinoData.find(item => {
+        // Assicuriamo che il valore del DB (item.barcode) sia una stringa e la confrontiamo con il valore inserito (barcodeValue)
+        return String(item.barcode).trim() === barcodeValue;
+    });
+
+    // Per ulteriore debug, puoi rimettere questo:
+    // console.log("Articolo Trovato nel Carico (dopo fix):", foundItem);
 
     if (foundItem) {
         // Barcode Trovato!
         currentArticleByBarcode = foundItem; 
         
-        // 💡 QUESTO È IL PUNTO CRITICO: Autocompilazione Articolo e Giacenza
-        articleInput.value = foundItem.article; // Deve usare foundItem.article
+        // Autocompilazione Articolo e Giacenza
+        articleInput.value = foundItem.article; 
         giacenzaDisplay.textContent = `Giacenza Attuale: ${foundItem.quantity || 0} unità`;
         
-        // Blocca l'input Articolo (per evitare modifiche a un articolo esistente)
+        // Blocca l'input Articolo
         articleInput.disabled = true; 
 
     } else {
         // Barcode NON Trovato: Nuovo articolo
         articleInput.disabled = false;
         giacenzaDisplay.textContent = 'Giacenza Attuale: 0 (NUOVO Articolo)';
-        // Non toccare articleInput.value in questo blocco
     }
 }
 
