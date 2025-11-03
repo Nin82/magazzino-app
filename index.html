@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestione Magazzino v6</title>
+<title>Gestione Magazzino v4</title>
 
 <!-- ================= PWA SETTINGS ================= -->
 <link rel="manifest" href="manifest.json">
@@ -386,11 +386,10 @@ function safeCreateIcons() {
 	let currentScannedItem = null;
         let scannerActive = false;
 	let currentArticleByBarcode = null;
-        let barcodeTypingTimer;
+	let barcodeTypingTimer;
 	const scannerCard = document.getElementById('scanner-card');
 	const qrResultInput = document.getElementById('qr-result');
-	const BARCODE_DEBOUNCE_DELAY = 600;
-
+	const BARCODE_DEBOUNCE_DELAY = 300;
 
         // =========================================================================
         // UTILITY E UI MANAGEMENT
@@ -1022,13 +1021,14 @@ function populateDatalist(inventoryData) {
     });
 }
 
+
 function handleCaricoArticleFocus() {
     const articleInput = document.getElementById('carico-article');
     if (articleInput.disabled) return;
     populateDatalist(magazzinoData);
 }
 
-function function handleCaricoBarcodeChange() {
+function handleCaricoBarcodeChange() {
     const barcodeInput = document.getElementById('carico-barcode');
     const articleInput = document.getElementById('carico-article');
     const giacenzaDisplay = document.getElementById('giacenza-display');
@@ -1072,6 +1072,7 @@ function function handleCaricoBarcodeChange() {
         }
     }, BARCODE_DEBOUNCE_DELAY);
 }
+
 
 function resetCaricoFields() {
     const barcodeInput = document.getElementById('carico-barcode');
