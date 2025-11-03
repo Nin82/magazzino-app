@@ -865,7 +865,6 @@ async function doCarico() {
     const articleName = document.getElementById('carico-article').value.trim();
     const qtyToAdd = parseInt(document.getElementById('carico-qty').value, 10);
 
-    // Usa 'articleName' come condizione, poiché il Barcode potrebbe esistere senza l'articolo.
     if (!barcode || !articleName || qtyToAdd <= 0 || isNaN(qtyToAdd)) {
         showNotification('Compila Barcode, Articolo e Quantità valida.', 'warning');
         return;
@@ -873,34 +872,50 @@ async function doCarico() {
 
     toggleLoading(true);
 
-    // Utilizza la variabile impostata da handleCaricoBarcodeChange()
-    const itemToUpdate = currentArticleByBarcode; 
-
-    let dataToSave = {};
-    let isNewItem = !itemToUpdate;
-    
-    // ✅ CORREZIONE: Converte la quantità del DB (stringa) in numero intero (base 10).
-    let currentQty = itemToUpdate ? (parseInt(itemToUpdate.quantity, 10) || 0) : 0;
-    
-    let newQty = currentQty + qtyToAdd; // Ora esegue una somma matematica
-
-    if (itemToUpdate) {
-        // Articolo ESISTENTE: Aggiorna solo la quantità
-        dataToSave = {
-            objectId: itemToUpdate.objectId,
-            quantity: newQty // Invierà il numero corretto a Backendless
-        };
-    } else {
-        // NUOVO Articolo: Crea il nuovo record
-        dataToSave = {
-            barcode: barcode,
-            article: articleName,
-            quantity: newQty,
-            ownerId: currentUser.objectId
-        };
-    }
-
     try {
+        let itemToUpdate = null;
+        
+        // =======================================================
+        // 🚨 MODIFICA CRITICA: RICERCA DI NUOVO L'ARTICOLO DAL DB
+        // =======================================================
+        // Esegue una query diretta al DB in base al Barcode attuale
+        const queryBuilder = Backendless.DataQueryBuilder.create()
+            .setWhereClause(`barcode = '${barcode}'`)
+            .setPageSize(1);
+            
+        const results = await Backendless.Data.of(MAGAZZINO_TABLE_NAME).find(queryBuilder);
+        
+        if (results && results.length > 0) {
+            itemToUpdate = results[0];
+        }
+
+        let dataToSave = {};
+        let isNewItem = !itemToUpdate;
+        let newQty;
+
+        if (itemToUpdate) {
+            // Articolo ESISTENTE: Aggiorna la quantità
+            const currentQty = parseInt(itemToUpdate.quantity, 10) || 0;
+            newQty = currentQty + qtyToAdd; 
+
+            dataToSave = {
+                objectId: itemToUpdate.objectId,
+                quantity: newQty // Somma corretta
+            };
+            
+        } else {
+            // NUOVO Articolo: Crea il nuovo record
+            newQty = qtyToAdd;
+
+            dataToSave = {
+                barcode: barcode,
+                article: articleName,
+                quantity: newQty,
+                ownerId: currentUser.objectId
+            };
+        }
+
+        // 3. Esegue l'operazione sul database
         await Backendless.Data.of(MAGAZZINO_TABLE_NAME).save(dataToSave);
         
         const successMsg = isNewItem
@@ -915,10 +930,10 @@ async function doCarico() {
         document.getElementById('carico-qty').value = 1;
         document.getElementById('giacenza-display').textContent = 'Giacenza Attuale: -';
         
-        // Reset della variabile globale
-        currentArticleByBarcode = null; 
-        document.getElementById('carico-article').disabled = false;
-        
+        // 🚨 CRITICO: Esegui il reset completo per pulire anche i timer debounce in corso
+        // Ho sostituito il blocco di reset manuale con la funzione che abbiamo corretto insieme:
+        resetCaricoFields(); 
+
         await loadDashboardData();
         
     } catch (error) {
@@ -927,7 +942,7 @@ async function doCarico() {
     } finally {
         toggleLoading(false);
     }
-}      
+}
 
  function handleCaricoArticleChange() {
     const articleInput = document.getElementById('carico-article');
