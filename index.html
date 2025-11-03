@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestione Magazzino v4</title>
+<title>Gestione Magazzino v1</title>
 
 <!-- ================= PWA SETTINGS ================= -->
 <link rel="manifest" href="manifest.json">
@@ -386,10 +386,12 @@ function safeCreateIcons() {
 	let currentScannedItem = null;
         let scannerActive = false;
 	let currentArticleByBarcode = null;
-	let barcodeTypingTimer;
+        let barcodeTypingTimer;
+        let articleTypingTimer = null;
 	const scannerCard = document.getElementById('scanner-card');
 	const qrResultInput = document.getElementById('qr-result');
-	const BARCODE_DEBOUNCE_DELAY = 300;
+	const BARCODE_DEBOUNCE_DELAY = 1000;
+
 
         // =========================================================================
         // UTILITY E UI MANAGEMENT
@@ -921,25 +923,31 @@ function handleCaricoArticleChange() {
     const datalist = document.getElementById('article-suggestions');
     const searchTerm = articleInput.value.trim().toLowerCase();
 
-    // Reset base
+    // 1. Reset immediato dello stato e dei timer
     currentArticleByBarcode = null;
     barcodeInput.disabled = false;
     articleInput.disabled = false;
     giacenzaDisplay.textContent = 'Giacenza Attuale: -';
 
-    // Se vuoto → ripristina il datalist completo e svuota barcode
+    if (articleTypingTimer) clearTimeout(articleTypingTimer); // Pulisce il timer precedente
+
+    // 2. Se vuoto → ripristina il datalist e svuota barcode
     if (searchTerm.length === 0) {
         barcodeInput.value = '';
-        populateDatalist(magazzinoData);
+        // Assumo che tu abbia una funzione populateDatalist(data)
+        // Se non ce l'hai, puoi commentare questa riga.
+        // populateDatalist(magazzinoData); 
+        
+        // Se non usi la funzione esterna, popoliamo il Datalist qui con tutti i dati.
+        datalist.innerHTML = magazzinoData.map(item => `<option value="${item.article}">`).join('');
         return;
     }
 
-    // Filtra articoli che contengono il testo digitato
+    // 3. AZIONE IMMEDIATA: Filtra e Popola Datalist (per autocompletamento UX)
+    // Non c'è debounce qui, deve rispondere subito alla digitazione.
     const filtered = magazzinoData.filter(item =>
         item.article && item.article.toLowerCase().includes(searchTerm)
     );
-
-    // Popola datalist con i risultati filtrati
     datalist.innerHTML = '';
     filtered.forEach(item => {
         const option = document.createElement('option');
@@ -947,25 +955,31 @@ function handleCaricoArticleChange() {
         datalist.appendChild(option);
     });
 
-    // Se l’utente ha digitato un nome esatto già presente → autocompila e blocca
-    const foundItem = magazzinoData.find(item =>
-        item.article && item.article.trim().toLowerCase() === searchTerm
-    );
+    // 4. AZIONE RITARDATA (DEBOUNCE): Cerca match esatto e blocca i campi.
+    articleTypingTimer = setTimeout(() => {
+        
+        // Cerca l'articolo con un match esatto (solo quando l'utente ha finito di digitare)
+        const foundItem = magazzinoData.find(item =>
+            item.article && item.article.trim().toLowerCase() === searchTerm
+        );
 
-    if (foundItem) {
-        currentArticleByBarcode = foundItem;
-        barcodeInput.value = foundItem.barcode || '';
-        giacenzaDisplay.textContent = `Giacenza Attuale: ${foundItem.quantity || 0} unità`;
+        if (foundItem) {
+            // Articolo ESISTENTE TROVATO
+            currentArticleByBarcode = foundItem;
+            barcodeInput.value = foundItem.barcode || '';
+            giacenzaDisplay.textContent = `Giacenza Attuale: ${foundItem.quantity || 0} unità`;
 
-        barcodeInput.disabled = true;
-        articleInput.disabled = true;
+            // Blocca ENTRAMBI i campi
+            barcodeInput.disabled = true;
+            articleInput.disabled = true;
+            
+        } else {
+            // NUOVO INSERIMENTO
+            giacenzaDisplay.textContent = 'Giacenza Attuale: 0 (NUOVO Articolo)';
+            barcodeInput.disabled = false;
+        }
 
-        // (Opzionale) Manteniamo il datalist completo per future ricerche
-        populateDatalist(magazzinoData);
-    } else {
-        giacenzaDisplay.textContent = 'Giacenza Attuale: 0 (NUOVO Articolo)';
-        barcodeInput.disabled = false;
-    }
+    }, BARCODE_DEBOUNCE_DELAY); // Utilizza il ritardo definito
 }
 
 function populateCaricoSelect() {
@@ -1021,14 +1035,13 @@ function populateDatalist(inventoryData) {
     });
 }
 
-
 function handleCaricoArticleFocus() {
     const articleInput = document.getElementById('carico-article');
     if (articleInput.disabled) return;
     populateDatalist(magazzinoData);
 }
 
-function handleCaricoBarcodeChange() {
+function function handleCaricoBarcodeChange() {
     const barcodeInput = document.getElementById('carico-barcode');
     const articleInput = document.getElementById('carico-article');
     const giacenzaDisplay = document.getElementById('giacenza-display');
@@ -1073,15 +1086,15 @@ function handleCaricoBarcodeChange() {
     }, BARCODE_DEBOUNCE_DELAY);
 }
 
-
 function resetCaricoFields() {
     const barcodeInput = document.getElementById('carico-barcode');
     const articleInput = document.getElementById('carico-article');
     const giacenzaDisplay = document.getElementById('giacenza-display');
     const qtyInput = document.getElementById('carico-qty');
 
-    // 🔹 Blocca eventuale debounce attivo
+    // 🔹 Blocca eventuali debounce attivi (AGGIUNGI QUESTA RIGA)
     if (barcodeTypingTimer) clearTimeout(barcodeTypingTimer);
+    if (articleTypingTimer) clearTimeout(articleTypingTimer); // <--- NUOVO
 
     // 🔹 Reset campi
     barcodeInput.value = '';
@@ -1095,7 +1108,6 @@ function resetCaricoFields() {
     // 🔹 Ripopoliamo il datalist completo
     populateDatalist(magazzinoData);
 }
-
         async function refreshScaricoSelect(filterBarcode = '') {
     const selectElement = document.getElementById('scarico-select');
     const displayGiacenza = document.getElementById('scarico-giacenza-display');
