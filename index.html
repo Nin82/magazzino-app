@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestione Magazzino v1</title>
+<title>Gestione Magazzino v2</title>
 
 <!-- ================= PWA SETTINGS ================= -->
 <link rel="manifest" href="manifest.json">
@@ -550,28 +550,60 @@ function closeModal(modalId) {
             document.getElementById('auth-content-register').classList.toggle('hidden', tab !== 'register');
         }
 
-        async function login() {
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
+async function login() {
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value.trim();
+    
+    if (!email || !password) {
+        showNotification('Inserisci email e password.', 'warning');
+        return;
+    }
 
-            toggleLoading(true);
-            try {
-                // Esegue il login
-                currentUser = await Backendless.UserService.login(email, password, true); // il terzo parametro è per rememberMe
-                
-                updateAuthUI(currentUser);
-                showView('dashboard-view');
-                //initializeQrScanner();
-                await loadDashboardData();
-                showNotification('Login effettuato con successo.', 'success');
-            } catch (error) {
-                // Errori comuni: 3003 (Login fallito), 3007 (Password/email errata)
-                showNotification(`Errore di Login: ${error.message || 'Verifica email e password.'}`, 'error');
-                console.error("Errore di Login Backendless:", error);
-            } finally {
-                toggleLoading(false);
-            }
+    toggleLoading(true);
+    try {
+        // Esegue il login (il terzo parametro è per rememberMe)
+        currentUser = await Backendless.UserService.login(email, password, true); 
+        
+        // Successo
+        updateAuthUI(currentUser);
+        showView('dashboard-view');
+        // initializeQrScanner(); // Manteniamo la logica di inizializzazione lazy
+        await loadDashboardData();
+        showNotification('Accesso effettuato con successo.', 'success');
+        
+    } catch (error) {
+        let errorMessage = 'Verifica email e password.'; // Messaggio generico di default
+        
+        // =======================================================
+        // 🚨 GESTIONE ERRORI SPECIFICI BACKENDLESS
+        // =======================================================
+        if (error.code === 3060) {
+            // Codice 3060: L'indirizzo email non è stato ancora confermato.
+            errorMessage = 'Verifica fallita: devi confermare la tua email per accedere.';
+        
+            // Offrire all'utente la possibilità di richiedere una nuova email di verifica
+            // Chiamiamo la funzione unificata handleSystemEmailRequest con il flag 'true'
+            showNotification(`${errorMessage} Vuoi inviare nuovamente il link di conferma?`, 'warning', 8000, () => {
+                // ✅ QUESTA È LA CHIAMATA CORRETTA
+                handleSystemEmailRequest(email, true); 
+            });
+            
+        } else if (error.code === 3003 || error.code === 3007) {
+            // 3003/3007: Credenziali non valide (login fallito / password errata)
+            errorMessage = 'Email o password non valide. Riprova.';
+            showNotification(`Errore di Login: ${errorMessage}`, 'error');
+            
+        } else {
+             // Gestione di tutti gli altri errori
+             showNotification(`Errore di Login: ${error.message || 'Errore server sconosciuto.'}`, 'error');
+             console.error("Errore di Login Backendless:", error);
         }
+
+    } finally {
+        toggleLoading(false);
+    }
+}
+        
         
        async function registerUser() {
     const email = document.getElementById('register-email').value;
@@ -593,22 +625,33 @@ function closeModal(modalId) {
         user.email = email;
         user.password = password;
         
-        // ✅ 1. Registra l'utente
+        // 1. Registra l'utente (invia la mail di verifica)
         await Backendless.UserService.register(user);
 
-        // ✅ 2. Login automatico subito dopo la registrazione
-        currentUser = await Backendless.UserService.login(email, password, true);
-        updateAuthUI(currentUser);
-        showView('dashboard-view');
-        initializeQrScanner();
-        await loadDashboardData();
-        showNotification(`Registrazione e login completati! Benvenuto, ${email}.`, 'success', 8000);
+        // 🚨 MODIFICA CRITICA: Rimosso il login automatico.
+        // Se la verifica email è attiva sul server, il login qui fallisce.
+        
+        // 2. Aggiornamento UI e notifica per l'utente
+        // Riportiamo l'utente al tab di Login
+        switchAuthTab('login'); 
+        
+        // NOTIFICA UX: Istruisce l'utente sul prossimo passo
+        const successMsg = `Registrazione Riuscita! Controlla la tua email (${email}) per il link di conferma prima di accedere.`;
+        showNotification(successMsg, 'success', 10000); // 10 secondi per leggere l'istruzione
 
     } catch (error) {
         // Errori comuni: 3033 (Email già esistente)
-        showNotification(`Errore di Registrazione: ${error.message || 'Email già esistente o errore server.'}`, 'error');
+        let displayMessage = error.message || 'Errore server sconosciuto.';
+        
+        // UX: Messaggio più amichevole per l'email esistente
+        if (error.code === 3033) {
+             displayMessage = 'Questa email è già registrata. Prova ad accedere.';
+        }
+        
+        showNotification(`Errore di Registrazione: ${displayMessage}`, 'error');
         console.error("Errore di Registrazione Backendless:", error);
     } finally {
+        // 3. Rimuove lo stato di caricamento
         toggleLoading(false);
     }
 }
@@ -639,30 +682,60 @@ function closeModal(modalId) {
 // =========================================================================
 // RESET PASSWORD (recupero tramite email Backendless)
 // =========================================================================        
-async function handlePasswordResetRequest() {
-    const email = document.getElementById('login-email').value;
-    if (!email) {
-        showNotification("Inserisci l'email per il recupero password.", 'error');
+/**
+ * Invia richieste di email di sistema a Backendless (Reset Password o Re-invia Conferma Email).
+ * @param {string} email - L'email dell'utente.
+ * @param {boolean} [isConfirmationRequest=false] - Se true, invia l'email di conferma, altrimenti invia il reset password.
+ */
+async function handleSystemEmailRequest(email, isConfirmationRequest = false) {
+    // Se la chiamata avviene dal Login/Notifica, l'email è già passata.
+    // Se la chiamata avviene dal pulsante Reset Password, prendiamo l'email dal campo Login.
+    const targetEmail = email || document.getElementById('login-email').value;
+
+    if (!targetEmail) {
+        showNotification("Inserisci l'email necessaria.", 'error');
         return;
     }
 
     toggleLoading(true);
-    try {
-        // Invia la richiesta di reset password a Backendless
-        await Backendless.UserService.restorePassword(email);
 
-        showNotification(
-            `Email di reset inviata a ${email}. Controlla la tua posta.`,
-            'success',
-            8000
-        );
+    try {
+        if (isConfirmationRequest) {
+            // ✅ SCENARIO 1: RE-INVIA EMAIL DI CONFERMA REGISTRAZIONE
+            await Backendless.UserService.resendEmailConfirmation(targetEmail);
+            
+            showNotification(
+                `Nuova email di conferma inviata a ${targetEmail}. Controlla la tua posta.`,
+                'success',
+                10000
+            );
+        } else {
+            // ✅ SCENARIO 2: RESET PASSWORD (Logica originale)
+            await Backendless.UserService.restorePassword(targetEmail);
+            
+            showNotification(
+                `Email di reset password inviata a ${targetEmail}. Controlla la tua posta.`,
+                'success',
+                8000
+            );
+        }
+        
+        // Pulizia opzionale: nasconde il modale di reset se ne hai uno
+
     } catch (error) {
-        // 🔧 Controllo di errore più chiaro e informativo
-        showNotification(
-            `Errore nel reset: ${error.message || 'Assicurati che l\'email sia registrata e che la funzione di reset sia abilitata in Backendless (Users → Email Templates → Password Recovery).'}`,
-            'error'
-        );
-        console.error("Errore reset password:", error);
+        let errorMessage = `Errore nella richiesta email: ${error.message}`;
+
+        if (error.code === 3020 && isConfirmationRequest) {
+            // Codice 3020: L'utente non esiste o è già confermato.
+            errorMessage = 'Impossibile inviare la conferma. L\'utente non è registrato o l\'email è già verificata.';
+        } else if (error.code === 3020) {
+            // Codice 3020: Per il reset, l'email non è registrata.
+            errorMessage = 'Impossibile inviare il reset. L\'email fornita non risulta registrata.';
+        }
+        
+        showNotification(errorMessage, 'error');
+        console.error(`Errore Backendless (${isConfirmationRequest ? 'Conferma' : 'Reset'}):`, error);
+        
     } finally {
         toggleLoading(false);
     }
