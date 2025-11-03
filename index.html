@@ -1401,6 +1401,23 @@ async function doScarico() {
     }
 }
     
+function resetScaricoFields() {
+    // 1. Pulisce i campi
+    document.getElementById('scarico-barcode').value = '';
+    document.getElementById('scarico-qty').value = '';
+    
+    // 2. Resetta l'elemento select al valore vuoto
+    document.getElementById('scarico-select').value = '';
+    
+    // 3. Resetta lo stato visuale e disabilitato
+    document.getElementById('scarico-barcode').disabled = false;
+    document.getElementById('scarico-select').disabled = false;
+    
+    // 4. Resetta la visualizzazione della giacenza
+    document.getElementById('scarico-giacenza-display').textContent = 'Giacenza Attuale: -';
+}
+
+
 
 function handleScaricoBarcodeInput() {
     const barcodeInput = document.getElementById('scarico-barcode');
