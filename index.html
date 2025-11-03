@@ -1379,90 +1379,97 @@ function openEditModal(objectId, article, barcode, quantity) {
 function renderDashboardStats(inventoryData) {
     const chartContainer = document.getElementById('chart-container');
 
-    // 1. Distruzione dell'istanza precedente (Essenziale per aggiornamenti)
+    // 1️⃣ Se non c'è container, fermati
+    if (!chartContainer) return;
+
+    // 2️⃣ Pulisci il vecchio grafico
     if (chartInstance) {
         chartInstance.destroy();
         chartInstance = null;
     }
 
-    // 2. Pulisce il container e ricrea sempre il canvas
-    chartContainer.innerHTML = '<canvas id="inventory-chart"></canvas>';
-    const ctx = document.getElementById('inventory-chart').getContext('2d');
+    // 3️⃣ Ricrea canvas pulito
+    chartContainer.innerHTML = '';
+    const canvas = document.createElement('canvas');
+    canvas.id = 'inventory-chart';
+    chartContainer.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
 
-    // 3. Statistiche principali (La tua logica intatta)
-    const totalItems = inventoryData.length;
-    const totalQuantity = inventoryData.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-    const lowStockCount = inventoryData.filter(item => (item.quantity || 0) > 0 && (item.quantity || 0) <= 5).length;
+    // 4️⃣ Statistiche principali
+    const validItems = inventoryData.filter(i => i && !isNaN(i.quantity));
+    const totalItems = validItems.length;
+    const totalQuantity = validItems.reduce((sum, i) => sum + Number(i.quantity || 0), 0);
+    const lowStockCount = validItems.filter(i => i.quantity > 0 && i.quantity <= 5).length;
 
     document.getElementById('stat-total-items').textContent = totalItems;
     document.getElementById('stat-total-qty').textContent = totalQuantity;
     document.getElementById('stat-low-stock').textContent = lowStockCount;
 
-    // 4. Prepara i dati per il grafico (Top 5 e Low 5)
-    const sortedByQuantity = [...inventoryData]
-        .filter(item => (item.quantity || 0) > 0)
-        .sort((a, b) => (b.quantity || 0) - (a.quantity || 0));
+    // 5️⃣ Ordina per quantità e prendi top/bottom 5
+    const sortedByQuantity = [...validItems]
+        .filter(i => i.quantity > 0)
+        .sort((a, b) => b.quantity - a.quantity);
 
     const top5 = sortedByQuantity.slice(0, 5);
-    // Controllo per evitare duplicati se ci sono meno di 10 articoli
-    const low5 = sortedByQuantity.length > 5 ? sortedByQuantity.slice(-5).reverse() : []; 
+    const low5 = sortedByQuantity.length > 5 ? sortedByQuantity.slice(-5).reverse() : [];
 
     const chartLabels = [...top5.map(i => i.article), ...low5.map(i => i.article)];
     const chartData = [...top5.map(i => i.quantity), ...low5.map(i => i.quantity)];
 
-    // 5. Crea il grafico a LINEE (se ci sono dati)
-    if (chartData.length > 0) {
-        chartInstance = new Chart(ctx, {
-            type: 'line', // <--- GRAFICO A LINEE
-            data: {
-                labels: chartLabels,
-                datasets: [{
-                    label: 'Giacenza Attuale',
-                    data: chartData,
-                    borderColor: '#4f46e5', // Colore Indaco per la linea
-                    backgroundColor: 'rgba(79, 70, 229, 0.2)', // Area ombreggiata
-                    fill: true, 
-                    tension: 0.3, // Smussatura
-                    // Colore dei punti: Rosso se Low Stock (<= 5), Verde altrimenti
-                    pointBackgroundColor: chartData.map(qty => qty <= 5 ? '#ef4444' : '#10b981'), 
-                    pointRadius: 5, 
-                    borderWidth: 3
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    title: {
-                        display: true,
-                        text: 'Top e Basso Stock per Articolo',
-                        font: { size: 16 }
-                    },
-                    tooltip: {
-                         callbacks: {
-                            label: function(context) { return ` Quantità: ${context.formattedValue}`; },
-                            title: function(context) { return context[0].label; }
-                        }
-                    }
+    // 6️⃣ Nessun dato → messaggio placeholder
+    if (chartData.length === 0) {
+        chartContainer.innerHTML = `
+            <p class="text-gray-500 text-center py-8">
+                Nessun dato di giacenza da mostrare.
+            </p>`;
+        return;
+    }
+
+    // 7️⃣ Crea nuovo grafico
+    chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                label: 'Giacenza Attuale',
+                data: chartData,
+                borderColor: '#4f46e5',
+                backgroundColor: 'rgba(79, 70, 229, 0.2)',
+                fill: true,
+                tension: 0.3,
+                pointBackgroundColor: chartData.map(qty => qty <= 5 ? '#ef4444' : '#10b981'),
+                pointRadius: 5,
+                borderWidth: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 400 },
+            plugins: {
+                legend: { display: false },
+                title: {
+                    display: true,
+                    text: 'Top e Basso Stock per Articolo',
+                    font: { size: 16 }
                 },
-                scales: {
-                    x: {
-                        grid: { display: false } // Griglia X pulita
-                    },
-                    y: { 
-                        beginAtZero: true,
-                        grid: { color: 'rgba(203, 213, 225, 0.5)' } // Griglia Y discreta
+                tooltip: {
+                    callbacks: {
+                        label: context => ` Quantità: ${context.formattedValue}`,
+                        title: context => context[0].label
                     }
                 }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: { 
+                    beginAtZero: true,
+                    grid: { color: 'rgba(203,213,225,0.5)' }
+                }
             }
-        });
-    } else {
-        // Nessun dato disponibile
-        chartContainer.innerHTML = '<p class="text-gray-500 text-center py-8">Nessun dato di giacenza da mostrare.</p>';
-    }
-}
-        
+        }
+    });
+}        
         function renderInventoryList(inventoryData) {
     const listContainer = document.getElementById('magazzino-list');
     
@@ -1518,25 +1525,25 @@ function showDashboardTab(tab) {
     if (tab === 'stats') {
         dashboardStats.classList.remove('hidden');
         dashboardMain.classList.add('hidden');
-        
+
         // ===============================================
-        // AZIONE CHIAVE: Chiama la funzione solo qui
-        // Assicurati che 'magazzinoData' sia la tua variabile globale
-        if (typeof renderInventoryChart === 'function') {
-            renderInventoryChart(magazzinoData); 
+        // 🔹 CHIAMATA AL GRAFICO: aggiorna solo quando serve
+        if (typeof renderDashboardStats === 'function' && Array.isArray(magazzinoData)) {
+            renderDashboardStats(magazzinoData);
+        } else {
+            console.warn("⚠️ renderDashboardStats non definita o magazzinoData non valida");
         }
         // ===============================================
-        
+
     } else {
         dashboardStats.classList.add('hidden');
         dashboardMain.classList.remove('hidden');
     }
 
-    // Gestione delle classi 'tab-active' sui pulsanti
+    // Gestione tab attivi
     document.getElementById('tab-dashboard-main').classList.toggle('tab-active', tab === 'main');
     document.getElementById('tab-dashboard-stats').classList.toggle('tab-active', tab === 'stats');
 }
-
         // =========================================================================
         // STARTUP
         // =========================================================================
