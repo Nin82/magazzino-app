@@ -655,7 +655,11 @@ async function handlePasswordResetRequest() {
         // GESTIONE SCANNER QR/BARCODE
         // =========================================================================
         
-        function startScanner() {
+function startScanner() {
+    // La variabile `scannerCard` deve essere definita nel tuo ambito
+    const scannerCard = document.getElementById('scanner-card');
+    const toggleBtn = document.getElementById('toggle-scanner-btn');
+
     if (scannerActive) return;
 
     if (!html5QrcodeScanner) {
@@ -670,7 +674,12 @@ async function handlePasswordResetRequest() {
     html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess)
         .then(() => {
             scannerActive = true;
-            document.getElementById('toggle-scanner-btn').innerHTML = '<i data-lucide="scan-off" class="h-5 w-5"></i> <span class="hidden sm:inline ml-2">Nascondi Scanner</span>';
+            
+            // ✅ CORREZIONE UI: Aggiorna il bottone allo stato 'Nascondi Scanner'
+            // L'icona "x-circle" è usata per indicare l'azione di chiusura.
+            toggleBtn.innerHTML = 
+                '<i data-lucide="x-circle" class="h-5 w-5"></i> <span class="hidden sm:inline ml-2">Nascondi Scanner</span>';
+
             if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
         })
         .catch(err => {
@@ -695,14 +704,23 @@ function stopScanner() {
     });
 }
 
-function toggleScanner() {
-    if (scannerActive) {
-        stopScanner();
-    } else {
-        startScanner();
+function stopScanner() {
+    const scannerCard = document.getElementById('scanner-card');
+    const toggleBtn = document.getElementById('toggle-scanner-btn');
+
+    if (html5QrcodeScanner && scannerActive) {
+        html5QrcodeScanner.stop()
+            .then(() => {
+                scannerActive = false;
+                scannerCard.classList.add('hidden');
+                
+                // ✅ UI: Ripristina il bottone allo stato 'Attiva Scanner'
+                toggleBtn.innerHTML = '<i data-lucide="scan" class="h-5 w-5"></i> <span class="hidden sm:inline ml-2">Scanner</span>';
+                if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+            })
+            .catch(err => console.error("Errore nello stop dello scanner:", err));
     }
 }
-
 
         
        function onScanSuccess(decodedText, decodedResult) {
