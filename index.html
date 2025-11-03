@@ -386,8 +386,10 @@ function safeCreateIcons() {
 	let currentScannedItem = null;
         let scannerActive = false;
 	let currentArticleByBarcode = null;
+        let barcodeTypingTimer;
 	const scannerCard = document.getElementById('scanner-card');
 	const qrResultInput = document.getElementById('qr-result');
+	onst BARCODE_DEBOUNCE_DELAY = 300;
 
 
         // =========================================================================
@@ -1033,34 +1035,45 @@ function handleCaricoBarcodeChange() {
     const giacenzaDisplay = document.getElementById('giacenza-display');
     const barcodeValue = barcodeInput.value.trim();
 
-    // Reset base
+    // Reset immediato
     currentArticleByBarcode = null;
     articleInput.disabled = false;
     barcodeInput.disabled = false;
     giacenzaDisplay.textContent = 'Giacenza Attuale: -';
 
+    if (barcodeTypingTimer) clearTimeout(barcodeTypingTimer);
+
+    // Se vuoto → reset campi
     if (barcodeValue.length === 0) {
         articleInput.value = '';
         return;
     }
 
-    // Cerca corrispondenza esatta solo quando la stringa completa coincide con un barcode esistente
-    const foundItem = magazzinoData.find(item =>
-        String(item.barcode).trim() === barcodeValue
-    );
+    // 💡 Debounce: attende che l’utente smetta di digitare per 300ms
+    barcodeTypingTimer = setTimeout(() => {
+        // Se i barcode nel tuo sistema sono numerici e lunghi almeno 3-4 caratteri
+        // puoi aggiungere anche una soglia minima per evitare match precoci:
+        // if (barcodeValue.length < 3) return;
 
-    if (foundItem) {
-        currentArticleByBarcode = foundItem;
-        articleInput.value = foundItem.article || '';
-        giacenzaDisplay.textContent = `Giacenza Attuale: ${foundItem.quantity || 0} unità`;
+        // Match esatto SOLO se la stringa completa corrisponde ad un barcode registrato
+        const foundItem = magazzinoData.find(item =>
+            String(item.barcode).trim() === barcodeValue
+        );
 
-        barcodeInput.disabled = true;
-        articleInput.disabled = true;
-    } else {
-        giacenzaDisplay.textContent = 'Giacenza Attuale: 0 (NUOVO Articolo)';
-        articleInput.disabled = false;
-    }
+        if (foundItem) {
+            currentArticleByBarcode = foundItem;
+            articleInput.value = foundItem.article || '';
+            giacenzaDisplay.textContent = `Giacenza Attuale: ${foundItem.quantity || 0} unità`;
+
+            barcodeInput.disabled = true;
+            articleInput.disabled = true;
+        } else {
+            giacenzaDisplay.textContent = 'Giacenza Attuale: 0 (NUOVO Articolo)';
+            articleInput.disabled = false;
+        }
+    }, BARCODE_DEBOUNCE_DELAY);
 }
+
 
 function resetCaricoFields() {
     const barcodeInput = document.getElementById('carico-barcode');
@@ -1068,6 +1081,10 @@ function resetCaricoFields() {
     const giacenzaDisplay = document.getElementById('giacenza-display');
     const qtyInput = document.getElementById('carico-qty');
 
+    // 🔹 Blocca eventuale debounce attivo
+    if (barcodeTypingTimer) clearTimeout(barcodeTypingTimer);
+
+    // 🔹 Reset campi
     barcodeInput.value = '';
     articleInput.value = '';
     qtyInput.value = 1;
@@ -1076,10 +1093,9 @@ function resetCaricoFields() {
     giacenzaDisplay.textContent = 'Giacenza Attuale: -';
     currentArticleByBarcode = null;
 
-    // IMPORTANTISSIMO: ripopoliamo il datalist con tutti gli articoli
+    // 🔹 Ripopoliamo il datalist completo
     populateDatalist(magazzinoData);
 }
-
 
         async function refreshScaricoSelect(filterBarcode = '') {
     const selectElement = document.getElementById('scarico-select');
