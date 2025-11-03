@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestione Magazzino v1</title>
+<title>Gestione Magazzino v2</title>
 
 <!-- ================= PWA SETTINGS ================= -->
 <link rel="manifest" href="manifest.json">
@@ -875,6 +875,7 @@ function playBeep() {
         // =========================================================================
 
 async function doCarico() {
+    // Verifica che l'utente sia loggato
     if (!currentUser || !currentUser.objectId) { 
         showNotification('Devi essere loggato per effettuare un Carico.', 'error'); 
         return; 
@@ -884,6 +885,7 @@ async function doCarico() {
     const articleName = document.getElementById('carico-article').value.trim();
     const qtyToAdd = parseInt(document.getElementById('carico-qty').value, 10);
 
+    // Validazione input
     if (!barcode || !articleName || qtyToAdd <= 0 || isNaN(qtyToAdd)) {
         showNotification('Compila Barcode, Articolo e Quantità valida.', 'warning');
         return;
@@ -895,11 +897,13 @@ async function doCarico() {
         let itemToUpdate = null;
         
         // =======================================================
-        // 🚨 MODIFICA CRITICA: RICERCA DI NUOVO L'ARTICOLO DAL DB
+        // 🚨 CORREZIONE CRITICA: RICERCA PER BARCODE E ownerId
         // =======================================================
-        // Esegue una query diretta al DB in base al Barcode attuale
+        // La query ora cerca un articolo che corrisponda sia al barcode SIA all'ID utente loggato.
+        const whereClause = `barcode = '${barcode}' AND ownerId = '${currentUser.objectId}'`;
+        
         const queryBuilder = Backendless.DataQueryBuilder.create()
-            .setWhereClause(`barcode = '${barcode}'`)
+            .setWhereClause(whereClause) // Inclusione del filtro di proprietà
             .setPageSize(1);
             
         const results = await Backendless.Data.of(MAGAZZINO_TABLE_NAME).find(queryBuilder);
@@ -913,28 +917,28 @@ async function doCarico() {
         let newQty;
 
         if (itemToUpdate) {
-            // Articolo ESISTENTE: Aggiorna la quantità
+            // Caso 1: Articolo ESISTENTE (dell'utente corrente) -> Aggiorna la quantità
             const currentQty = parseInt(itemToUpdate.quantity, 10) || 0;
             newQty = currentQty + qtyToAdd; 
 
             dataToSave = {
-                objectId: itemToUpdate.objectId,
-                quantity: newQty // Somma corretta
+                objectId: itemToUpdate.objectId, // Mantiene l'objectId per l'operazione di UPDATE
+                quantity: newQty 
             };
             
         } else {
-            // NUOVO Articolo: Crea il nuovo record
+            // Caso 2: NUOVO Articolo (per l'utente corrente) -> Crea un nuovo record
             newQty = qtyToAdd;
 
             dataToSave = {
                 barcode: barcode,
                 article: articleName,
                 quantity: newQty,
-                ownerId: currentUser.objectId
+                ownerId: currentUser.objectId // Imposta la proprietà all'utente loggato
             };
         }
 
-        // 3. Esegue l'operazione sul database
+        // 3. Esegue l'operazione sul database (UPDATE se ha objectId, altrimenti CREATE)
         await Backendless.Data.of(MAGAZZINO_TABLE_NAME).save(dataToSave);
         
         const successMsg = isNewItem
@@ -943,16 +947,8 @@ async function doCarico() {
 
         showNotification(successMsg, 'success');
         
-        // Pulizia UI e reset della logica
-        document.getElementById('carico-barcode').value = '';
-        document.getElementById('carico-article').value = '';
-        document.getElementById('carico-qty').value = 1;
-        document.getElementById('giacenza-display').textContent = 'Giacenza Attuale: -';
-        
-        // 🚨 CRITICO: Esegui il reset completo per pulire anche i timer debounce in corso
-        // Ho sostituito il blocco di reset manuale con la funzione che abbiamo corretto insieme:
+        // Pulizia e UI
         resetCaricoFields(); 
-
         await loadDashboardData();
         
     } catch (error) {
@@ -1247,54 +1243,79 @@ function updateScaricoGiacenza() {
     }
 }
 
-        async function doScarico() {
-    if (!currentUser) {
-        showNotification('Devi essere loggato per effettuare uno Scarico.', 'error');
-        return;
+async function doScarico() {
+    // 1. Verifica autenticazione
+    if (!currentUser || !currentUser.objectId) { 
+        showNotification('Devi essere loggato per effettuare uno Scarico.', 'error'); 
+        return; 
     }
-    
-    // Recupera l'articolo da scaricare:
-    // 1. Prima opzione: l'articolo trovato con l'ultima scansione (currentScannedItem)
-    // 2. Seconda opzione: l'articolo selezionato dal menu a tendina
-    const objectIdFromSelect = document.getElementById('scarico-select').value;
-    const itemToUpdate = currentScannedItem || magazzinoData.find(i => i.objectId === objectIdFromSelect);
-    
-    const qtyToSubtract = parseInt(document.getElementById('scarico-qty').value, 10);
 
-    if (!itemToUpdate) {
-        showNotification('Nessun articolo selezionato o trovato per lo Scarico.', 'warning');
-        return;
-    }
+    const barcodeInput = document.getElementById('scarico-barcode');
+    const select = document.getElementById('scarico-select');
+    const qtyInput = document.getElementById('scarico-qty');
     
-    const currentQty = itemToUpdate.quantity || 0;
+    // Per lo scarico, l'articolo può essere selezionato dal barcode (input) o dal select
+    const barcode = barcodeInput.value.trim();
+    const qtyToSubtract = parseInt(qtyInput.value, 10);
 
-    if (qtyToSubtract <= 0 || qtyToSubtract > currentQty || isNaN(qtyToSubtract)) {
-        showNotification(`Quantità non valida. Disponibili: ${currentQty}.`, 'warning');
+    // 2. Validazione di base
+    if (!barcode || qtyToSubtract <= 0 || isNaN(qtyToSubtract)) {
+        showNotification('Assicurati di aver selezionato un Articolo e inserito una Quantità valida.', 'warning');
         return;
     }
 
     toggleLoading(true);
 
-    const newQty = currentQty - qtyToSubtract;
-    
-    // Oggetto da salvare: usiamo l'objectId dell'articolo trovato, che appartiene già all'utente corrente.
-    const updateObject = {
-        objectId: itemToUpdate.objectId, 
-        quantity: newQty
-    };
-
     try {
-        await Backendless.Data.of(MAGAZZINO_TABLE_NAME).save(updateObject);
-        showNotification(`Scarico Riuscito: Rimosse ${qtyToSubtract} unità di ${itemToUpdate.article}. Nuova giacenza: ${newQty}`, 'success');
+        let itemToUpdate = null;
         
-        // Pulizia e Aggiornamento UI
-        document.getElementById('scarico-barcode').value = '';
-        document.getElementById('scarico-qty').value = 1;
-        document.getElementById('scarico-select').value = '';
-        document.getElementById('scarico-giacenza-display').textContent = 'Giacenza Attuale: -';
-        currentScannedItem = null; // Resetta la cache
+        // =======================================================
+        // 🚨 CORREZIONE CRITICA: RICERCA PER BARCODE E ownerId
+        // =======================================================
+        // Cerca l'articolo nel database che corrisponde al barcode E appartiene all'utente corrente.
+        const whereClause = `barcode = '${barcode}' AND ownerId = '${currentUser.objectId}'`;
         
-        await loadDashboardData(); // Ricarica i dati per l'utente corrente
+        const queryBuilder = Backendless.DataQueryBuilder.create()
+            .setWhereClause(whereClause)
+            .setPageSize(1);
+            
+        const results = await Backendless.Data.of(MAGAZZINO_TABLE_NAME).find(queryBuilder);
+        
+        if (results && results.length > 0) {
+            itemToUpdate = results[0];
+        }
+
+        // 3. Controllo Esistenza e Giacenza
+        if (!itemToUpdate) {
+            showNotification(`Articolo con Barcode ${barcode} non trovato nel tuo magazzino.`, 'error');
+            return;
+        }
+
+        const currentQty = parseInt(itemToUpdate.quantity, 10) || 0;
+        const newQty = currentQty - qtyToSubtract;
+
+        // 4. Controllo Quantità negativa (Logica di Scarico)
+        if (newQty < 0) {
+            showNotification(`Scarico fallito: La giacenza attuale di ${currentQty} non copre la richiesta di ${qtyToSubtract} unità.`, 'error');
+            return;
+        }
+
+        // 5. Preparazione dati per l'UPDATE
+        const dataToSave = {
+            objectId: itemToUpdate.objectId, // Mantiene l'objectId per l'UPDATE
+            quantity: newQty 
+        };
+        
+        // 6. Esegue l'operazione sul database
+        await Backendless.Data.of(MAGAZZINO_TABLE_NAME).save(dataToSave);
+        
+        const successMsg = `Scarico Riuscito: Rimosse ${qtyToSubtract} unità di ${itemToUpdate.article}. Nuova giacenza: ${newQty}`;
+
+        showNotification(successMsg, 'success');
+        
+        // Pulizia e UI
+        resetScaricoFields(); 
+        await loadDashboardData();
         
     } catch (error) {
         showNotification(`Errore durante lo Scarico: ${error.message}`, 'error');
@@ -1303,40 +1324,6 @@ function updateScaricoGiacenza() {
         toggleLoading(false);
     }
 }
-    
-function resetScaricoFields() {
-    const barcodeInput = document.getElementById('scarico-barcode');
-    const select = document.getElementById('scarico-select');
-    const giacenzaDisplay = document.getElementById('scarico-giacenza-display');
-    const qtyInput = document.getElementById('scarico-qty');
-    
-    // 🔹 Pulisce gli input e ripristina la quantità
-    barcodeInput.value = '';
-    select.value = ''; // Deseleziona l'opzione
-    qtyInput.value = 1;
-
-    // 🔹 Sblocca i campi (se erano stati bloccati)
-    barcodeInput.disabled = false;
-    select.disabled = false;
-
-    // 🔹 Reset dello stato e del display
-    giacenzaDisplay.textContent = 'Giacenza Attuale: -';
-    
-    // 🚨 Resetta la variabile globale usata per la scansione o selezione
-    if (typeof currentScannedItem !== 'undefined') {
-         currentScannedItem = null; 
-    }
-    
-    // 🔹 (Opzionale ma Raccomandato) Ricarica il menu a tendina completo
-    // Se la tua logica di scarico prevede un ripopolamento con tutti i dati disponibili.
-    if (typeof populateScaricoSelect === 'function') {
-        populateScaricoSelect(magazzinoData); 
-    }
-    
-    // Nota: Non c'è debounce da bloccare qui, a meno che tu non lo aggiunga
-    // alla gestione input del Barcode di scarico.
-}
-
     
 
 function handleScaricoBarcodeInput() {
@@ -1492,29 +1479,41 @@ function openEditModal(objectId, article, barcode, quantity) {
         // =========================================================================
         
  async function loadDashboardData() {
+    // 1. Verifica utente loggato
     if (!currentUser || !currentUser.objectId) {
         document.getElementById('magazzino-list').innerHTML = '<p class="text-center text-gray-500 p-4">Effettua il login per vedere il magazzino.</p>';
+        // Passa un array vuoto alle funzioni che gestiscono i dati se l'utente non è loggato
         renderDashboardStats([]);
+        populateDatalist([]);
         return; 
     }
     
     toggleLoading(true);
+    let data = []; // Inizializza data per garantire che sia definita
+
     try {
-        // ✅ FILTRO CRUCIALE: Prende solo gli articoli di proprietà dell'utente corrente
+        // =======================================================
+        // 🚨 FILTRO CRUCIALE: Prende SOLO gli articoli di proprietà dell'utente corrente
+        // =======================================================
         const whereClause = `ownerId = '${currentUser.objectId}'`; 
 
         const queryBuilder = Backendless.DataQueryBuilder.create()
-            .setWhereClause(whereClause) 
+            .setWhereClause(whereClause) // La tua correzione essenziale
             .setSortBy(['article ASC', 'barcode ASC'])
             .setPageSize(100); 
 
-        const data = await Backendless.Data.of(MAGAZZINO_TABLE_NAME).find(queryBuilder);
-        magazzinoData = data; 
+        data = await Backendless.Data.of(MAGAZZINO_TABLE_NAME).find(queryBuilder);
+        magazzinoData = data; // Aggiorna la variabile globale con SOLO i dati dell'utente
+
+        // 2. Rendering dell'Interfaccia Utente
         
+        // Passa i dati filtrati (magazzinoData) per popolare la lista visibile
         renderInventoryList(magazzinoData);
-        renderDashboardStats(magazzinoData);
         
-        // 💡 PUNTO DI MODIFICA: Chiama la funzione per popolare l'autocompletamento
+        // Passa i dati filtrati per calcolare e mostrare le statistiche (totali, sotto-soglia, ecc.)
+        renderDashboardStats(magazzinoData); 
+        
+        // Passa i dati filtrati per popolare i suggerimenti di autocompletamento (datalist)
         populateDatalist(magazzinoData); 
         
     } catch (error) {
