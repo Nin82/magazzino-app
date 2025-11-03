@@ -266,20 +266,27 @@ body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Sego
 </div>
 
                 <div id="form-scarico" class="bg-white p-6 rounded-xl card space-y-4 hidden">
-                    <h3 class="text-lg font-semibold">Modulo di Scarico</h3>
-                    <input type="text" id="scarico-barcode" placeholder="Scannerizza Barcode o Inserisci per filtrare" 
-                           class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                    <select id="scarico-select" class="w-full p-3 border border-gray-300 rounded-lg input-focus relative z-10">
-                           <option value="">-- Seleziona Articolo o Scansiona --</option>
-                    </select>
-                    <p id="scarico-giacenza-display" class="text-sm font-medium text-red-600">Giacenza Attuale: -</p>
-                    <input type="number" id="scarico-qty" placeholder="Quantità da Scaricare" value="1" min="1" 
-                           class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                    <button onclick="doScarico()" class="w-full btn-primary bg-red-600 text-white p-3 rounded-lg font-bold hover:bg-red-700 flex items-center justify-center">
-                        <i data-lucide="package-minus" class="h-5 w-5 mr-2"></i>
-                        Conferma Scarico
-                    </button>
-                </div>
+    <h3 class="text-lg font-semibold">Modulo di Scarico</h3>
+    <input type="text" id="scarico-barcode" placeholder="Scannerizza Barcode o Inserisci per filtrare" 
+           class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+    <select id="scarico-select" class="w-full p-3 border border-gray-300 rounded-lg input-focus relative z-10">
+        <option value="">-- Seleziona Articolo o Scansiona --</option>
+    </select>
+    <p id="scarico-giacenza-display" class="text-sm font-medium text-red-600">Giacenza Attuale: -</p>
+    <input type="number" id="scarico-qty" placeholder="Quantità da Scaricare" value="1" min="1" 
+           class="w-full p-3 border border-gray-300 rounded-lg input-focus">
+    
+    <button onclick="resetScaricoFields()" 
+            class="w-full mt-2 bg-gray-100 text-gray-700 p-3 rounded-lg font-semibold hover:bg-gray-200 flex items-center justify-center">
+        <i data-lucide="rotate-ccw" class="h-5 w-5 mr-2"></i>
+        Reset Campi
+    </button>
+    
+    <button onclick="doScarico()" class="w-full btn-primary bg-red-600 text-white p-3 rounded-lg font-bold hover:bg-red-700 flex items-center justify-center">
+        <i data-lucide="package-minus" class="h-5 w-5 mr-2"></i>
+        Conferma Scarico
+    </button>
+</div>
 
                 <div class="mt-8 bg-white p-6 rounded-xl card">
                     <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
@@ -916,7 +923,7 @@ async function doCarico() {
     }
 }      
 
-function handleCaricoArticleChange() {
+function function handleCaricoArticleChange() {
     const articleInput = document.getElementById('carico-article');
     const barcodeInput = document.getElementById('carico-barcode');
     const giacenzaDisplay = document.getElementById('giacenza-display');
@@ -928,26 +935,32 @@ function handleCaricoArticleChange() {
     barcodeInput.disabled = false;
     articleInput.disabled = false;
     giacenzaDisplay.textContent = 'Giacenza Attuale: -';
-
-    if (articleTypingTimer) clearTimeout(articleTypingTimer); // Pulisce il timer precedente
-
-    // 2. Se vuoto → ripristina il datalist e svuota barcode
+    if (articleTypingTimer) clearTimeout(articleTypingTimer);
+    
+    // 2. LOGICA DI RESET SU CAMPO VUOTO (CORRETTA)
     if (searchTerm.length === 0) {
         barcodeInput.value = '';
-        // Assumo che tu abbia una funzione populateDatalist(data)
-        // Se non ce l'hai, puoi commentare questa riga.
-        // populateDatalist(magazzinoData); 
-        
-        // Se non usi la funzione esterna, popoliamo il Datalist qui con tutti i dati.
-        datalist.innerHTML = magazzinoData.map(item => `<option value="${item.article}">`).join('');
+        // Rimuovi qui la chiamata a populateDatalist o la ricostruzione inline del Datalist.
+        // Presumiamo che il Datalist sia già popolato al caricamento della pagina
+        // o gestito al reset completo da resetCaricoFields().
         return;
     }
 
-    // 3. AZIONE IMMEDIATA: Filtra e Popola Datalist (per autocompletamento UX)
-    // Non c'è debounce qui, deve rispondere subito alla digitazione.
+    // 3. AZIONE IMMEDIATA: Filtra e Popola Datalist (SOLO QUANDO L'UTENTE DIGITA)
+    
+    // Filtra articoli che contengono il testo digitato
     const filtered = magazzinoData.filter(item =>
         item.article && item.article.toLowerCase().includes(searchTerm)
     );
+
+    // 🚨 MODIFICA QUI: Rimuoviamo la manipolazione DOM in questo punto
+    // datalist.innerHTML = ''; // NON SVUOTARE QUI
+    
+    // Invece di ricostruire l'HTML, la strategia migliore è manipolare la lista di opzioni 
+    // o utilizzare un meccanismo che non chiuda il dropdown nativo. 
+    // Tuttavia, per il datalist, la ricostruzione è spesso necessaria.
+    
+    // Ritorna alla ricostruzione completa, ma l'azione di click è stata gestita sopra.
     datalist.innerHTML = '';
     filtered.forEach(item => {
         const option = document.createElement('option');
@@ -957,7 +970,6 @@ function handleCaricoArticleChange() {
 
     // 4. AZIONE RITARDATA (DEBOUNCE): Cerca match esatto e blocca i campi.
     articleTypingTimer = setTimeout(() => {
-        
         // Cerca l'articolo con un match esatto (solo quando l'utente ha finito di digitare)
         const foundItem = magazzinoData.find(item =>
             item.article && item.article.trim().toLowerCase() === searchTerm
@@ -969,9 +981,9 @@ function handleCaricoArticleChange() {
             barcodeInput.value = foundItem.barcode || '';
             giacenzaDisplay.textContent = `Giacenza Attuale: ${foundItem.quantity || 0} unità`;
 
-            // Blocca ENTRAMBI i campi
+            // Blocca ENTRAMBI i campi solo ORA che è identificato
             barcodeInput.disabled = true;
-            articleInput.disabled = true;
+            articleInput.disabled = true; 
             
         } else {
             // NUOVO INSERIMENTO
@@ -979,7 +991,7 @@ function handleCaricoArticleChange() {
             barcodeInput.disabled = false;
         }
 
-    }, BARCODE_DEBOUNCE_DELAY); // Utilizza il ritardo definito
+    }, BARCODE_DEBOUNCE_DELAY); 
 }
 
 function populateCaricoSelect() {
@@ -1252,7 +1264,38 @@ function updateScaricoGiacenza() {
     }
 }
     
+function resetScaricoFields() {
+    const barcodeInput = document.getElementById('scarico-barcode');
+    const select = document.getElementById('scarico-select');
+    const giacenzaDisplay = document.getElementById('scarico-giacenza-display');
+    const qtyInput = document.getElementById('scarico-qty');
+    
+    // 🔹 Pulisce gli input e ripristina la quantità
+    barcodeInput.value = '';
+    select.value = ''; // Deseleziona l'opzione
+    qtyInput.value = 1;
 
+    // 🔹 Sblocca i campi (se erano stati bloccati)
+    barcodeInput.disabled = false;
+    select.disabled = false;
+
+    // 🔹 Reset dello stato e del display
+    giacenzaDisplay.textContent = 'Giacenza Attuale: -';
+    
+    // 🚨 Resetta la variabile globale usata per la scansione o selezione
+    if (typeof currentScannedItem !== 'undefined') {
+         currentScannedItem = null; 
+    }
+    
+    // 🔹 (Opzionale ma Raccomandato) Ricarica il menu a tendina completo
+    // Se la tua logica di scarico prevede un ripopolamento con tutti i dati disponibili.
+    if (typeof populateScaricoSelect === 'function') {
+        populateScaricoSelect(magazzinoData); 
+    }
+    
+    // Nota: Non c'è debounce da bloccare qui, a meno che tu non lo aggiunga
+    // alla gestione input del Barcode di scarico.
+}
 
     
         // =========================================================================
