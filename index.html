@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestione Magazzino v1</title>
+<title>Gestione Magazzino v5</title>
 
 <!-- ================= PWA SETTINGS ================= -->
 <link rel="manifest" href="manifest.json">
@@ -1342,40 +1342,31 @@ function openEditModal(objectId, article, barcode, quantity) {
         // DASHBOARD E LISTA
         // =========================================================================
         
-async function loadDashboardData() {
+ async function loadDashboardData() {
     if (!currentUser || !currentUser.objectId) {
-        document.getElementById('magazzino-list').innerHTML =
-            '<p class="text-center text-gray-500 p-4">Effettua il login per vedere il magazzino.</p>';
+        document.getElementById('magazzino-list').innerHTML = '<p class="text-center text-gray-500 p-4">Effettua il login per vedere il magazzino.</p>';
         renderDashboardStats([]);
         return; 
     }
     
     toggleLoading(true);
     try {
+        // ✅ FILTRO CRUCIALE: Prende solo gli articoli di proprietà dell'utente corrente
         const whereClause = `ownerId = '${currentUser.objectId}'`; 
 
         const queryBuilder = Backendless.DataQueryBuilder.create()
-            .setWhereClause(whereClause)   
+            .setWhereClause(whereClause) 
             .setSortBy(['article ASC', 'barcode ASC'])
             .setPageSize(100); 
 
         const data = await Backendless.Data.of(MAGAZZINO_TABLE_NAME).find(queryBuilder);
+        magazzinoData = data; 
         
-        // 🔹 1. Evita duplicati in magazzinoData
-        const seen = new Set();
-        magazzinoData = data.filter(item => {
-            const key = `${item.article}-${item.barcode}`;
-            if (seen.has(key)) return false;
-            seen.add(key);
-            return true;
-        });
-
-        // 🔹 2. Aggiorna solo la lista e l’autocompletamento
         renderInventoryList(magazzinoData);
+        renderDashboardStats(magazzinoData);
+        
+        // 💡 PUNTO DI MODIFICA: Chiama la funzione per popolare l'autocompletamento
         populateDatalist(magazzinoData); 
-
-        // 🚫 3. NON chiamare più renderDashboardStats qui
-        // Verrà chiamata solo quando l’utente apre il tab “Statistiche”
         
     } catch (error) {
         showNotification(`Errore nel caricamento della Dashboard: ${error.message || 'Verifica i permessi di lettura della tabella.'}`, 'error');
@@ -1388,60 +1379,53 @@ async function loadDashboardData() {
 function renderDashboardStats(inventoryData) {
     const chartContainer = document.getElementById('chart-container');
 
-    // 1️⃣ Distrugge l’eventuale grafico precedente
+    // 1. Distruzione dell'istanza precedente (Essenziale per aggiornamenti)
     if (chartInstance) {
         chartInstance.destroy();
         chartInstance = null;
     }
 
-    // 2️⃣ Rimuove eventuali duplicati da magazzinoData
-    const uniqueInventory = [];
-    const seenArticles = new Set();
-
-    for (const item of inventoryData) {
-        if (!seenArticles.has(item.article)) {
-            seenArticles.add(item.article);
-            uniqueInventory.push(item);
-        }
-    }
-
-    // 3️⃣ Pulisce il canvas
+    // 2. Pulisce il container e ricrea sempre il canvas
     chartContainer.innerHTML = '<canvas id="inventory-chart"></canvas>';
     const ctx = document.getElementById('inventory-chart').getContext('2d');
 
-    // 4️⃣ Usa la lista filtrata
-    const totalItems = uniqueInventory.length;
-    const totalQuantity = uniqueInventory.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-    const lowStockCount = uniqueInventory.filter(item => (item.quantity || 0) > 0 && (item.quantity || 0) <= 5).length;
+    // 3. Statistiche principali (La tua logica intatta)
+    const totalItems = inventoryData.length;
+    const totalQuantity = inventoryData.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+    const lowStockCount = inventoryData.filter(item => (item.quantity || 0) > 0 && (item.quantity || 0) <= 5).length;
 
     document.getElementById('stat-total-items').textContent = totalItems;
     document.getElementById('stat-total-qty').textContent = totalQuantity;
     document.getElementById('stat-low-stock').textContent = lowStockCount;
 
-    const sortedByQuantity = [...uniqueInventory]
+    // 4. Prepara i dati per il grafico (Top 5 e Low 5)
+    const sortedByQuantity = [...inventoryData]
         .filter(item => (item.quantity || 0) > 0)
         .sort((a, b) => (b.quantity || 0) - (a.quantity || 0));
 
     const top5 = sortedByQuantity.slice(0, 5);
+    // Controllo per evitare duplicati se ci sono meno di 10 articoli
     const low5 = sortedByQuantity.length > 5 ? sortedByQuantity.slice(-5).reverse() : []; 
 
     const chartLabels = [...top5.map(i => i.article), ...low5.map(i => i.article)];
     const chartData = [...top5.map(i => i.quantity), ...low5.map(i => i.quantity)];
 
+    // 5. Crea il grafico a LINEE (se ci sono dati)
     if (chartData.length > 0) {
         chartInstance = new Chart(ctx, {
-            type: 'line',
+            type: 'line', // <--- GRAFICO A LINEE
             data: {
                 labels: chartLabels,
                 datasets: [{
                     label: 'Giacenza Attuale',
                     data: chartData,
-                    borderColor: '#4f46e5',
-                    backgroundColor: 'rgba(79, 70, 229, 0.2)',
-                    fill: true,
-                    tension: 0.3,
-                    pointBackgroundColor: chartData.map(qty => qty <= 5 ? '#ef4444' : '#10b981'),
-                    pointRadius: 5,
+                    borderColor: '#4f46e5', // Colore Indaco per la linea
+                    backgroundColor: 'rgba(79, 70, 229, 0.2)', // Area ombreggiata
+                    fill: true, 
+                    tension: 0.3, // Smussatura
+                    // Colore dei punti: Rosso se Low Stock (<= 5), Verde altrimenti
+                    pointBackgroundColor: chartData.map(qty => qty <= 5 ? '#ef4444' : '#10b981'), 
+                    pointRadius: 5, 
                     borderWidth: 3
                 }]
             },
@@ -1450,24 +1434,82 @@ function renderDashboardStats(inventoryData) {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false },
-                    title: { display: true, text: 'Top e Basso Stock per Articolo', font: { size: 16 } },
+                    title: {
+                        display: true,
+                        text: 'Top e Basso Stock per Articolo',
+                        font: { size: 16 }
+                    },
                     tooltip: {
-                        callbacks: {
-                            label: context => ` Quantità: ${context.formattedValue}`,
-                            title: context => context[0].label
+                         callbacks: {
+                            label: function(context) { return ` Quantità: ${context.formattedValue}`; },
+                            title: function(context) { return context[0].label; }
                         }
                     }
                 },
                 scales: {
-                    x: { grid: { display: false } },
-                    y: { beginAtZero: true, grid: { color: 'rgba(203, 213, 225, 0.5)' } }
+                    x: {
+                        grid: { display: false } // Griglia X pulita
+                    },
+                    y: { 
+                        beginAtZero: true,
+                        grid: { color: 'rgba(203, 213, 225, 0.5)' } // Griglia Y discreta
+                    }
                 }
             }
         });
     } else {
+        // Nessun dato disponibile
         chartContainer.innerHTML = '<p class="text-gray-500 text-center py-8">Nessun dato di giacenza da mostrare.</p>';
     }
 }
+        
+        function renderInventoryList(inventoryData) {
+    const listContainer = document.getElementById('magazzino-list');
+    
+    if (!Array.isArray(inventoryData) || inventoryData.length === 0) {
+        listContainer.innerHTML = `<p class="text-gray-500 text-center py-4">Nessun prodotto in magazzino.</p>`;
+        return;
+    }
+    
+    const inventoryHtml = inventoryData.map(item => {
+        const quantity = Number(item.quantity || 0);
+        const isLow = quantity <= 5 && quantity > 0;
+        const isZero = quantity === 0;
+        
+        let stockClass = 'bg-green-100 text-green-700';
+        if (isLow) stockClass = 'bg-yellow-100 text-yellow-700';
+        if (isZero) stockClass = 'bg-red-100 text-red-700';
+
+        const objectId = item.objectId || '';
+
+        return `
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-all">
+                <div class="mb-2 md:mb-0 md:w-1/2">
+                    <div class="font-semibold text-gray-900">${(item.article||'--')} <span class="text-xs text-gray-500 ml-2">(${item.barcode||''})</span></div>
+                    <p class="text-xs text-gray-600">ID: ${objectId}</p>
+                </div>
+                <div class="flex items-center space-x-3 w-full md:w-auto mt-2 md:mt-0">
+                    <div class="flex items-center px-3 py-1 rounded-full font-bold ${stockClass} min-w-[70px] justify-center text-sm">
+                        ${quantity}
+                    </div>
+                    <button onclick="openEditModal('${objectId}', '${item.article.replace(/'/g, "\\'")}', '${item.barcode.replace(/'/g, "\\'")}', ${quantity})" 
+        				class="flex items-center space-x-1 px-3 py-1 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors" 
+        				title="Modifica">
+   					    <i data-lucide="edit-3" class="h-4 w-4"></i> 
+   						 <span>Modifica</span>
+					</button>
+
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    listContainer.innerHTML = inventoryHtml;
+
+    // Rende le icone Lucide dopo aver popolato l'HTML (usa helper sicuro)
+    safeCreateIcons();
+}
+
 
 function showDashboardTab(tab) {
     const dashboardStats = document.getElementById('dashboard-stats-tab');
@@ -1477,24 +1519,22 @@ function showDashboardTab(tab) {
         dashboardStats.classList.remove('hidden');
         dashboardMain.classList.add('hidden');
 
-        // ===============================================
-        // 🔹 CHIAMATA AL GRAFICO: aggiorna solo quando serve
-        if (typeof renderDashboardStats === 'function' && Array.isArray(magazzinoData)) {
+        // ✅ Chiama direttamente la funzione che già esiste
+        if (typeof renderDashboardStats === 'function') {
             renderDashboardStats(magazzinoData);
-        } else {
-            console.warn("⚠️ renderDashboardStats non definita o magazzinoData non valida");
         }
-        // ===============================================
 
     } else {
         dashboardStats.classList.add('hidden');
         dashboardMain.classList.remove('hidden');
     }
 
-    // Gestione tab attivi
+    // Gestione delle classi 'tab-active' sui pulsanti
     document.getElementById('tab-dashboard-main').classList.toggle('tab-active', tab === 'main');
     document.getElementById('tab-dashboard-stats').classList.toggle('tab-active', tab === 'stats');
 }
+
+
         // =========================================================================
         // STARTUP
         // =========================================================================
