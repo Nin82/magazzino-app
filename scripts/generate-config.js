@@ -3,8 +3,8 @@ const fs = require('fs');
 const path = require('path');
 
 const config = {
-  BACKENDLESS_APP_ID: process.env.BACKENDLESS_APP_ID || '',
-  BACKENDLESS_JS_KEY: process.env.BACKENDLESS_JS_KEY || '',
+  BACKENDLESS_APP_ID: process.env.BACKENDLESS_APP_ID || 'AA895053-C960-45EC-BFBE-FCBAFD9D7D0B',
+  BACKENDLESS_JS_KEY: process.env.BACKENDLESS_JS_KEY || '1F4341D8-CAB8-44F6-97D6-203322D8D245',
   BACKENDLESS_API_URL: process.env.BACKENDLESS_API_URL || 'https://api.backendless.com'
 };
 
@@ -19,3 +19,4 @@ fs.mkdirSync(outDir, { recursive: true });
 fs.writeFileSync(outFile, out, 'utf8');
 
 console.log('✅ env-config.js generato in', outFile);
+
