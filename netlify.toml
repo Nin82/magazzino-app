@@ -1,6 +1,6 @@
 [build]
   command = "node scripts/generate-config.js"
-  publish = "."
+  publish = "dist"
 
 [[redirects]]
   from = "/*"
