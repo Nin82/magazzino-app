@@ -498,7 +498,86 @@ function closeModal(modalId) {
     document.getElementById(modalId).classList.add('hidden');
     // 💡 AGGIUNGI QUESTA RIGA:
     document.body.classList.remove('modal-open'); 
-}        
+}    
+
+/**
+ * Mostra o nasconde l'overlay di caricamento.
+ * È chiamata all'inizio e alla fine di ogni operazione che richiede attesa (es. checkAuth, login, fetch).
+ * @param {boolean} show Se true mostra il caricamento, altrimenti lo nasconde.
+ */
+function toggleLoading(show) {
+    // Assumiamo che nel tuo HTML ci sia un div con ID 'loading-overlay' che copre lo schermo.
+    const loader = document.getElementById('loading-overlay');
+    
+    if (!loader) {
+        // Se manca l'elemento, la funzione non può fare nulla.
+        console.warn("Elemento 'loading-overlay' non trovato nell'HTML.");
+        return;
+    }
+
+    if (show) {
+        // Mostra l'overlay rimuovendo la classe 'hidden' di Tailwind
+        loader.classList.remove('hidden'); 
+    } else {
+        // Nasconde l'overlay aggiungendo la classe 'hidden' di Tailwind
+        loader.classList.add('hidden'); 
+    }
+}
+
+
+async function checkAuth() {
+    // ❌ Rimosso: if (!initBackendless()) return;
+    
+    toggleLoading(true);
+
+    try {
+        // Tenta di recuperare l'utente dalla sessione locale (storage)
+        const storedUser = await Backendless.UserService.getCurrentUser();
+
+        if (storedUser && storedUser.objectId) {
+            // Verifica se il token è ancora valido chiamando un'API leggera (es. un fetch su un oggetto User)
+            try {
+                // Questo è un controllo di validità del token (Backendless lo fa bene)
+                await Backendless.Data.of("Users").findById(storedUser.objectId, {
+                    options: {
+                        pageSize: 1, // Limita il fetch
+                        relationsDepth: 0 // Non caricare relazioni
+                    }
+                });
+                
+                currentUser = storedUser;
+                updateAuthUI(currentUser); // Assicurati che anche questa funzione esista
+                showView('dashboard-view');
+                
+                // Chiama le funzioni di inizializzazione della dashboard
+                // initializeQrScanner(); // Scommenta se hai implementato lo scanner
+                await loadDashboardData(); // Assicurati che questa funzione esista
+                
+            } catch (tokenError) {
+                // Se il token è scaduto o non valido
+                console.warn("Token scaduto o non valido, richiedo nuovo login.");
+                await Backendless.UserService.logout();
+                currentUser = null;
+                showView('login-view');
+                switchAuthTab('login'); // Assicurati che switchAuthTab esista
+                showNotification('Sessione scaduta, effettua nuovamente il login.', 'info');
+            }
+        } else {
+            // Nessun utente loggato in sessione
+            showView('login-view');
+            switchAuthTab('login');
+        }
+    } catch (error) {
+        console.error("Errore durante il controllo di autenticazione:", error);
+        // In caso di errore API, mostra la pagina di login
+        showView('login-view');
+        switchAuthTab('login');
+    } finally {
+        toggleLoading(false);
+    }
+}
+
+    
         // =========================================================================
         // GESTIONE AUTENTICAZIONE (Backendless)
         // =========================================================================
