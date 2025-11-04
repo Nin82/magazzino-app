@@ -385,6 +385,7 @@ body {
 
 <script>
 /**
+/**
  * Inizializza Backendless leggendo la configurazione da window.APP_CONFIG
  * @returns {boolean} true se l'inizializzazione è avvenuta correttamente
  */
@@ -393,21 +394,21 @@ function initBackendless() {
         console.error('⚠️ Nessuna configurazione trovata in initBackendless');
         return false;
     }
+
+    // ✅ CORREZIONE: Usa le variabili corrette lette da /env-config.js
     const { BACKENDLESS_APP_ID, BACKENDLESS_JS_KEY, BACKENDLESS_API_URL } = window.APP_CONFIG;
     
-    // **Aggiungi un controllo per evitare doppie inizializzazioni**
+    // Controlla se è già inizializzato (opzionale, ma buona pratica)
     if (Backendless.__initialized) {
-        console.warn('Backendless è già stato inizializzato. Ignoro la chiamata.');
-        return true;
+        return true; 
     }
 
     Backendless.serverURL = BACKENDLESS_API_URL;
+    // ✅ CORREZIONE: Inizializza con le chiavi lette da APP_CONFIG
     Backendless.initApp(BACKENDLESS_APP_ID, BACKENDLESS_JS_KEY);
+    
     console.log('✅ Backendless inizializzato correttamente');
-    
-    // Indica che l'inizializzazione è avvenuta
     Backendless.__initialized = true; 
-    
     return true;
 }
 
@@ -1817,7 +1818,9 @@ window.onload = function() {
     // Log che l'app sta partendo
     console.log("Applicazione avviata. Inizio inizializzazione...");
 
-    // 2. Controllo autenticazione e sessione (Ora è il primo passo utile)
+    // ❌ RIMOSSO IL PUNTO 1. La connessione a Backendless è già attiva!
+
+    // 2. Controllo autenticazione e sessione (Primo passo utile)
     if (typeof checkAuth === 'function') {
         checkAuth();
     }
@@ -1845,12 +1848,3 @@ window.onload = function() {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
