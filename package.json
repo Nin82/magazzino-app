@@ -1,0 +1,8 @@
+{
+  "name": "magazzino-app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/generate-config.js && mkdir -p dist && cp -r * dist/ 2>/dev/null || true"
+  }
+}
