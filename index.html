@@ -384,26 +384,41 @@ body {
 <script src="https://cdn.backendless.com/js/backendless.min.js"></script>
 
 <script>
-window.addEventListener('DOMContentLoaded', () => {
-  if (!window.APP_CONFIG) {
-    console.error('⚠️ Nessuna configurazione trovata. Ricontrolla env-config.js');
-    return;
-  }
+/**
+ * Inizializza Backendless leggendo la configurazione da window.APP_CONFIG
+ * @returns {boolean} true se l'inizializzazione è avvenuta correttamente
+ */
+function initBackendless() {
+    if (!window.APP_CONFIG) {
+        console.error('⚠️ Nessuna configurazione trovata in initBackendless');
+        return false;
+    }
+    const { BACKENDLESS_APP_ID, BACKENDLESS_JS_KEY, BACKENDLESS_API_URL } = window.APP_CONFIG;
+    
+    // **Aggiungi un controllo per evitare doppie inizializzazioni**
+    if (Backendless.__initialized) {
+        console.warn('Backendless è già stato inizializzato. Ignoro la chiamata.');
+        return true;
+    }
 
-  const { BACKENDLESS_APP_ID, BACKENDLESS_JS_KEY, BACKENDLESS_API_URL } = window.APP_CONFIG;
-  const MAGAZZINO_TABLE_NAME = 'Magazzino';
+    Backendless.serverURL = BACKENDLESS_API_URL;
+    Backendless.initApp(BACKENDLESS_APP_ID, BACKENDLESS_JS_KEY);
+    console.log('✅ Backendless inizializzato correttamente');
+    
+    // Indica che l'inizializzazione è avvenuta
+    Backendless.__initialized = true; 
+    
+    return true;
+}
 
-  if (typeof Backendless === 'undefined') {
-    console.error('⚠️ Backendless SDK non caricato.');
-    return;
-  }
+// 🚀 NUOVO: CHIAMA LA FUNZIONE QUI PER INIZIALIZZARE SUBITO
+if (!initBackendless()) {
+    // Se fallisce, impedisci l'esecuzione del resto del codice dell'app.
+    // In un'app reale, mostreresti un errore bloccante qui.
+    console.error("L'applicazione non può continuare senza Backendless.");
+}
 
-  Backendless.serverURL = BACKENDLESS_API_URL;
-  Backendless.initApp(BACKENDLESS_APP_ID, BACKENDLESS_JS_KEY);
-
-  console.log('✅ Backendless inizializzato correttamente');
-});
-
+	
 // ---------- Helper per Lucide (chiamare dopo ogni modifica dinamica del DOM) ----------
 function safeCreateIcons() {
     window.requestAnimationFrame(() => {
@@ -420,6 +435,7 @@ function safeCreateIcons() {
         }
     });
 }        
+
         let currentUser = null;
         let html5QrcodeScanner = null;
         let lastScanned = '';
@@ -1798,43 +1814,38 @@ function showDashboardTab(tab) {
         // STARTUP
         // =========================================================================
 window.onload = function() {
-            // Log che l'app sta partendo
-            console.log("Applicazione avviata. Inizio inizializzazione...");
+    // Log che l'app sta partendo
+    console.log("Applicazione avviata. Inizio inizializzazione...");
 
-            // 1. Inizializzazione di Backendless
-            if (typeof initBackendless === 'function') {
-                if (!initBackendless()) return;
-            }
+    // 2. Controllo autenticazione e sessione (Ora è il primo passo utile)
+    if (typeof checkAuth === 'function') {
+        checkAuth();
+    }
 
-            // 2. Controllo autenticazione e sessione
-            if (typeof checkAuth === 'function') {
-                checkAuth();
-            }
+    // 3. Setup degli Event Listener
+    document.getElementById('carico-barcode').addEventListener('keydown', handleBarcodeInput);
+    document.getElementById('scarico-barcode').addEventListener('keydown', handleBarcodeInput);
+    document.getElementById('scarico-select').addEventListener('change', updateScaricoGiacenza);
+    
+    // 4. Imposta la modalità di default
+    if (typeof switchMode === 'function') {
+        switchMode('carico');
+    }
 
-            // 3. Setup degli Event Listener
-            document.getElementById('carico-barcode').addEventListener('keydown', handleBarcodeInput);
-            document.getElementById('scarico-barcode').addEventListener('keydown', handleBarcodeInput);
-            document.getElementById('scarico-select').addEventListener('change', updateScaricoGiacenza);
-            
-            // 4. Imposta la modalità di default
-            if (typeof switchMode === 'function') {
-                switchMode('carico');
-            }
-
-            // 5. Inizializzazione Sicura Lucide Icons (per l'ultima volta)
-            // L'errore a riga 23 è già stato risolto dal DOMContentLoaded che hai lasciato,
-            // ma lo manteniamo qui per sicurezza, anche se non dovrebbe più essere necessario.
-            if (typeof lucide !== 'undefined' && lucide.createIcons) {
-                 lucide.createIcons();
-                 console.log("Lucide Icons ricaricato con successo in onload.");
-            }
-            
-            console.log("Applicazione inizializzata completamente.");
-        };
+    // 5. Inizializzazione Sicura Lucide Icons
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+         lucide.createIcons();
+         console.log("Lucide Icons ricaricato con successo in onload.");
+    }
+    
+    console.log("Applicazione inizializzata completamente.");
+};
+	
 </script>
 
 </body>
 </html>
+
 
 
 
