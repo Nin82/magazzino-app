@@ -503,56 +503,7 @@ function closeModal(modalId) {
         // GESTIONE AUTENTICAZIONE (Backendless)
         // =========================================================================
 
-        function initBackendless() {
-            if (APPLICATION_ID.startsWith('YOUR_')) {
-                document.getElementById('view-container').innerHTML = `
-                    <div class="max-w-xl mx-auto my-12 p-8 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-xl card">
-                        <h2 class="text-2xl font-bold mb-4">Errore di Configurazione Backendless</h2>
-                        <p>Per favore, modifica il codice e sostituisci APPLICATION_ID e JAVASCRIPT_API_KEY con i valori reali del tuo progetto Backendless.</p>
-                    </div>
-                `;
-                return false;
-            }
-            // Inizializza Backendless
-            Backendless.initApp(APPLICATION_ID, JAVASCRIPT_API_KEY);
-            return true;
-        }
         
-        async function checkAuth() {
-    if (!initBackendless()) return;
-    toggleLoading(true);
-
-    try {
-        const storedUser = await Backendless.UserService.getCurrentUser();
-
-        if (storedUser && storedUser.objectId) {
-            // Verifica se il token è ancora valido
-            try {
-                await Backendless.Data.of("Users").findById(storedUser.objectId);
-                currentUser = storedUser;
-                updateAuthUI(currentUser);
-                showView('dashboard-view');
-               // initializeQrScanner();
-                await loadDashboardData();
-            } catch (tokenError) {
-                console.warn("Token scaduto, richiedo nuovo login.");
-                await Backendless.UserService.logout();
-                showView('login-view');
-                switchAuthTab('login');
-                showNotification('Sessione scaduta, effettua nuovamente il login.', 'info');
-            }
-        } else {
-            showView('login-view');
-            switchAuthTab('login');
-        }
-    } catch (error) {
-        console.error("Errore checkAuth Backendless:", error);
-        showView('login-view');
-        switchAuthTab('login');
-    } finally {
-        toggleLoading(false);
-    }
-}
 
         function updateAuthUI(user) {
             const authStatus = document.getElementById('auth-status');
@@ -1815,12 +1766,13 @@ function showDashboardTab(tab) {
         // STARTUP
         // =========================================================================
 window.onload = function() {
-    // Log che l'app sta partendo
     console.log("Applicazione avviata. Inizio inizializzazione...");
 
-    // ❌ RIMOSSO IL PUNTO 1. La connessione a Backendless è già attiva!
+    // 1. Inizializzazione di Backendless:
+    //    Rimosso, perché la funzione initBackendless() è stata chiamata subito
+    //    dopo la sua definizione nello script principale, risolvendo l'errore.
 
-    // 2. Controllo autenticazione e sessione (Primo passo utile)
+    // 2. Controllo autenticazione e sessione (Primo passo logico)
     if (typeof checkAuth === 'function') {
         checkAuth();
     }
@@ -1836,14 +1788,14 @@ window.onload = function() {
     }
 
     // 5. Inizializzazione Sicura Lucide Icons
+    //    (Ripetuta per sicurezza, anche se DOMContentLoaded l'ha già caricata)
     if (typeof lucide !== 'undefined' && lucide.createIcons) {
          lucide.createIcons();
          console.log("Lucide Icons ricaricato con successo in onload.");
     }
     
     console.log("Applicazione inizializzata completamente.");
-};
-	
+};	
 </script>
 
 </body>
