@@ -381,21 +381,27 @@ body {
  <!-- ================= CONFIGURAZIONE E INIZIALIZZAZIONE (Backendless) ================= -->
 
 <script src="/env-config.js"></script>
+<script src="https://cdn.backendless.com/js/backendless.min.js"></script>
 
 <script>
+window.addEventListener('DOMContentLoaded', () => {
   if (!window.APP_CONFIG) {
     console.error('⚠️ Nessuna configurazione trovata. Ricontrolla env-config.js');
-  } else {
-    const cfg = window.APP_CONFIG;
-    const APPLICATION_ID = cfg.BACKENDLESS_APP_ID;
-    const JAVASCRIPT_API_KEY = cfg.BACKENDLESS_JS_KEY;
-    const BACKENDLESS_API_URL = cfg.BACKENDLESS_API_URL;
-    const MAGAZZINO_TABLE_NAME = 'Magazzino';
-
-    Backendless.serverURL = BACKENDLESS_API_URL;
-    Backendless.initApp(APPLICATION_ID, JAVASCRIPT_API_KEY);
+    return;
   }
 
+  const { BACKENDLESS_APP_ID, BACKENDLESS_JS_KEY, BACKENDLESS_API_URL } = window.APP_CONFIG;
+  const MAGAZZINO_TABLE_NAME = 'Magazzino';
+
+  if (typeof Backendless === 'undefined') {
+    console.error('⚠️ Backendless SDK non caricato.');
+    return;
+  }
+
+  Backendless.serverURL = BACKENDLESS_API_URL;
+  Backendless.initApp(BACKENDLESS_APP_ID, BACKENDLESS_JS_KEY);
+
+  console.log('✅ Backendless inizializzato correttamente');
 
 
 // ---------- Helper per Lucide (chiamare dopo ogni modifica dinamica del DOM) ----------
@@ -1829,6 +1835,7 @@ window.onload = function() {
 
 </body>
 </html>
+
 
 
 
